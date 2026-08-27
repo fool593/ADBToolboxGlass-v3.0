@@ -1,0 +1,46 @@
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# Android
+*.apk
+*.aab
+*.ap_
+*.dex
+*.class
+local.properties
+captures/
+.externalNativeBuild/
+.cxx/
+
+# IDE
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+build_log*.txt
+
+# Temporary
+tmp/
+temp/
+*.tmp
+*.bak
+
+# Kotlin
+*.kotlin_metadata
+
+# Compose Multiplatform
+.compose/

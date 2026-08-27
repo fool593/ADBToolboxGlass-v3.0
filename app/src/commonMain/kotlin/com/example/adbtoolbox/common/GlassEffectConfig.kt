@@ -1,0 +1,181 @@
+package com.example.adbtoolbox.common
+
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.graphics.Color
+
+// 全局液态玻璃效果配置，保存用户调节的参数，全局生效
+object GlassEffectConfig {
+    // 基础效果参数
+    val cornerRadius = mutableStateOf(0.5f)      // 圆角 0~1
+    val blurRadius = mutableStateOf(16f)          // 模糊半径 0~32dp
+    val refractionHeight = mutableStateOf(0.2f)   // 折射高度 0~1
+    val refractionAmount = mutableStateOf(0.2f)   // 折射量 0~1
+    val chromaticAberration = mutableStateOf(0f)  // 色差 0~1
+    val enableVibrancy = mutableStateOf(true)      // 光域效果开关
+
+    // 全局效果强度（0~1，控制所有玻璃效果的整体强度）
+    val globalIntensity = mutableStateOf(1f)
+
+    // 导航栏效果
+    val navBlurRadius = mutableStateOf(8f)         // 导航栏模糊半径
+    val navOpacity = mutableStateOf(0.4f)          // 导航栏透明度 0~1
+    val navCornerRadius = mutableStateOf(0.6f)     // 导航栏圆角 0~1
+    val navRefractionHeight = mutableStateOf(0.15f) // 导航栏折射高度
+    val navRefractionAmount = mutableStateOf(0.15f) // 导航栏折射量
+    val navChromaticAberration = mutableStateOf(0f)  // 导航栏色差
+    val navEnableVibrancy = mutableStateOf(true)      // 导航栏光域效果
+
+    // 导航栏胶囊指示器参数
+    val navIndicatorShape = mutableStateOf("capsule") // "round"=圆球, "capsule"=胶囊, "square"=正方形
+    val navIndicatorHeight = mutableStateOf(50f)      // 胶囊高度/圆球直径 dp
+    val navIndicatorWidth = mutableStateOf(0f)         // 胶囊长度 0=自适应, >0=固定宽度 dp
+    val navIndicatorCorner = mutableStateOf(0.5f)      // 胶囊圆角比例 0~1 (0=直角, 1=全圆)
+    val navIndicatorBlur = mutableStateOf(12f)         // 胶囊模糊半径
+    val navIndicatorOpacity = mutableStateOf(0.6f)     // 胶囊透明度
+    val navIndicatorColor = mutableStateOf(Color(0xFF007AFF).copy(alpha = 0.5f)) // 胶囊颜色
+
+    // 主界面液态玻璃参数
+    val homeBlurRadius = mutableStateOf(20f)
+    val homeOpacity = mutableStateOf(0.3f)
+    val homeCornerRadius = mutableStateOf(0.5f)
+    val homeRefractionHeight = mutableStateOf(0.2f)
+    val homeRefractionAmount = mutableStateOf(0.2f)
+    val homeEnableVibrancy = mutableStateOf(true)
+
+    // 终端页面液态玻璃参数
+    val terminalBlurRadius = mutableStateOf(16f)
+    val terminalOpacity = mutableStateOf(0.35f)
+    val terminalCornerRadius = mutableStateOf(0.4f)
+    val terminalRefractionHeight = mutableStateOf(0.15f)
+    val terminalRefractionAmount = mutableStateOf(0.15f)
+    val terminalEnableVibrancy = mutableStateOf(true)
+
+    // 设置页面液态玻璃参数
+    val settingsBlurRadius = mutableStateOf(18f)
+    val settingsOpacity = mutableStateOf(0.3f)
+    val settingsCornerRadius = mutableStateOf(0.5f)
+    val settingsRefractionHeight = mutableStateOf(0.18f)
+    val settingsRefractionAmount = mutableStateOf(0.18f)
+    val settingsEnableVibrancy = mutableStateOf(true)
+
+    // 应用管理页面液态玻璃参数
+    val appsBlurRadius = mutableStateOf(18f)
+    val appsOpacity = mutableStateOf(0.3f)
+    val appsCornerRadius = mutableStateOf(0.5f)
+    val appsRefractionHeight = mutableStateOf(0.18f)
+    val appsRefractionAmount = mutableStateOf(0.18f)
+    val appsEnableVibrancy = mutableStateOf(true)
+
+    // 卡片效果
+    val cardBlurRadius = mutableStateOf(20f)        // 卡片模糊半径
+    val cardOpacity = mutableStateOf(0.3f)          // 卡片透明度 0~1
+    val cardCornerRadius = mutableStateOf(0.5f)     // 卡片圆角 0~1
+
+    // 按钮效果
+    val buttonBlurRadius = mutableStateOf(12f)       // 按钮模糊半径
+    val buttonOpacity = mutableStateOf(0.5f)         // 按钮透明度 0~1
+
+    // 玻璃颜色（叠加色，alpha 控制透明度）
+    val glassColor = mutableStateOf(Color.White.copy(alpha = 0.15f))
+
+    // 字体颜色
+    val fontColor = mutableStateOf(Color.Unspecified) // Unspecified=跟随主题
+
+    // 预设字体颜色
+    val presetFontColors = listOf(
+        "默认" to Color.Unspecified,
+        "白色" to Color.White,
+        "黑色" to Color.Black,
+        "赤" to Color(0xFFFF3B30),
+        "橙" to Color(0xFFFF9500),
+        "黄" to Color(0xFFFFCC00),
+        "绿" to Color(0xFF34C759),
+        "青" to Color(0xFF5AC8FA),
+        "蓝" to Color(0xFF007AFF),
+        "紫" to Color(0xFFAF52DE)
+    )
+
+    // 预设颜色
+    val presetColors = listOf(
+        "透明" to Color.Transparent,
+        "白色" to Color.White.copy(alpha = 0.15f),
+        "赤" to Color(0xFFFF3B30).copy(alpha = 0.2f),
+        "橙" to Color(0xFFFF9500).copy(alpha = 0.2f),
+        "黄" to Color(0xFFFFCC00).copy(alpha = 0.2f),
+        "绿" to Color(0xFF34C759).copy(alpha = 0.2f),
+        "青" to Color(0xFF5AC8FA).copy(alpha = 0.2f),
+        "蓝" to Color(0xFF007AFF).copy(alpha = 0.2f),
+        "紫" to Color(0xFFAF52DE).copy(alpha = 0.2f)
+    )
+
+    // 保存参数
+    fun saveConfig(
+        corner: Float,
+        blur: Float,
+        refHeight: Float,
+        refAmount: Float,
+        chromatic: Float,
+        vibrancy: Boolean
+    ) {
+        cornerRadius.value = corner
+        blurRadius.value = blur
+        refractionHeight.value = refHeight
+        refractionAmount.value = refAmount
+        chromaticAberration.value = chromatic
+        enableVibrancy.value = vibrancy
+    }
+
+    // 设置颜色
+    fun setColor(color: Color) {
+        glassColor.value = color
+    }
+
+    // 设置字体颜色
+    fun setFontColor(color: Color) {
+        fontColor.value = color
+    }
+
+    // 保存全局效果参数
+    fun saveGlobalConfig(
+        intensity: Float,
+        navBlur: Float,
+        navOpac: Float,
+        navCorner: Float,
+        cardBlur: Float,
+        cardOpac: Float,
+        cardCorner: Float,
+        btnBlur: Float,
+        btnOpac: Float
+    ) {
+        globalIntensity.value = intensity
+        navBlurRadius.value = navBlur
+        navOpacity.value = navOpac
+        navCornerRadius.value = navCorner
+        cardBlurRadius.value = cardBlur
+        cardOpacity.value = cardOpac
+        cardCornerRadius.value = cardCorner
+        buttonBlurRadius.value = btnBlur
+        buttonOpacity.value = btnOpac
+    }
+
+    // 重置为默认值
+    fun resetToDefault() {
+        cornerRadius.value = 0.5f
+        blurRadius.value = 16f
+        refractionHeight.value = 0.2f
+        refractionAmount.value = 0.2f
+        chromaticAberration.value = 0f
+        enableVibrancy.value = true
+        globalIntensity.value = 1f
+        navBlurRadius.value = 8f
+        navOpacity.value = 0.4f
+        navCornerRadius.value = 0.6f
+        cardBlurRadius.value = 20f
+        cardOpacity.value = 0.3f
+        cardCornerRadius.value = 0.5f
+        buttonBlurRadius.value = 12f
+        buttonOpacity.value = 0.5f
+        glassColor.value = Color.White.copy(alpha = 0.15f)
+        fontColor.value = Color.Unspecified
+    }
+}
