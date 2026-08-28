@@ -32,6 +32,7 @@ actual fun BackdropDemoScaffold(
     modifier: Modifier,
     pickWallpaperTrigger: Int,
     clearWallpaperTrigger: Int,
+    dynamicWallpaper: (@Composable () -> Unit)?,
     content: @Composable BoxScope.(backdrop: LayerBackdrop) -> Unit
 ) {
     Box(
@@ -111,15 +112,27 @@ actual fun BackdropDemoScaffold(
             androidx.compose.ui.graphics.Color(0xFFFFFFFF)
         }
 
-        Image(
-            painter ?: ColorPainter(defaultBgColor),
-            null,
-            Modifier
-                .layerBackdrop(backdrop)
-                .then(modifier)
-                .fillMaxSize(),
-            contentScale = ContentScale.Crop
-        )
+        if (dynamicWallpaper != null) {
+            // 动态壁纸模式：视频作为 backdrop 捕获层，液态玻璃反射视频画面
+            Box(
+                Modifier
+                    .layerBackdrop(backdrop)
+                    .then(modifier)
+                    .fillMaxSize()
+            ) {
+                dynamicWallpaper()
+            }
+        } else {
+            Image(
+                painter ?: ColorPainter(defaultBgColor),
+                null,
+                Modifier
+                    .layerBackdrop(backdrop)
+                    .then(modifier)
+                    .fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+        }
 
         content(backdrop)
     }

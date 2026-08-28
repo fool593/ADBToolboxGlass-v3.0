@@ -30,6 +30,7 @@ import com.example.adbtoolbox.common.ui.PluginDetailScreen
 import com.example.adbtoolbox.common.ui.PluginsScreen
 import com.example.adbtoolbox.common.AppCache
 import com.example.adbtoolbox.common.AppStrings
+import com.example.adbtoolbox.common.GlassEffectConfig
 import com.example.adbtoolbox.common.ui.AppDetailScreen
 import com.example.adbtoolbox.common.ui.AppsScreen
 import com.example.adbtoolbox.common.ui.DeviceInfoScreen
@@ -48,7 +49,10 @@ import com.kyant.backdrop.catalog.components.LiquidBottomTabs
 @Composable
 fun MainContent() {
     val isLightTheme = !AppSettings.isDarkMode
-    val contentColor = if (isLightTheme) Color.Black else Color.White
+    // 字体颜色：优先使用用户设置的玻璃字体色，否则跟随主题
+    val fontColorSetting = GlassEffectConfig.fontColor.value
+    val contentColor = if (fontColorSetting != Color.Unspecified) fontColorSetting
+        else if (isLightTheme) Color.Black else Color.White
 
     var selectedTabIndex by rememberSaveable { mutableIntStateOf(0) }
     var currentDestination by rememberSaveable { mutableStateOf(ADBDestination.Home) }
@@ -67,17 +71,17 @@ fun MainContent() {
     }
 
     Box(Modifier.fillMaxSize()) {
-        // 视频动态壁纸背景 - 放在最外层，确保液态玻璃能正确捕获
-        if (dynamicWallpaperEnabled && dynamicWallpaperVideoPath != null) {
-            DynamicWallpaperBackground(
-                videoPath = dynamicWallpaperVideoPath,
-                modifier = Modifier.fillMaxSize()
-            )
-        }
-
         BackdropDemoScaffold(
             pickWallpaperTrigger = pickWallpaperTrigger,
-            clearWallpaperTrigger = clearWallpaperTrigger
+            clearWallpaperTrigger = clearWallpaperTrigger,
+            dynamicWallpaper = if (dynamicWallpaperEnabled && dynamicWallpaperVideoPath != null) {
+                {
+                    DynamicWallpaperBackground(
+                        videoPath = dynamicWallpaperVideoPath,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+            } else null
         ) { backdrop ->
             Box(Modifier.fillMaxSize()) {
                 Column(

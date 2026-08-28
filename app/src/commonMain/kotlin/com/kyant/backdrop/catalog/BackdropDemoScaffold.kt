@@ -10,5 +10,6 @@ expect fun BackdropDemoScaffold(
     modifier: Modifier = Modifier,
     pickWallpaperTrigger: Int = 0,
     clearWallpaperTrigger: Int = 0,
+    dynamicWallpaper: (@Composable () -> Unit)? = null,
     content: @Composable BoxScope.(backdrop: LayerBackdrop) -> Unit
 )

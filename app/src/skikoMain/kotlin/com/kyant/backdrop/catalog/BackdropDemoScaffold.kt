@@ -22,6 +22,8 @@ import androidx.compose.ui.graphics.painter.ColorPainter
 actual fun BackdropDemoScaffold(
     modifier: Modifier,
     pickWallpaperTrigger: Int,
+    clearWallpaperTrigger: Int,
+    dynamicWallpaper: (@Composable () -> Unit)?,
     content: @Composable BoxScope.(backdrop: LayerBackdrop) -> Unit
 ) {
     Box(
@@ -32,15 +34,26 @@ actual fun BackdropDemoScaffold(
 
         val backdrop = rememberLayerBackdrop()
 
-        Image(
-            painter ?: ColorPainter(androidx.compose.ui.graphics.Color(0xFF1C1C1E)),
-            null,
-            Modifier
-                .layerBackdrop(backdrop)
-                .then(modifier)
-                .fillMaxSize(),
-            contentScale = ContentScale.Crop
-        )
+        if (dynamicWallpaper != null) {
+            Box(
+                Modifier
+                    .layerBackdrop(backdrop)
+                    .then(modifier)
+                    .fillMaxSize()
+            ) {
+                dynamicWallpaper()
+            }
+        } else {
+            Image(
+                painter ?: ColorPainter(androidx.compose.ui.graphics.Color(0xFF1C1C1E)),
+                null,
+                Modifier
+                    .layerBackdrop(backdrop)
+                    .then(modifier)
+                    .fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+        }
 
         content(backdrop)
     }

@@ -169,13 +169,14 @@ fun LiquidBottomTabs(
                 }
                 .drawBackdrop(
                     backdrop = backdrop,
-                    shape = { Capsule() },
+                    shape = { RoundedRectangle(32f.dp * GlassEffectConfig.navCornerRadius.value) },
                     effects = {
-                        vibrancy()
+                        if (GlassEffectConfig.navEnableVibrancy.value) vibrancy()
                         blur(GlassEffectConfig.navBlurRadius.value.dp.toPx())
                         lens(
                             GlassEffectConfig.navRefractionHeight.value * 24f.dp.toPx(),
-                            GlassEffectConfig.navRefractionAmount.value * 24f.dp.toPx()
+                            GlassEffectConfig.navRefractionAmount.value * 24f.dp.toPx(),
+                            chromaticAberration = GlassEffectConfig.navChromaticAberration.value > 0f
                         )
                     },
                     layerBlock = {
@@ -211,14 +212,15 @@ fun LiquidBottomTabs(
                     }
                     .drawBackdrop(
                         backdrop = backdrop,
-                        shape = { Capsule() },
+                        shape = { RoundedRectangle(28f.dp * GlassEffectConfig.navCornerRadius.value) },
                         effects = {
                             val progress = dampedDragAnimation.pressProgress
-                            vibrancy()
+                            if (GlassEffectConfig.navEnableVibrancy.value) vibrancy()
                             blur(GlassEffectConfig.navBlurRadius.value.dp.toPx())
                             lens(
                                 GlassEffectConfig.navRefractionHeight.value * 24f.dp.toPx() * (1f + progress),
-                                GlassEffectConfig.navRefractionAmount.value * 24f.dp.toPx() * (1f + progress)
+                                GlassEffectConfig.navRefractionAmount.value * 24f.dp.toPx() * (1f + progress),
+                                chromaticAberration = GlassEffectConfig.navChromaticAberration.value > 0f
                             )
                         },
                         highlight = {
@@ -254,10 +256,9 @@ fun LiquidBottomTabs(
                     shape = {
                         when (GlassEffectConfig.navIndicatorShape.value) {
                             "round" -> Capsule()
-                            "square" -> RoundedRectangle(
+                            else -> RoundedRectangle(
                                 (GlassEffectConfig.navIndicatorHeight.value / 2f).dp * GlassEffectConfig.navIndicatorCorner.value
                             )
-                            else -> Capsule()
                         }
                     },
                     effects = {

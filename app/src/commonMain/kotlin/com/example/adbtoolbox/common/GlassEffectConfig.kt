@@ -81,18 +81,18 @@ object GlassEffectConfig {
     // 字体颜色
     val fontColor = mutableStateOf(Color.Unspecified) // Unspecified=跟随主题
 
-    // 预设字体颜色
+    // 预设字体颜色（key 为语言 key，显示时用 AppStrings.get）
     val presetFontColors = listOf(
-        "默认" to Color.Unspecified,
-        "白色" to Color.White,
-        "黑色" to Color.Black,
-        "赤" to Color(0xFFFF3B30),
-        "橙" to Color(0xFFFF9500),
-        "黄" to Color(0xFFFFCC00),
-        "绿" to Color(0xFF34C759),
-        "青" to Color(0xFF5AC8FA),
-        "蓝" to Color(0xFF007AFF),
-        "紫" to Color(0xFFAF52DE)
+        "color_default" to Color.Unspecified,
+        "color_white" to Color.White,
+        "color_black" to Color.Black,
+        "color_red" to Color(0xFFFF3B30),
+        "color_orange" to Color(0xFFFF9500),
+        "color_yellow" to Color(0xFFFFCC00),
+        "color_green" to Color(0xFF34C759),
+        "color_cyan" to Color(0xFF5AC8FA),
+        "color_blue" to Color(0xFF007AFF),
+        "color_purple" to Color(0xFFAF52DE)
     )
 
     // 预设颜色
