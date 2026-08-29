@@ -409,9 +409,9 @@ actual object ADBTools {
             val totalStorage = statFs.totalBytes / (1024 * 1024)
             val availStorage = statFs.availableBytes / (1024 * 1024)
             val refreshRate = try {
-                val wm = appContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-                @Suppress("DEPRECATION")
-                "${wm.defaultDisplay.refreshRate.toInt()} Hz"
+                val dm = appContext.getSystemService(Context.DISPLAY_SERVICE) as android.hardware.display.DisplayManager
+                val display = dm.getDisplay(android.view.Display.DEFAULT_DISPLAY)
+                if (display != null) "${display.refreshRate.toInt()} Hz" else "Unknown"
             } catch (e: Exception) {
                 "Unknown"
             }
