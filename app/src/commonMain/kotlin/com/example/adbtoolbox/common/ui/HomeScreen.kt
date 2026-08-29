@@ -111,6 +111,7 @@ fun HomeScreen(
                     InfoRow(AppStrings.get("memory"), "${info.availableMemory} / ${info.totalMemory}", contentColor)
                     InfoRow(AppStrings.get("storage"), "${info.availableStorage} / ${info.totalStorage}", contentColor)
                     InfoRow(AppStrings.get("battery"), "${info.batteryLevel}%", contentColor)
+                    InfoRow(AppStrings.get("refresh_rate"), info.refreshRate, contentColor)
                     InfoRow(AppStrings.get("root"), if (info.isRooted) AppStrings.get("root_obtained") else AppStrings.get("root_not_obtained"), contentColor)
                 }
                 Spacer(Modifier.height(8f.dp))

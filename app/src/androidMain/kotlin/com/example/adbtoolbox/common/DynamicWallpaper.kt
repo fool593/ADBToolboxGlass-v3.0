@@ -1,18 +1,28 @@
 package com.example.adbtoolbox.common
 
-import android.graphics.Matrix
 import android.graphics.SurfaceTexture
 import android.media.MediaPlayer
 import android.net.Uri
 import android.view.Surface
 import android.view.TextureView
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.viewinterop.AndroidView
 import java.io.File
 
 // 视频动态壁纸背景 - Android 实现
-// 使用 TextureView + MediaPlayer：居中裁剪铺满全屏（CENTER_CROP）、循环播放、静音
+// 使用 TextureView + MediaPlayer + Compose graphicsLayer 实现 CENTER_CROP（居中裁剪铺满全屏）、循环播放、静音
 @Composable
 actual fun DynamicWallpaperBackground(
     videoPath: String?,
@@ -22,100 +32,75 @@ actual fun DynamicWallpaperBackground(
     val videoFile = File(videoPath)
     if (!videoFile.exists()) return
 
+    val context = LocalContext.current
+    var viewSize by remember { mutableStateOf(IntSize.Zero) }
+    var videoSize by remember { mutableStateOf(IntSize.Zero) }
+
+    // 计算 CENTER_CROP 的缩放和偏移
+    val scale = if (videoSize.width > 0 && videoSize.height > 0 && viewSize.width > 0 && viewSize.height > 0) {
+        val sx = viewSize.width.toFloat() / videoSize.width
+        val sy = viewSize.height.toFloat() / videoSize.height
+        if (sx > sy) sx else sy
+    } else 1f
+    val dx = if (videoSize.width > 0) (viewSize.width - videoSize.width * scale) / 2f else 0f
+    val dy = if (videoSize.height > 0) (viewSize.height - videoSize.height * scale) / 2f else 0f
+
     AndroidView(
-        modifier = modifier,
-        factory = { context ->
-            TextureView(context).apply {
+        modifier = modifier
+            .clip(RectangleShape)
+            .onSizeChanged { size ->
+                viewSize = size
+            }
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+                translationX = dx
+                translationY = dy
+                transformOrigin = TransformOrigin(0f, 0f)
+            },
+        factory = { ctx ->
+            TextureView(ctx).apply {
                 setOpaque(false)
+
                 surfaceTextureListener = object : TextureView.SurfaceTextureListener {
                     override fun onSurfaceTextureAvailable(surface: SurfaceTexture, width: Int, height: Int) {
-                        attachVideo(this@apply, videoFile.absolutePath, surface)
+                        try {
+                            val mp = MediaPlayer()
+                            mp.setDataSource(ctx, Uri.fromFile(videoFile))
+                            mp.isLooping = true
+                            mp.setVolume(0f, 0f)
+                            mp.setSurface(Surface(surface))
+                            mp.setOnPreparedListener { player ->
+                                videoSize = IntSize(player.videoWidth, player.videoHeight)
+                                player.start()
+                            }
+                            mp.setOnErrorListener { player, _, _ ->
+                                runCatching {
+                                    player.reset()
+                                    player.setDataSource(ctx, Uri.fromFile(videoFile))
+                                    player.prepareAsync()
+                                }
+                                true
+                            }
+                            mp.prepareAsync()
+                            tag = mp
+                        } catch (_: Exception) {}
                     }
 
-                    override fun onSurfaceTextureSizeChanged(surface: SurfaceTexture, width: Int, height: Int) {
-                        // 尺寸变化时重新计算裁剪比例
-                        (this@apply.tag as? VideoHolder)?.player?.let {
-                            fitVideo(this@apply, it)
-                        }
-                    }
+                    override fun onSurfaceTextureSizeChanged(surface: SurfaceTexture, width: Int, height: Int) {}
 
                     override fun onSurfaceTextureDestroyed(surface: SurfaceTexture): Boolean {
-                        (this@apply.tag as? VideoHolder)?.player?.let { runCatching { it.release() } }
-                        this@apply.tag = null
+                        (tag as? MediaPlayer)?.let { player ->
+                            runCatching { player.stop() }
+                            runCatching { player.release() }
+                        }
+                        tag = null
                         return true
                     }
 
                     override fun onSurfaceTextureUpdated(surface: SurfaceTexture) {}
                 }
             }
-        },
-        update = { view ->
-            val holder = view.tag as? VideoHolder
-            if (holder == null || holder.path != videoFile.absolutePath) {
-                holder?.player?.let { runCatching { it.release() } }
-                val surfaceTexture = view.surfaceTexture
-                if (surfaceTexture != null) {
-                    attachVideo(view, videoFile.absolutePath, surfaceTexture)
-                } else {
-                    view.tag = VideoHolder(videoFile.absolutePath, null)
-                }
-            }
         }
     )
-}
-
-private class VideoHolder(val path: String, var player: MediaPlayer?)
-
-private fun attachVideo(view: TextureView, path: String, surface: SurfaceTexture) {
-    try {
-        val mp = MediaPlayer()
-        mp.setDataSource(view.context, Uri.fromFile(File(path)))
-        mp.isLooping = true
-        mp.setVolume(0f, 0f)
-        mp.setSurface(Surface(surface))
-        mp.setOnPreparedListener { player ->
-            // 延迟到布局完成后再计算裁剪比例，确保 view.width/height 有效
-            if (view.width > 0 && view.height > 0) {
-                fitVideo(view, player)
-            } else {
-                view.post { fitVideo(view, player) }
-            }
-            player.start()
-        }
-        mp.setOnErrorListener { player, _, _ ->
-            runCatching {
-                player.reset()
-                player.setDataSource(view.context, Uri.fromFile(File(path)))
-                player.prepareAsync()
-            }
-            true
-        }
-        mp.prepareAsync()
-        view.tag = VideoHolder(path, mp)
-    } catch (_: Exception) {}
-}
-
-// 居中裁剪（CENTER_CROP）：视频保持比例铺满整个屏幕，超出部分裁掉
-private fun fitVideo(view: TextureView, player: MediaPlayer) {
-    try {
-        val vw = player.videoWidth
-        val vh = player.videoHeight
-        val viewW = view.width
-        val viewH = view.height
-        if (vw <= 0 || vh <= 0 || viewW <= 0 || viewH <= 0) return
-
-        // 计算缩放比例：取较大值确保填满整个 view
-        val scaleX = viewW.toFloat() / vw
-        val scaleY = viewH.toFloat() / vh
-        val scale = if (scaleX > scaleY) scaleX else scaleY
-
-        val matrix = Matrix()
-        matrix.setScale(scale, scale)
-        // 居中：计算偏移量
-        val dx = (viewW - vw * scale) / 2f
-        val dy = (viewH - vh * scale) / 2f
-        matrix.postTranslate(dx, dy)
-        view.setTransform(matrix)
-        view.invalidate()
-    } catch (_: Exception) {}
 }

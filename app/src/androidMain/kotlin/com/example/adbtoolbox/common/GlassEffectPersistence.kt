@@ -96,6 +96,11 @@ actual object GlassEffectPersistence {
         editor.putInt("glassColor", config.glassColor.value.value.toInt())
         editor.putInt("fontColor", if (config.fontColor.value == Color.Unspecified) -1 else config.fontColor.value.value.toInt())
 
+        // 动态壁纸
+        editor.putBoolean("dynamicWallpaperEnabled", AppCache.dynamicWallpaperEnabled.value)
+        val videoPath = AppCache.dynamicWallpaperVideoPath.value
+        editor.putString("dynamicWallpaperVideoPath", if (videoPath != null && java.io.File(videoPath).exists()) videoPath else null)
+
         editor.apply()
     }
 
@@ -176,6 +181,20 @@ actual object GlassEffectPersistence {
         if (prefs.contains("fontColor")) {
             val fv = prefs.getInt("fontColor", -1)
             config.fontColor.value = if (fv == -1) Color.Unspecified else Color(fv)
+        }
+
+        // 动态壁纸
+        if (prefs.contains("dynamicWallpaperEnabled")) {
+            AppCache.dynamicWallpaperEnabled.value = prefs.getBoolean("dynamicWallpaperEnabled", false)
+        }
+        if (prefs.contains("dynamicWallpaperVideoPath")) {
+            val savedPath = prefs.getString("dynamicWallpaperVideoPath", null)
+            if (savedPath != null && java.io.File(savedPath).exists()) {
+                AppCache.dynamicWallpaperVideoPath.value = savedPath
+            } else {
+                AppCache.dynamicWallpaperVideoPath.value = null
+                AppCache.dynamicWallpaperEnabled.value = false
+            }
         }
     }
 

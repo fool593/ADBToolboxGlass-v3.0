@@ -135,8 +135,10 @@ class MainActivity : ComponentActivity() {
             ) { uri: Uri? ->
                 uri?.let { selectedUri ->
                     try {
-                        // 始终复制到缓存目录，确保视频文件可以被正确播放
-                        val cacheFile = java.io.File(cacheDir, "wallpaper_${System.currentTimeMillis()}.mp4")
+                        // 始终复制到 filesDir，确保视频文件不会被系统缓存清理
+                        val wallpaperDir = java.io.File(filesDir, "wallpapers")
+                        if (!wallpaperDir.exists()) wallpaperDir.mkdirs()
+                        val cacheFile = java.io.File(wallpaperDir, "wallpaper_${System.currentTimeMillis()}.mp4")
                         contentResolver.openInputStream(selectedUri)?.use { input ->
                             cacheFile.outputStream().use { output ->
                                 input.copyTo(output)
@@ -145,6 +147,8 @@ class MainActivity : ComponentActivity() {
                         if (cacheFile.exists() && cacheFile.length() > 0) {
                             AppCache.dynamicWallpaperVideoPath.value = cacheFile.absolutePath
                             AppCache.dynamicWallpaperEnabled.value = true
+                            // 立即持久化，避免退出应用后丢失
+                            try { com.example.adbtoolbox.common.GlassEffectPersistence.saveAll() } catch (_: Exception) {}
                         }
                     } catch (e: Exception) {
                         e.printStackTrace()

@@ -139,6 +139,7 @@ object AppStrings {
         "memory" to "内存",
         "storage" to "存储",
         "battery" to "电池",
+        "refresh_rate" to "刷新率",
         "root" to "Root",
         "root_obtained" to "已获取",
         "root_not_obtained" to "未获取",
@@ -288,6 +289,7 @@ object AppStrings {
         "video_selected" to "已选择视频，点击更换",
         "current_video" to "当前视频:",
         "video_hint" to "支持 MP4、3GP 等常见视频格式，将作为应用背景循环播放",
+        "delete_video" to "删除视频",
 
         // 液态玻璃调节
         "home_glass" to "主页液态玻璃",
@@ -500,6 +502,7 @@ object AppStrings {
         "memory" to "Memory",
         "storage" to "Storage",
         "battery" to "Battery",
+        "refresh_rate" to "Refresh Rate",
         "root" to "Root",
         "root_obtained" to "Obtained",
         "root_not_obtained" to "Not obtained",
@@ -649,6 +652,7 @@ object AppStrings {
         "video_selected" to "Video Selected, Tap to Change",
         "current_video" to "Current Video:",
         "video_hint" to "Supports MP4, 3GP and other common video formats, loops as app background",
+        "delete_video" to "Delete Video",
 
         // Glass Effect Adjustment
         "home_glass" to "Home Glass",
@@ -872,6 +876,7 @@ object AppStrings {
         "brand" to "ब्रांड",
         "android_version" to "Android वर्ज़न",
         "sdk" to "SDK",
+        "refresh_rate" to "रिफ्रेश दर",
         "root" to "Root",
         "memory" to "मेमोरी",
         "storage" to "स्टोरेज",
@@ -979,6 +984,7 @@ object AppStrings {
         "video_selected" to "वीडियो चुना गया, बदलने के लिए टैप करें",
         "current_video" to "वर्तमान वीडियो:",
         "video_hint" to "MP4, 3GP और अन्य सामान्य वीडियो फ़ॉर्मेट समर्थित, ऐप बैकग्राउंड के रूप में लूप होता है",
+        "delete_video" to "वीडियो हटाएं",
 
         // Glass Effect Adjustment
         "home_glass" to "होम ग्लास",

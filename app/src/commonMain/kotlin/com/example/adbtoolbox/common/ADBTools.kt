@@ -68,7 +68,8 @@ data class DeviceInfoData(
     val availableStorage: String,
     val batteryLevel: Int,
     val isRooted: Boolean,
-    val isAdbEnabled: Boolean
+    val isAdbEnabled: Boolean,
+    val refreshRate: String = "Unknown"
 )
 
 data class AppInfoData(

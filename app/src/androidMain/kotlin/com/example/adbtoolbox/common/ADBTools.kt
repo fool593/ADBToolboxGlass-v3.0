@@ -11,6 +11,7 @@ import android.os.Build
 import android.os.Environment
 import android.os.StatFs
 import android.util.Base64
+import android.view.WindowManager
 import rikka.shizuku.Shizuku
 import java.io.BufferedReader
 import java.io.ByteArrayOutputStream
@@ -407,6 +408,13 @@ actual object ADBTools {
             val statFs = StatFs(Environment.getDataDirectory().path)
             val totalStorage = statFs.totalBytes / (1024 * 1024)
             val availStorage = statFs.availableBytes / (1024 * 1024)
+            val refreshRate = try {
+                val wm = appContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+                @Suppress("DEPRECATION")
+                "${wm.defaultDisplay.refreshRate.toInt()} Hz"
+            } catch (e: Exception) {
+                "Unknown"
+            }
             DeviceInfoData(
                 model = Build.MODEL,
                 brand = Build.BRAND,
@@ -421,7 +429,8 @@ actual object ADBTools {
                 availableStorage = "${availStorage / 1024} GB",
                 batteryLevel = getBatteryLevel(),
                 isRooted = isRooted(),
-                isAdbEnabled = isAdbEnabled()
+                isAdbEnabled = isAdbEnabled(),
+                refreshRate = refreshRate
             )
         } catch (e: Exception) {
             // 兜底：即使某些系统服务获取失败，也返回基本信息，避免界面空白

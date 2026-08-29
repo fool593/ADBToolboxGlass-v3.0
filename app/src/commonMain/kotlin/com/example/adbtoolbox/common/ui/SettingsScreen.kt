@@ -119,7 +119,13 @@ fun SettingsScreen(
                 }
                 LiquidSlider(
                     value = { if (AppCache.dynamicWallpaperEnabled.value) 1f else 0f },
-                    onValueChange = { AppCache.dynamicWallpaperEnabled.value = it > 0.5f },
+                    onValueChange = {
+                        val newVal = it > 0.5f
+                        if (AppCache.dynamicWallpaperEnabled.value != newVal) {
+                            AppCache.dynamicWallpaperEnabled.value = newVal
+                            try { com.example.adbtoolbox.common.GlassEffectPersistence.saveAll() } catch (_: Exception) {}
+                        }
+                    },
                     valueRange = 0f..1f,
                     visibilityThreshold = 0.01f,
                     backdrop = backdrop
@@ -145,6 +151,19 @@ fun SettingsScreen(
                             "${AppStrings.get("current_video")} ${AppCache.dynamicWallpaperVideoPath.value?.substringAfterLast('/')}",
                             style = TextStyle(contentColor.copy(alpha = 0.6f), 12f.sp)
                         )
+                        Spacer(Modifier.height(4f.dp))
+                        LiquidButton(
+                            onClick = {
+                                AppCache.dynamicWallpaperVideoPath.value = null
+                                AppCache.dynamicWallpaperEnabled.value = false
+                                try { com.example.adbtoolbox.common.GlassEffectPersistence.saveAll() } catch (_: Exception) {}
+                            },
+                            backdrop = backdrop,
+                            modifier = Modifier.height(40f.dp).fillMaxWidth(),
+                            tint = Color(0xFFFF3B30)
+                        ) {
+                            BasicText(AppStrings.get("delete_video"), style = TextStyle(Color.White, 14f.sp))
+                        }
                     }
                     BasicText(AppStrings.get("video_hint"), style = TextStyle(contentColor.copy(alpha = 0.5f), 11f.sp))
                 }

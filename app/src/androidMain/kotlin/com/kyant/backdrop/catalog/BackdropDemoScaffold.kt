@@ -2,7 +2,6 @@ package com.kyant.backdrop.catalog
 
 import android.graphics.BitmapFactory
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
@@ -44,7 +43,7 @@ actual fun BackdropDemoScaffold(
         val prefs = remember { context.getSharedPreferences("wallpaper", 0) }
 
         val pickMedia = rememberLauncherForActivityResult(
-            ActivityResultContracts.PickVisualMedia()
+            ActivityResultContracts.GetContent()
         ) { uri ->
             if (uri != null) {
                 try {
@@ -87,7 +86,7 @@ actual fun BackdropDemoScaffold(
         // 监听壁纸选择触发
         LaunchedEffect(pickWallpaperTrigger) {
             if (pickWallpaperTrigger > 0) {
-                pickMedia.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                pickMedia.launch("image/*")
             }
         }
 

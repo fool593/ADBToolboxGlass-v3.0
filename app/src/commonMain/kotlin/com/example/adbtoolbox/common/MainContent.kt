@@ -189,6 +189,7 @@ fun MainContent() {
 
                 LiquidBottomTabs(
                     selectedTabIndex = { selectedTabIndex },
+                    accentColor = if (GlassEffectConfig.fontColor.value != Color.Unspecified) GlassEffectConfig.fontColor.value else null,
                     onTabSelected = { index ->
                         selectedTabIndex = index
                         currentDestination = when (index) {

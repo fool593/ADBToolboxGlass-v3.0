@@ -67,14 +67,15 @@ fun LiquidBottomTabs(
     tabsCount: Int,
     modifier: Modifier = Modifier,
     indicatorHeight: Float = 56f, // 指示器高度，56=默认圆形，40=胶囊状
+    accentColor: Color? = null, // 外部传入的胶囊指示器颜色，null时用默认蓝色或navIndicatorColor
+    containerColor: Color? = null, // 外部传入的容器颜色，null时用默认
     content: @Composable RowScope.() -> Unit
 ) {
     val isLightTheme = !isSystemInDarkTheme()
-    val accentColor =
-        if (isLightTheme) Color(0xFF0088FF)
+    val externalAccentColor = accentColor
+    val accentColor = accentColor ?: if (isLightTheme) Color(0xFF0088FF)
         else Color(0xFF0091FF)
-    val containerColor =
-        if (isLightTheme) Color(0xFFFAFAFA).copy(0.4f)
+    val containerColor = containerColor ?: if (isLightTheme) Color(0xFFFAFAFA).copy(0.4f)
         else Color(0xFF121212).copy(0.4f)
 
     val tabsBackdrop = rememberLayerBackdrop()
@@ -216,10 +217,10 @@ fun LiquidBottomTabs(
                         effects = {
                             val progress = dampedDragAnimation.pressProgress
                             if (GlassEffectConfig.navEnableVibrancy.value) vibrancy()
-                            blur(GlassEffectConfig.navBlurRadius.value.dp.toPx())
+                            blur(GlassEffectConfig.navBlurRadius.value.dp.toPx() * 1.5f)
                             lens(
-                                GlassEffectConfig.navRefractionHeight.value * 24f.dp.toPx() * (1f + progress),
-                                GlassEffectConfig.navRefractionAmount.value * 24f.dp.toPx() * (1f + progress),
+                                GlassEffectConfig.navRefractionHeight.value * 48f.dp.toPx() * (1f + progress),
+                                GlassEffectConfig.navRefractionAmount.value * 48f.dp.toPx() * (1f + progress),
                                 chromaticAberration = GlassEffectConfig.navChromaticAberration.value > 0f
                             )
                         },
@@ -294,7 +295,7 @@ fun LiquidBottomTabs(
                     },
                     onDrawSurface = {
                         val progress = dampedDragAnimation.pressProgress
-                        val base = GlassEffectConfig.navIndicatorColor.value
+                        val base = externalAccentColor ?: GlassEffectConfig.navIndicatorColor.value
                         drawRect(
                             base.copy(alpha = GlassEffectConfig.navIndicatorOpacity.value * (1f - progress))
                         )
