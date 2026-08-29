@@ -288,28 +288,32 @@ fun SettingsScreen(
                     Spacer(Modifier.height(8f.dp))
                 }
                 // 请求 Dhizuku 权限按钮（像 MT 管理器一样，Dhizuku 作为设备所有者给应用授权）
-                if (dhizukuInstalled && dhizukuActive) {
+                if (dhizukuInstalled) {
                     LiquidButton(
                         onClick = {
                             dhizukuLoading = true
-                            dhizukuMessage = AppStrings.get("dhizuku_requesting")
+                            dhizukuMessage = if (dhizukuActive) AppStrings.get("dhizuku_requesting") else AppStrings.get("dhizuku_activate_hint")
                             dhizukuScope.launch {
-                                val granted = withContext(Dispatchers.Default) { ADBTools.requestDhizukuPermission() }
-                                dhizukuMessage = if (granted) AppStrings.get("dhizuku_granted") else AppStrings.get("dhizuku_denied")
+                                if (dhizukuActive) {
+                                    val granted = withContext(Dispatchers.Default) { ADBTools.requestDhizukuPermission() }
+                                    dhizukuMessage = if (granted) AppStrings.get("dhizuku_granted") else AppStrings.get("dhizuku_denied")
+                                }
                                 dhizukuActive = ADBTools.isDhizukuActive()
                                 dhizukuLoading = false
                             }
                         },
                         backdrop = backdrop,
                         modifier = Modifier.height(44f.dp).fillMaxWidth(),
-                        tint = Color(0xFFAF52DE)
+                        tint = if (dhizukuActive) Color(0xFFAF52DE) else Color(0xFFFF9500)
                     ) {
-                        BasicText(if (dhizukuLoading) AppStrings.get("dhizuku_requesting") else AppStrings.get("dhizuku_request"), Modifier.padding(horizontal = 8f.dp), style = TextStyle(Color.White, 14f.sp))
+                        BasicText(
+                            if (dhizukuLoading) AppStrings.get("dhizuku_requesting") else if (dhizukuActive) AppStrings.get("dhizuku_request") else AppStrings.get("dhizuku_not_active"),
+                            Modifier.padding(horizontal = 8f.dp),
+                            style = TextStyle(Color.White, 14f.sp)
+                        )
                     }
-                } else if (!dhizukuInstalled) {
-                    BasicText(AppStrings.get("dhizuku_install_hint"), style = TextStyle(contentColor.copy(alpha = 0.6f), 12f.sp))
                 } else {
-                    BasicText(AppStrings.get("dhizuku_activate_hint"), style = TextStyle(contentColor.copy(alpha = 0.6f), 12f.sp))
+                    BasicText(AppStrings.get("dhizuku_install_hint"), style = TextStyle(contentColor.copy(alpha = 0.6f), 12f.sp))
                 }
                 Spacer(Modifier.height(8f.dp))
                 BasicText(AppStrings.get("dhizuku_notice"), style = TextStyle(contentColor.copy(alpha = 0.5f), 11f.sp))

@@ -842,6 +842,27 @@ actual object ADBTools {
     }
 
     actual fun isDhizukuActive(): Boolean {
+        // 方式1：通过 Dhizuku API 反射检测（最可靠）
+        try {
+            val dhizukuClass = Class.forName("com.rosan.dhizuku.api.Dhizuku")
+            // 尝试 isActive() 方法
+            try {
+                val method = dhizukuClass.getMethod("isActive")
+                if (method.invoke(null) as Boolean) return true
+            } catch (e: NoSuchMethodException) {}
+            // 尝试 isDeviceOwner() 方法
+            try {
+                val method = dhizukuClass.getMethod("isDeviceOwner")
+                if (method.invoke(null) as Boolean) return true
+            } catch (e: NoSuchMethodException) {}
+            // 尝试获取 binder，如果能获取到说明已激活
+            try {
+                val method = dhizukuClass.getMethod("getBinder")
+                if (method.invoke(null) != null) return true
+            } catch (e: NoSuchMethodException) {}
+        } catch (e: Exception) {}
+
+        // 方式2：通过命令检测
         return try {
             val result = execCommand("dumpsys device_policy | grep com.rosan.dhizuku")
             result.output.contains("com.rosan.dhizuku", ignoreCase = true) &&
