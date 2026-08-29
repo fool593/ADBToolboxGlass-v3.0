@@ -81,7 +81,7 @@ object GlassEffectConfig {
     // 字体颜色
     val fontColor = mutableStateOf(Color.Unspecified) // Unspecified=跟随主题
 
-    // 预设字体颜色（key 为语言 key，显示时用 AppStrings.get）
+    // 预设字体颜色（32种，key 为语言 key，显示时用 AppStrings.get）
     val presetFontColors = listOf(
         "color_default" to Color.Unspecified,
         "color_white" to Color.White,
@@ -92,7 +92,29 @@ object GlassEffectConfig {
         "color_green" to Color(0xFF34C759),
         "color_cyan" to Color(0xFF5AC8FA),
         "color_blue" to Color(0xFF007AFF),
-        "color_purple" to Color(0xFFAF52DE)
+        "color_purple" to Color(0xFFAF52DE),
+        "color_pink" to Color(0xFFFF2D55),
+        "color_brown" to Color(0xFFA2845E),
+        "color_gray" to Color(0xFF8E8E93),
+        "color_dark_red" to Color(0xFFC70000),
+        "color_dark_orange" to Color(0xFFC93400),
+        "color_dark_green" to Color(0xFF007A33),
+        "color_dark_blue" to Color(0xFF0040DD),
+        "color_dark_purple" to Color(0xFF5E5CE6),
+        "color_light_red" to Color(0xFFFF6B6B),
+        "color_light_orange" to Color(0xFFFFB347),
+        "color_light_yellow" to Color(0xFFFFE066),
+        "color_light_green" to Color(0xFF7BED9F),
+        "color_light_blue" to Color(0xFF64D2FF),
+        "color_light_purple" to Color(0xFFC77DFF),
+        "color_orange_red" to Color(0xFFFF4500),
+        "color_yellow_green" to Color(0xFF9ACD32),
+        "color_teal" to Color(0xFF008080),
+        "color_indigo" to Color(0xFF4B0082),
+        "color_magenta" to Color(0xFFFF00FF),
+        "color_gold" to Color(0xFFFFD700),
+        "color_silver" to Color(0xFFC0C0C0),
+        "color_cream" to Color(0xFFFFFDD0)
     )
 
     // 预设颜色

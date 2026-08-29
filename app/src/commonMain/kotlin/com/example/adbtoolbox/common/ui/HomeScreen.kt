@@ -225,8 +225,8 @@ fun GlassCard(
                     if (enableVibrancy) vibrancy()
                     blur(blurRadius.dp.toPx() * intensity)
                     lens(
-                        refractionHeight = refHeight * minDim * 0.5f * intensity,
-                        refractionAmount = refAmount * minDim * intensity,
+                        refractionHeight = refHeight * minDim * 1.0f * intensity,
+                        refractionAmount = refAmount * minDim * 1.5f * intensity,
                         depthEffect = true,
                         chromaticAberration = config.chromaticAberration.value > 0f
                     )

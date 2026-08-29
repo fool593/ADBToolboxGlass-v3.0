@@ -174,8 +174,8 @@ fun LiquidBottomTabs(
                         if (GlassEffectConfig.navEnableVibrancy.value) vibrancy()
                         blur(GlassEffectConfig.navBlurRadius.value.dp.toPx())
                         lens(
-                            GlassEffectConfig.navRefractionHeight.value * 24f.dp.toPx(),
-                            GlassEffectConfig.navRefractionAmount.value * 24f.dp.toPx(),
+                            GlassEffectConfig.navRefractionHeight.value * 48f.dp.toPx(),
+                            GlassEffectConfig.navRefractionAmount.value * 48f.dp.toPx(),
                             chromaticAberration = GlassEffectConfig.navChromaticAberration.value > 0f
                         )
                     },
