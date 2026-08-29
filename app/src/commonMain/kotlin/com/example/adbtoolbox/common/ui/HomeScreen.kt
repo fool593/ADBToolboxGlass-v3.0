@@ -145,6 +145,9 @@ fun HomeScreen(
             QuickActionButton(backdrop, AppStrings.get("root_tool"), Color(0xFFFF2D55), contentColor, Modifier.weight(1f)) { onNavigate(ADBDestination.RootTool) }
             QuickActionButton(backdrop, AppStrings.get("adb_module"), Color(0xFFBF5AF2), contentColor, Modifier.weight(1f)) { onNavigate(ADBDestination.ADBModule) }
         }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12f.dp)) {
+            QuickActionButton(backdrop, AppStrings.get("temp_root"), Color(0xFFFF9500), contentColor, Modifier.weight(1f)) { onNavigate(ADBDestination.TempRoot) }
+        }
 
         Spacer(Modifier.height(16f.dp))
     }

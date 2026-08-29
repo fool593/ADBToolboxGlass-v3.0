@@ -165,6 +165,38 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
+            // 临时 Root 提权包选择器
+            val tempRootPicker = rememberLauncherForActivityResult(
+                contract = ActivityResultContracts.GetContent()
+            ) { uri: Uri? ->
+                uri?.let { selectedUri ->
+                    try {
+                        val tempRootDir = java.io.File(filesDir, "temp_root")
+                        if (!tempRootDir.exists()) tempRootDir.mkdirs()
+                        val cacheFile = java.io.File(tempRootDir, "temproot_${System.currentTimeMillis()}.zip")
+                        contentResolver.openInputStream(selectedUri)?.use { input ->
+                            cacheFile.outputStream().use { output ->
+                                input.copyTo(output)
+                            }
+                        }
+                        if (cacheFile.exists() && cacheFile.length() > 0) {
+                            AppCache.selectedTempRootPath.value = cacheFile.absolutePath
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+            }
+
+            // 观察临时 Root 选择触发器
+            val tempRootTrigger by androidx.compose.runtime.rememberUpdatedState(AppCache.pickTempRootFileTrigger.value)
+            LaunchedEffect(tempRootTrigger) {
+                if (tempRootTrigger > 0) {
+                    AppCache.pickTempRootFileTrigger.value = 0
+                    tempRootPicker.launch("application/zip")
+                }
+            }
+
             MainContent()
         }
     }

@@ -320,6 +320,7 @@ object AppStrings {
 
         // Root 工具
         "root_tool" to "一键 Root 工具",
+        "temp_root" to "临时 Root",
         "root_tool_hint" to "支持 Magisk / KernelSU / 临时 Root",
         "detecting" to "检测中...",
         "select_root_method" to "选择 Root 方案",
@@ -692,6 +693,7 @@ object AppStrings {
 
         // Root Tools
         "root_tool" to "One-Click Root Tool",
+        "temp_root" to "Temp Root",
         "root_tool_hint" to "Supports Magisk / KernelSU / Temp Root",
         "detecting" to "Detecting...",
         "select_root_method" to "Select Root Method",
@@ -1034,6 +1036,7 @@ object AppStrings {
 
         // Root Tools
         "root_tool" to "वन-क्लिक रूट टूल",
+        "temp_root" to "अस्थायी रूट",
         "root_tool_hint" to "Magisk / KernelSU / टेम्प रूट सपोर्ट",
         "detecting" to "जांच हो रही है...",
         "select_root_method" to "रूट विधि चुनें",

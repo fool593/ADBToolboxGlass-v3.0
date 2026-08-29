@@ -184,6 +184,9 @@ fun MainContent() {
                                 currentDestination = ADBDestination.Terminal
                             }
                         )
+                        ADBDestination.TempRoot -> com.example.adbtoolbox.common.ui.TempRootScreen(
+                            backdrop = backdrop,
+                        )
                     }
                 }
 

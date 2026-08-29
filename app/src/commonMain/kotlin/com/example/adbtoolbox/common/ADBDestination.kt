@@ -15,5 +15,6 @@ enum class ADBDestination {
     Plugins,
     PluginDetail,
     GlassPlayground,
-    RootTool
+    RootTool,
+    TempRoot
 }
