@@ -164,32 +164,32 @@ actual object RootToolManager {
         return try {
             // 检查是否有 root 权限（提取 boot.img 需要 root 或 fastboot）
             if (!isRooted()) {
-                return RootResult(false, "需要 Root 权限或 Fastboot 模式才能提取 boot.img", "extract")
+                return RootResult(false, "Root or Fastboot is required to extract boot.img", "extract")
             }
 
             val bootPath = "/sdcard/boot.img"
             // 尝试通过 dd 提取 boot 分区
             val result = exec("dd if=/dev/block/by-name/boot of=$bootPath 2>&1")
             if (File(bootPath).exists() && File(bootPath).length() > 0) {
-                RootResult(true, "boot.img 已提取到: $bootPath", "extract")
+                RootResult(true, "boot.img extracted to: $bootPath", "extract")
             } else {
                 // 尝试其他路径
                 val result2 = exec("dd if=/dev/block/bootdevice/by-name/boot of=$bootPath 2>&1")
                 if (File(bootPath).exists() && File(bootPath).length() > 0) {
-                    RootResult(true, "boot.img 已提取到: $bootPath", "extract")
+                    RootResult(true, "boot.img extracted to: $bootPath", "extract")
                 } else {
                     // 尝试 init_boot（Android 13+）
                     val initBootPath = "/sdcard/init_boot.img"
                     exec("dd if=/dev/block/by-name/init_boot of=$initBootPath 2>&1")
                     if (File(initBootPath).exists() && File(initBootPath).length() > 0) {
-                        RootResult(true, "init_boot.img 已提取到: $initBootPath", "extract")
+                        RootResult(true, "init_boot.img extracted to: $initBootPath", "extract")
                     } else {
-                        RootResult(false, "提取 boot.img 失败，请手动提取", "extract")
+                        RootResult(false, "Failed to extract boot.img, please extract manually", "extract")
                     }
                 }
             }
         } catch (e: Exception) {
-            RootResult(false, "提取失败: ${e.message}", "extract")
+            RootResult(false, "Extraction failed: ${e.message}", "extract")
         }
     }
 
@@ -199,7 +199,7 @@ actual object RootToolManager {
             val magiskInstalled = exec("pm list packages | grep com.topjohnwu.magisk").isNotEmpty() ||
                                    exec("pm list packages | grep com.topjohnwu.magisk").contains("magisk", ignoreCase = true)
             if (!magiskInstalled) {
-                return RootResult(false, "请先安装 Magisk APP", "patch")
+                return RootResult(false, "Please install Magisk app first", "patch")
             }
 
             // Magisk 修补需要在 APP 内操作，这里尝试命令行
@@ -210,12 +210,12 @@ actual object RootToolManager {
 
             val allPatched = listOf(patchedFiles, patchedFiles2).filter { it.isNotEmpty() }
             if (allPatched.isNotEmpty()) {
-                RootResult(true, "Magisk 修补成功: ${allPatched.first()}", "patch")
+                RootResult(true, "Magisk patch success: ${allPatched.first()}", "patch")
             } else {
-                RootResult(false, "Magisk 修补失败，请在 Magisk APP 中手动选择 boot.img 进行修补", "patch")
+                RootResult(false, "Magisk patch failed, please select boot.img manually in Magisk app", "patch")
             }
         } catch (e: Exception) {
-            RootResult(false, "修补失败: ${e.message}", "patch")
+            RootResult(false, "Patch failed: ${e.message}", "patch")
         }
     }
 
@@ -225,7 +225,7 @@ actual object RootToolManager {
             val ksuInstalled = exec("pm list packages | grep me.weishu.kernelsu").isNotEmpty() ||
                                exec("pm list packages | grep me.weishu.kernelsu").contains("kernelsu", ignoreCase = true)
             if (!ksuInstalled) {
-                return RootResult(false, "请先安装 KernelSU APP", "patch")
+                return RootResult(false, "Please install KernelSU app first", "patch")
             }
 
             // KernelSU 修补 boot.img
@@ -235,12 +235,12 @@ actual object RootToolManager {
 
             val allPatched = listOf(patchedFiles, patchedFiles2).filter { it.isNotEmpty() }
             if (allPatched.isNotEmpty()) {
-                RootResult(true, "KernelSU 修补成功: ${allPatched.first()}", "patch")
+                RootResult(true, "KernelSU patch success: ${allPatched.first()}", "patch")
             } else {
-                RootResult(false, "KernelSU 修补失败，请在 KernelSU APP 中手动修补", "patch")
+                RootResult(false, "KernelSU patch failed, please patch manually in KernelSU app", "patch")
             }
         } catch (e: Exception) {
-            RootResult(false, "修补失败: ${e.message}", "patch")
+            RootResult(false, "Patch failed: ${e.message}", "patch")
         }
     }
 
@@ -248,7 +248,7 @@ actual object RootToolManager {
         return try {
             val bootFile = File(bootPath)
             if (!bootFile.exists()) {
-                return RootResult(false, "boot.img 文件不存在: $bootPath", "flash")
+                return RootResult(false, "boot.img not found: $bootPath", "flash")
             }
 
             // 检查是否在 fastboot 模式
@@ -258,20 +258,20 @@ actual object RootToolManager {
                 // fastboot 模式下刷入
                 val result = exec("fastboot flash boot $bootPath 2>&1")
                 if (result.contains("OKAY", ignoreCase = true) || result.contains("success", ignoreCase = true) || result.contains("Sending", ignoreCase = true)) {
-                    RootResult(true, "boot.img 刷入成功，建议重启设备", "flash")
+                    RootResult(true, "boot.img flashed successfully, please reboot", "flash")
                 } else {
-                    RootResult(false, "刷入失败: $result", "flash")
+                    RootResult(false, "Flash failed: $result", "flash")
                 }
             } else {
                 // 需要 root 权限直接刷入 boot 分区
                 if (!isRooted()) {
-                    return RootResult(false, "需要 Root 权限或 Fastboot 模式才能刷入 boot.img", "flash")
+                    return RootResult(false, "Root or Fastboot is required to flash boot.img", "flash")
                 }
                 val result = exec("dd if=$bootPath of=/dev/block/by-name/boot 2>&1")
-                RootResult(true, "boot.img 已通过 dd 刷入，建议重启设备", "flash")
+                RootResult(true, "boot.img flashed via dd, please reboot", "flash")
             }
         } catch (e: Exception) {
-            RootResult(false, "刷入失败: ${e.message}", "flash")
+            RootResult(false, "Flash failed: ${e.message}", "flash")
         }
     }
 
@@ -294,9 +294,9 @@ actual object RootToolManager {
                 return xiaomiTempRoot()
             }
 
-            RootResult(false, "当前机型 ($device) 不支持临时 Root", "temproot")
+            RootResult(false, "Current device ($device) does not support temp root", "temproot")
         } catch (e: Exception) {
-            RootResult(false, "临时 Root 失败: ${e.message}", "temproot")
+            RootResult(false, "Temp root failed: ${e.message}", "temproot")
         }
     }
 
@@ -308,7 +308,7 @@ actual object RootToolManager {
             // 检查 exploit 二进制文件是否存在
             val exploitFile = File(exploitPath)
             if (!exploitFile.exists()) {
-                return RootResult(false, "GhostLock exploit 未找到，请先下载 ghostlock 二进制文件并推送到 $exploitPath", "ghostlock")
+                return RootResult(false, "GhostLock exploit not found, please download ghostlock binary and push to $exploitPath", "ghostlock")
             }
 
             // 设置权限
@@ -324,12 +324,12 @@ actual object RootToolManager {
             // 检查是否成功获取 root
             val idResult = exec("id")
             if (idResult.contains("uid=0") || result.contains("root", ignoreCase = true) || result.contains("success", ignoreCase = true)) {
-                RootResult(true, "GhostLock 临时 Root 成功！基于 CVE-2026-43499，重启后失效\n\n$result", "ghostlock")
+                RootResult(true, "GhostLock temp root success! Based on CVE-2026-43499, lost after reboot\n\n$result", "ghostlock")
             } else {
-                RootResult(false, "GhostLock 临时 Root 失败\n\n$result", "ghostlock")
+                RootResult(false, "GhostLock temp root failed\n\n$result", "ghostlock")
             }
         } catch (e: Exception) {
-            RootResult(false, "GhostLock 失败: ${e.message}", "ghostlock")
+            RootResult(false, "GhostLock failed: ${e.message}", "ghostlock")
         }
     }
 
@@ -338,18 +338,18 @@ actual object RootToolManager {
         return try {
             val tempRootScript = File(appContext.filesDir, "temproot.sh")
             if (!tempRootScript.exists()) {
-                return RootResult(false, "TempRoot 工具未初始化，请先下载资源", "temproot")
+                return RootResult(false, "TempRoot tool not initialized, please download resources first", "temproot")
             }
 
             val result = exec("sh ${tempRootScript.absolutePath} 2>&1")
             val idResult = exec("id")
             if (idResult.contains("uid=0") || result.contains("root", ignoreCase = true)) {
-                RootResult(true, "临时 Root 成功！注意：重启后失效\n\n$result", "temproot")
+                RootResult(true, "Temp root success! Note: lost after reboot\n\n$result", "temproot")
             } else {
-                RootResult(false, "临时 Root 失败\n\n$result", "temproot")
+                RootResult(false, "Temp root failed\n\n$result", "temproot")
             }
         } catch (e: Exception) {
-            RootResult(false, "临时 Root 失败: ${e.message}", "temproot")
+            RootResult(false, "Temp root failed: ${e.message}", "temproot")
         }
     }
 

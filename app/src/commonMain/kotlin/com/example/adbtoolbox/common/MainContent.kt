@@ -49,9 +49,9 @@ import com.kyant.backdrop.catalog.components.LiquidBottomTabs
 @Composable
 fun MainContent() {
     val isLightTheme = !AppSettings.isDarkMode
-    // 字体颜色：优先使用用户设置的玻璃字体色，否则跟随主题
+    // 字体颜色：优先使用用户设置的玻璃字体色（必须非透明），否则跟随主题
     val fontColorSetting = GlassEffectConfig.fontColor.value
-    val contentColor = if (fontColorSetting != Color.Unspecified) fontColorSetting
+    val contentColor = if (fontColorSetting != Color.Unspecified && fontColorSetting.alpha > 0f) fontColorSetting
         else if (isLightTheme) Color.Black else Color.White
 
     var selectedTabIndex by rememberSaveable { mutableIntStateOf(0) }

@@ -61,11 +61,19 @@ fun HomeScreen(
             deviceInfo = AppCache.deviceInfo.value
         } else {
             // 耗时操作移到后台线程，避免主线程阻塞导致ANR
-            deviceInfo = withContext(Dispatchers.Default) { ADBTools.getDeviceInfo() }
-            AppCache.deviceInfo.value = deviceInfo
-            AppCache.deviceInfoLoaded.value = true
+            try {
+                deviceInfo = withContext(Dispatchers.Default) { ADBTools.getDeviceInfo() }
+                AppCache.deviceInfo.value = deviceInfo
+                AppCache.deviceInfoLoaded.value = true
+            } catch (e: Exception) {
+                deviceInfo = null
+            }
         }
-        shizukuAvailable = withContext(Dispatchers.Default) { ADBTools.isShizukuAvailable() }
+        try {
+            shizukuAvailable = withContext(Dispatchers.Default) { ADBTools.isShizukuAvailable() }
+        } catch (e: Exception) {
+            shizukuAvailable = false
+        }
     }
 
     Column(

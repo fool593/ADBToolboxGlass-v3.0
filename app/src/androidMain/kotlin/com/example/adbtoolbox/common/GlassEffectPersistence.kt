@@ -92,9 +92,9 @@ actual object GlassEffectPersistence {
         editor.putFloat("appsRefractionAmount", config.appsRefractionAmount.value)
         editor.putBoolean("appsEnableVibrancy", config.appsEnableVibrancy.value)
 
-        // 颜色
+        // 颜色（fontColor 用 -1 标记 Unspecified，避免加载时变成透明黑）
         editor.putInt("glassColor", config.glassColor.value.value.toInt())
-        editor.putInt("fontColor", config.fontColor.value.value.toInt())
+        editor.putInt("fontColor", if (config.fontColor.value == Color.Unspecified) -1 else config.fontColor.value.value.toInt())
 
         editor.apply()
     }
@@ -173,7 +173,10 @@ actual object GlassEffectPersistence {
 
         // 颜色
         if (prefs.contains("glassColor")) config.glassColor.value = Color(prefs.getInt("glassColor", Color.White.copy(alpha = 0.15f).value.toInt()))
-        if (prefs.contains("fontColor")) config.fontColor.value = Color(prefs.getInt("fontColor", Color.Unspecified.value.toInt()))
+        if (prefs.contains("fontColor")) {
+            val fv = prefs.getInt("fontColor", -1)
+            config.fontColor.value = if (fv == -1) Color.Unspecified else Color(fv)
+        }
     }
 
     actual fun clear() {

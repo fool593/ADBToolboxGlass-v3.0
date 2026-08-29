@@ -398,30 +398,50 @@ actual object ADBTools {
     }
 
     actual fun getDeviceInfo(): DeviceInfoData {
-        val am = appContext.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-        val memInfo = ActivityManager.MemoryInfo()
-        am.getMemoryInfo(memInfo)
-        val totalMem = memInfo.totalMem / (1024 * 1024)
-        val availMem = memInfo.availMem / (1024 * 1024)
-        val statFs = StatFs(Environment.getDataDirectory().path)
-        val totalStorage = statFs.totalBytes / (1024 * 1024)
-        val availStorage = statFs.availableBytes / (1024 * 1024)
-        return DeviceInfoData(
-            model = Build.MODEL,
-            brand = Build.BRAND,
-            androidVersion = Build.VERSION.RELEASE,
-            sdkVersion = Build.VERSION.SDK_INT,
-            kernelVersion = getKernelVersion(),
-            buildNumber = Build.DISPLAY,
-            cpuAbi = Build.SUPPORTED_ABIS.joinToString(", "),
-            totalMemory = "${totalMem / 1024} GB",
-            availableMemory = "${availMem / 1024} GB",
-            totalStorage = "${totalStorage / 1024} GB",
-            availableStorage = "${availStorage / 1024} GB",
-            batteryLevel = getBatteryLevel(),
-            isRooted = isRooted(),
-            isAdbEnabled = isAdbEnabled()
-        )
+        return try {
+            val am = appContext.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+            val memInfo = ActivityManager.MemoryInfo()
+            am.getMemoryInfo(memInfo)
+            val totalMem = memInfo.totalMem / (1024 * 1024)
+            val availMem = memInfo.availMem / (1024 * 1024)
+            val statFs = StatFs(Environment.getDataDirectory().path)
+            val totalStorage = statFs.totalBytes / (1024 * 1024)
+            val availStorage = statFs.availableBytes / (1024 * 1024)
+            DeviceInfoData(
+                model = Build.MODEL,
+                brand = Build.BRAND,
+                androidVersion = Build.VERSION.RELEASE,
+                sdkVersion = Build.VERSION.SDK_INT,
+                kernelVersion = getKernelVersion(),
+                buildNumber = Build.DISPLAY,
+                cpuAbi = Build.SUPPORTED_ABIS.joinToString(", "),
+                totalMemory = "${totalMem / 1024} GB",
+                availableMemory = "${availMem / 1024} GB",
+                totalStorage = "${totalStorage / 1024} GB",
+                availableStorage = "${availStorage / 1024} GB",
+                batteryLevel = getBatteryLevel(),
+                isRooted = isRooted(),
+                isAdbEnabled = isAdbEnabled()
+            )
+        } catch (e: Exception) {
+            // 兜底：即使某些系统服务获取失败，也返回基本信息，避免界面空白
+            DeviceInfoData(
+                model = Build.MODEL,
+                brand = Build.BRAND,
+                androidVersion = Build.VERSION.RELEASE,
+                sdkVersion = Build.VERSION.SDK_INT,
+                kernelVersion = "Unknown",
+                buildNumber = Build.DISPLAY,
+                cpuAbi = Build.SUPPORTED_ABIS.joinToString(", "),
+                totalMemory = "Unknown",
+                availableMemory = "Unknown",
+                totalStorage = "Unknown",
+                availableStorage = "Unknown",
+                batteryLevel = -1,
+                isRooted = false,
+                isAdbEnabled = false
+            )
+        }
     }
 
     actual fun getInstalledApps(): List<AppInfoData> {
