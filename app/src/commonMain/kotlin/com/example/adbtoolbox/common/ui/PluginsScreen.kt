@@ -159,7 +159,7 @@ fun PluginsScreen(
             Spacer(Modifier.height(12f.dp))
 
             if (isInstalling) {
-                GlassCard(backdrop = backdrop, pageType = "apps") {
+                GlassCard(backdrop = backdrop, pageType = "plugins") {
                     Box(Modifier.padding(16f.dp).fillMaxWidth(), contentAlignment = Alignment.Center) {
                         BasicText(AppStrings.get("installing"), style = TextStyle(contentColor, 14f.sp))
                     }
@@ -168,7 +168,7 @@ fun PluginsScreen(
             }
 
             installResult?.let { result ->
-                GlassCard(backdrop = backdrop, pageType = "apps") {
+                GlassCard(backdrop = backdrop, pageType = "plugins") {
                     Box(Modifier.padding(16f.dp).fillMaxWidth()) {
                         BasicText(
                             result,

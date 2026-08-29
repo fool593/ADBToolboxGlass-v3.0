@@ -91,7 +91,7 @@ fun RootManagerScreen(
         }
         Spacer(Modifier.height(16f.dp))
 
-        GlassCard(backdrop = backdrop, pageType = "apps") {
+        GlassCard(backdrop = backdrop, pageType = "plugins") {
             Column(Modifier.padding(20f.dp)) {
                 SectionTitle(AppStrings.get("root_status"), contentColor)
                 InfoRow(AppStrings.get("root_permission"), if (isRooted) AppStrings.get("root_obtained") else AppStrings.get("root_not_obtained"), contentColor)
@@ -117,7 +117,7 @@ fun RootManagerScreen(
 
         Spacer(Modifier.height(16f.dp))
 
-        GlassCard(backdrop = backdrop, pageType = "apps") {
+        GlassCard(backdrop = backdrop, pageType = "plugins") {
             Column(Modifier.padding(20f.dp)) {
                 SectionTitle(AppStrings.get("root_quick_commands"), contentColor)
                 Spacer(Modifier.height(8f.dp))
@@ -138,7 +138,7 @@ fun RootManagerScreen(
         Spacer(Modifier.height(16f.dp))
 
         if (resultOutput.isNotEmpty()) {
-            GlassCard(backdrop = backdrop, pageType = "apps") {
+            GlassCard(backdrop = backdrop, pageType = "plugins") {
                 Column(Modifier.padding(20f.dp)) {
                     SectionTitle(AppStrings.get("execution_result"), contentColor)
                     BasicText(

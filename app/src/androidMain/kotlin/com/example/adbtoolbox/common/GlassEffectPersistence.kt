@@ -92,6 +92,22 @@ actual object GlassEffectPersistence {
         editor.putFloat("appsRefractionAmount", config.appsRefractionAmount.value)
         editor.putBoolean("appsEnableVibrancy", config.appsEnableVibrancy.value)
 
+        // 插件页面
+        editor.putFloat("pluginsBlurRadius", config.pluginsBlurRadius.value)
+        editor.putFloat("pluginsOpacity", config.pluginsOpacity.value)
+        editor.putFloat("pluginsCornerRadius", config.pluginsCornerRadius.value)
+        editor.putFloat("pluginsRefractionHeight", config.pluginsRefractionHeight.value)
+        editor.putFloat("pluginsRefractionAmount", config.pluginsRefractionAmount.value)
+        editor.putBoolean("pluginsEnableVibrancy", config.pluginsEnableVibrancy.value)
+
+        // ADB模块页面
+        editor.putFloat("adbmoduleBlurRadius", config.adbmoduleBlurRadius.value)
+        editor.putFloat("adbmoduleOpacity", config.adbmoduleOpacity.value)
+        editor.putFloat("adbmoduleCornerRadius", config.adbmoduleCornerRadius.value)
+        editor.putFloat("adbmoduleRefractionHeight", config.adbmoduleRefractionHeight.value)
+        editor.putFloat("adbmoduleRefractionAmount", config.adbmoduleRefractionAmount.value)
+        editor.putBoolean("adbmoduleEnableVibrancy", config.adbmoduleEnableVibrancy.value)
+
         // 颜色（fontColor 用 -1 标记 Unspecified，避免加载时变成透明黑）
         editor.putInt("glassColor", config.glassColor.value.value.toInt())
         editor.putInt("fontColor", if (config.fontColor.value == Color.Unspecified) -1 else config.fontColor.value.value.toInt())
@@ -175,6 +191,22 @@ actual object GlassEffectPersistence {
         if (prefs.contains("appsRefractionHeight")) config.appsRefractionHeight.value = prefs.getFloat("appsRefractionHeight", 0.18f)
         if (prefs.contains("appsRefractionAmount")) config.appsRefractionAmount.value = prefs.getFloat("appsRefractionAmount", 0.18f)
         if (prefs.contains("appsEnableVibrancy")) config.appsEnableVibrancy.value = prefs.getBoolean("appsEnableVibrancy", true)
+
+        // 插件页面
+        if (prefs.contains("pluginsBlurRadius")) config.pluginsBlurRadius.value = prefs.getFloat("pluginsBlurRadius", 18f)
+        if (prefs.contains("pluginsOpacity")) config.pluginsOpacity.value = prefs.getFloat("pluginsOpacity", 0.3f)
+        if (prefs.contains("pluginsCornerRadius")) config.pluginsCornerRadius.value = prefs.getFloat("pluginsCornerRadius", 0.5f)
+        if (prefs.contains("pluginsRefractionHeight")) config.pluginsRefractionHeight.value = prefs.getFloat("pluginsRefractionHeight", 0.18f)
+        if (prefs.contains("pluginsRefractionAmount")) config.pluginsRefractionAmount.value = prefs.getFloat("pluginsRefractionAmount", 0.18f)
+        if (prefs.contains("pluginsEnableVibrancy")) config.pluginsEnableVibrancy.value = prefs.getBoolean("pluginsEnableVibrancy", true)
+
+        // ADB模块页面
+        if (prefs.contains("adbmoduleBlurRadius")) config.adbmoduleBlurRadius.value = prefs.getFloat("adbmoduleBlurRadius", 18f)
+        if (prefs.contains("adbmoduleOpacity")) config.adbmoduleOpacity.value = prefs.getFloat("adbmoduleOpacity", 0.3f)
+        if (prefs.contains("adbmoduleCornerRadius")) config.adbmoduleCornerRadius.value = prefs.getFloat("adbmoduleCornerRadius", 0.5f)
+        if (prefs.contains("adbmoduleRefractionHeight")) config.adbmoduleRefractionHeight.value = prefs.getFloat("adbmoduleRefractionHeight", 0.18f)
+        if (prefs.contains("adbmoduleRefractionAmount")) config.adbmoduleRefractionAmount.value = prefs.getFloat("adbmoduleRefractionAmount", 0.18f)
+        if (prefs.contains("adbmoduleEnableVibrancy")) config.adbmoduleEnableVibrancy.value = prefs.getBoolean("adbmoduleEnableVibrancy", true)
 
         // 颜色
         if (prefs.contains("glassColor")) config.glassColor.value = Color(prefs.getInt("glassColor", Color.White.copy(alpha = 0.15f).value.toInt()))

@@ -154,7 +154,7 @@ fun HomeScreen(
 fun GlassCard(
     backdrop: Backdrop,
     modifier: Modifier = Modifier,
-    pageType: String = "default", // "default","home","terminal","settings","apps"
+    pageType: String = "default", // "default","home","terminal","settings","apps","plugins","adbmodule"
     content: @Composable () -> Unit
 ) {
     // 从全局配置读取参数，根据页面类型选择对应参数
@@ -200,6 +200,22 @@ fun GlassCard(
             refHeight = config.appsRefractionHeight.value
             refAmount = config.appsRefractionAmount.value
             enableVibrancy = config.appsEnableVibrancy.value
+        }
+        "plugins" -> {
+            blurRadius = config.pluginsBlurRadius.value
+            opacity = config.pluginsOpacity.value
+            corner = config.pluginsCornerRadius.value
+            refHeight = config.pluginsRefractionHeight.value
+            refAmount = config.pluginsRefractionAmount.value
+            enableVibrancy = config.pluginsEnableVibrancy.value
+        }
+        "adbmodule" -> {
+            blurRadius = config.adbmoduleBlurRadius.value
+            opacity = config.adbmoduleOpacity.value
+            corner = config.adbmoduleCornerRadius.value
+            refHeight = config.adbmoduleRefractionHeight.value
+            refAmount = config.adbmoduleRefractionAmount.value
+            enableVibrancy = config.adbmoduleEnableVibrancy.value
         }
         else -> {
             blurRadius = config.cardBlurRadius.value

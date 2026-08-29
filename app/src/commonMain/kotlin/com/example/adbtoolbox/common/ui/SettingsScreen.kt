@@ -287,44 +287,29 @@ fun SettingsScreen(
                     BasicText(dhizukuMessage, style = TextStyle(contentColor.copy(alpha = 0.8f), 12f.sp))
                     Spacer(Modifier.height(8f.dp))
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(8f.dp)) {
-                    if (!dhizukuActive) {
-                        LiquidButton(
-                            onClick = {
-                                dhizukuLoading = true
-                                dhizukuMessage = AppStrings.get("dhizuku_activating")
-                                dhizukuScope.launch {
-                                    val result = withContext(Dispatchers.Default) { ADBTools.activateDhizuku() }
-                                    dhizukuMessage = if (result.exitCode == 0) result.output else result.error
-                                    dhizukuActive = ADBTools.isDhizukuActive()
-                                    dhizukuLoading = false
-                                }
-                            },
-                            backdrop = backdrop,
-                            modifier = Modifier.height(44f.dp).weight(1f),
-                            tint = Color(0xFFAF52DE)
-                        ) {
-                            BasicText(if (dhizukuLoading) AppStrings.get("dhizuku_activating") else AppStrings.get("dhizuku_activate"), Modifier.padding(horizontal = 8f.dp), style = TextStyle(Color.White, 14f.sp))
-                        }
-                    } else {
-                        LiquidButton(
-                            onClick = {
-                                dhizukuLoading = true
-                                dhizukuMessage = AppStrings.get("dhizuku_removing")
-                                dhizukuScope.launch {
-                                    val result = withContext(Dispatchers.Default) { ADBTools.removeDhizuku() }
-                                    dhizukuMessage = if (result.exitCode == 0) result.output else result.error
-                                    dhizukuActive = ADBTools.isDhizukuActive()
-                                    dhizukuLoading = false
-                                }
-                            },
-                            backdrop = backdrop,
-                            modifier = Modifier.height(44f.dp).weight(1f),
-                            tint = Color(0xFFFF3B30)
-                        ) {
-                            BasicText(if (dhizukuLoading) AppStrings.get("dhizuku_removing") else AppStrings.get("dhizuku_remove"), Modifier.padding(horizontal = 8f.dp), style = TextStyle(Color.White, 14f.sp))
-                        }
+                // 请求 Dhizuku 权限按钮（像 MT 管理器一样，Dhizuku 作为设备所有者给应用授权）
+                if (dhizukuInstalled && dhizukuActive) {
+                    LiquidButton(
+                        onClick = {
+                            dhizukuLoading = true
+                            dhizukuMessage = AppStrings.get("dhizuku_requesting")
+                            dhizukuScope.launch {
+                                val granted = withContext(Dispatchers.Default) { ADBTools.requestDhizukuPermission() }
+                                dhizukuMessage = if (granted) AppStrings.get("dhizuku_granted") else AppStrings.get("dhizuku_denied")
+                                dhizukuActive = ADBTools.isDhizukuActive()
+                                dhizukuLoading = false
+                            }
+                        },
+                        backdrop = backdrop,
+                        modifier = Modifier.height(44f.dp).fillMaxWidth(),
+                        tint = Color(0xFFAF52DE)
+                    ) {
+                        BasicText(if (dhizukuLoading) AppStrings.get("dhizuku_requesting") else AppStrings.get("dhizuku_request"), Modifier.padding(horizontal = 8f.dp), style = TextStyle(Color.White, 14f.sp))
                     }
+                } else if (!dhizukuInstalled) {
+                    BasicText(AppStrings.get("dhizuku_install_hint"), style = TextStyle(contentColor.copy(alpha = 0.6f), 12f.sp))
+                } else {
+                    BasicText(AppStrings.get("dhizuku_activate_hint"), style = TextStyle(contentColor.copy(alpha = 0.6f), 12f.sp))
                 }
                 Spacer(Modifier.height(8f.dp))
                 BasicText(AppStrings.get("dhizuku_notice"), style = TextStyle(contentColor.copy(alpha = 0.5f), 11f.sp))

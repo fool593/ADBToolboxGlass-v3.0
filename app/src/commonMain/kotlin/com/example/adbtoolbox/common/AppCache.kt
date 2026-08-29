@@ -43,6 +43,10 @@ object AppCache {
     // Dhizuku 使用开关（默认开启，激活后自动使用 Dhizuku 权限执行命令）
     val useDhizuku = mutableStateOf(true)
 
+    // 临时 Root 提权包文件选择
+    val selectedTempRootPath = mutableStateOf<String?>(null)
+    val pickTempRootFileTrigger = mutableStateOf(0)
+
     fun getPermissions(packageName: String): List<PermissionInfoData>? {
         return permissionCache[packageName]
     }

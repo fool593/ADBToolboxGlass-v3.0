@@ -63,7 +63,7 @@ fun RootToolScreen(
         Spacer(Modifier.height(20.dp))
 
         // 设备信息卡片
-        GlassCard(backdrop = backdrop, pageType = "apps") {
+        GlassCard(backdrop = backdrop, pageType = "plugins") {
             Column(Modifier.padding(16.dp)) {
                 BasicText(AppStrings.get("device_info"), style = TextStyle(contentColor, 16.sp, FontWeight.Bold))
                 Spacer(Modifier.height(12.dp))
@@ -95,7 +95,7 @@ fun RootToolScreen(
 
         // Root 方案选择
         if (deviceInfo != null && deviceInfo!!.supportedMethods.isNotEmpty()) {
-            GlassCard(backdrop = backdrop, pageType = "apps") {
+            GlassCard(backdrop = backdrop, pageType = "plugins") {
                 Column(Modifier.padding(16.dp)) {
                     BasicText(AppStrings.get("select_root_method"), style = TextStyle(contentColor, 16.sp, FontWeight.Bold))
                     Spacer(Modifier.height(12.dp))
@@ -169,7 +169,7 @@ fun RootToolScreen(
 
         // 进度显示
         if (currentStep != RootStep.IDLE && currentStep != RootStep.DONE && currentStep != RootStep.ERROR) {
-            GlassCard(backdrop = backdrop, pageType = "apps") {
+            GlassCard(backdrop = backdrop, pageType = "plugins") {
                 Column(Modifier.padding(16.dp)) {
                     BasicText(AppStrings.get("exec_progress"), style = TextStyle(contentColor, 16.sp, FontWeight.Bold))
                     Spacer(Modifier.height(12.dp))
@@ -195,7 +195,7 @@ fun RootToolScreen(
 
         // 结果显示
         result?.let { r ->
-            GlassCard(backdrop = backdrop, pageType = "apps") {
+            GlassCard(backdrop = backdrop, pageType = "plugins") {
                 Column(Modifier.padding(16.dp)) {
                     BasicText(
                         if (r.success) AppStrings.get("op_success") else AppStrings.get("op_failed"),
@@ -333,7 +333,7 @@ fun RootToolScreen(
                 BasicText(AppStrings.get("redetect"), style = TextStyle(Color.White, 14.sp))
             }
         } else if (!isLoading) {
-            GlassCard(backdrop = backdrop, pageType = "apps") {
+            GlassCard(backdrop = backdrop, pageType = "plugins") {
                 Column(Modifier.padding(16.dp)) {
                     BasicText(AppStrings.get("not_supported"), style = TextStyle(Color(0xFFFF9500), 16.sp, FontWeight.Bold))
                     Spacer(Modifier.height(8.dp))
@@ -348,7 +348,7 @@ fun RootToolScreen(
         Spacer(Modifier.height(20.dp))
 
         // 风险提示
-        GlassCard(backdrop = backdrop, pageType = "apps") {
+        GlassCard(backdrop = backdrop, pageType = "plugins") {
             Column(Modifier.padding(16.dp)) {
                 BasicText(AppStrings.get("risk_warning"), style = TextStyle(Color(0xFFFF3B30), 14.sp, FontWeight.Bold))
                 Spacer(Modifier.height(8.dp))

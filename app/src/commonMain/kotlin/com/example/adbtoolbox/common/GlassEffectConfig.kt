@@ -66,6 +66,22 @@ object GlassEffectConfig {
     val appsRefractionAmount = mutableStateOf(0.18f)
     val appsEnableVibrancy = mutableStateOf(true)
 
+    // 插件页面（ADB插件/Root模块）独立玻璃参数
+    val pluginsBlurRadius = mutableStateOf(18f)
+    val pluginsOpacity = mutableStateOf(0.3f)
+    val pluginsCornerRadius = mutableStateOf(0.5f)
+    val pluginsRefractionHeight = mutableStateOf(0.18f)
+    val pluginsRefractionAmount = mutableStateOf(0.18f)
+    val pluginsEnableVibrancy = mutableStateOf(true)
+
+    // ADB模块页面独立玻璃参数
+    val adbmoduleBlurRadius = mutableStateOf(18f)
+    val adbmoduleOpacity = mutableStateOf(0.3f)
+    val adbmoduleCornerRadius = mutableStateOf(0.5f)
+    val adbmoduleRefractionHeight = mutableStateOf(0.18f)
+    val adbmoduleRefractionAmount = mutableStateOf(0.18f)
+    val adbmoduleEnableVibrancy = mutableStateOf(true)
+
     // 卡片效果
     val cardBlurRadius = mutableStateOf(20f)        // 卡片模糊半径
     val cardOpacity = mutableStateOf(0.3f)          // 卡片透明度 0~1

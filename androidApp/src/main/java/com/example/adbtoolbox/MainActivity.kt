@@ -189,6 +189,14 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onPause() {
+        super.onPause()
+        // 应用进入后台时自动保存所有个性化设置，避免滑后台后丢失
+        try {
+            com.example.adbtoolbox.common.GlassEffectPersistence.saveAll()
+        } catch (e: Exception) {}
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         try {

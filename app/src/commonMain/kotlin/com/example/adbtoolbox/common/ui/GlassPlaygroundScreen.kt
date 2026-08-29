@@ -635,6 +635,64 @@ fun GlassPlaygroundScreen(
 
         Spacer(Modifier.height(16f.dp))
 
+        // plugins_glass液态玻璃调节
+        GlassCard(backdrop = backdrop, pageType = "plugins") {
+            Column(Modifier.padding(20f.dp), verticalArrangement = Arrangement.spacedBy(12f.dp)) {
+                BasicText(AppStrings.get("plugins_glass"), style = TextStyle(contentColor, 18f.sp, androidx.compose.ui.text.font.FontWeight.Medium))
+                Column(verticalArrangement = Arrangement.spacedBy(8f.dp)) {
+                    Row { BasicText(AppStrings.get("blur_radius"), style = TextStyle(contentColor, 14f.sp), modifier = Modifier.weight(1f)); BasicText("${GlassEffectConfig.pluginsBlurRadius.value.toInt()}dp", style = TextStyle(contentColor.copy(alpha = 0.6f), 12f.sp)) }
+                    LiquidSlider(value = { GlassEffectConfig.pluginsBlurRadius.value / 32f }, onValueChange = { GlassEffectConfig.pluginsBlurRadius.value = it * 32f }, valueRange = 0f..1f, visibilityThreshold = 0.001f, backdrop = backdrop)
+                }
+                Column(verticalArrangement = Arrangement.spacedBy(8f.dp)) {
+                    Row { BasicText(AppStrings.get("opacity"), style = TextStyle(contentColor, 14f.sp), modifier = Modifier.weight(1f)); BasicText("${(GlassEffectConfig.pluginsOpacity.value * 100).toInt()}%", style = TextStyle(contentColor.copy(alpha = 0.6f), 12f.sp)) }
+                    LiquidSlider(value = { GlassEffectConfig.pluginsOpacity.value }, onValueChange = { GlassEffectConfig.pluginsOpacity.value = it }, valueRange = 0f..1f, visibilityThreshold = 0.001f, backdrop = backdrop)
+                }
+                Column(verticalArrangement = Arrangement.spacedBy(8f.dp)) {
+                    Row { BasicText(AppStrings.get("corner_radius"), style = TextStyle(contentColor, 14f.sp), modifier = Modifier.weight(1f)); BasicText("${(GlassEffectConfig.pluginsCornerRadius.value * 100).toInt()}%", style = TextStyle(contentColor.copy(alpha = 0.6f), 12f.sp)) }
+                    LiquidSlider(value = { GlassEffectConfig.pluginsCornerRadius.value }, onValueChange = { GlassEffectConfig.pluginsCornerRadius.value = it }, valueRange = 0f..1f, visibilityThreshold = 0.001f, backdrop = backdrop)
+                }
+                Column(verticalArrangement = Arrangement.spacedBy(8f.dp)) {
+                    Row { BasicText(AppStrings.get("refraction_height"), style = TextStyle(contentColor, 14f.sp), modifier = Modifier.weight(1f)); BasicText("${(GlassEffectConfig.pluginsRefractionHeight.value * 100).toInt()}%", style = TextStyle(contentColor.copy(alpha = 0.6f), 12f.sp)) }
+                    LiquidSlider(value = { GlassEffectConfig.pluginsRefractionHeight.value }, onValueChange = { GlassEffectConfig.pluginsRefractionHeight.value = it }, valueRange = 0f..1f, visibilityThreshold = 0.001f, backdrop = backdrop)
+                }
+                Column(verticalArrangement = Arrangement.spacedBy(8f.dp)) {
+                    Row { BasicText(AppStrings.get("refraction_amount"), style = TextStyle(contentColor, 14f.sp), modifier = Modifier.weight(1f)); BasicText("${(GlassEffectConfig.pluginsRefractionAmount.value * 100).toInt()}%", style = TextStyle(contentColor.copy(alpha = 0.6f), 12f.sp)) }
+                    LiquidSlider(value = { GlassEffectConfig.pluginsRefractionAmount.value }, onValueChange = { GlassEffectConfig.pluginsRefractionAmount.value = it }, valueRange = 0f..1f, visibilityThreshold = 0.001f, backdrop = backdrop)
+                }
+            }
+        }
+
+        Spacer(Modifier.height(16f.dp))
+
+        // adbmodule_glass液态玻璃调节
+        GlassCard(backdrop = backdrop, pageType = "adbmodule") {
+            Column(Modifier.padding(20f.dp), verticalArrangement = Arrangement.spacedBy(12f.dp)) {
+                BasicText(AppStrings.get("adbmodule_glass"), style = TextStyle(contentColor, 18f.sp, androidx.compose.ui.text.font.FontWeight.Medium))
+                Column(verticalArrangement = Arrangement.spacedBy(8f.dp)) {
+                    Row { BasicText(AppStrings.get("blur_radius"), style = TextStyle(contentColor, 14f.sp), modifier = Modifier.weight(1f)); BasicText("${GlassEffectConfig.adbmoduleBlurRadius.value.toInt()}dp", style = TextStyle(contentColor.copy(alpha = 0.6f), 12f.sp)) }
+                    LiquidSlider(value = { GlassEffectConfig.adbmoduleBlurRadius.value / 32f }, onValueChange = { GlassEffectConfig.adbmoduleBlurRadius.value = it * 32f }, valueRange = 0f..1f, visibilityThreshold = 0.001f, backdrop = backdrop)
+                }
+                Column(verticalArrangement = Arrangement.spacedBy(8f.dp)) {
+                    Row { BasicText(AppStrings.get("opacity"), style = TextStyle(contentColor, 14f.sp), modifier = Modifier.weight(1f)); BasicText("${(GlassEffectConfig.adbmoduleOpacity.value * 100).toInt()}%", style = TextStyle(contentColor.copy(alpha = 0.6f), 12f.sp)) }
+                    LiquidSlider(value = { GlassEffectConfig.adbmoduleOpacity.value }, onValueChange = { GlassEffectConfig.adbmoduleOpacity.value = it }, valueRange = 0f..1f, visibilityThreshold = 0.001f, backdrop = backdrop)
+                }
+                Column(verticalArrangement = Arrangement.spacedBy(8f.dp)) {
+                    Row { BasicText(AppStrings.get("corner_radius"), style = TextStyle(contentColor, 14f.sp), modifier = Modifier.weight(1f)); BasicText("${(GlassEffectConfig.adbmoduleCornerRadius.value * 100).toInt()}%", style = TextStyle(contentColor.copy(alpha = 0.6f), 12f.sp)) }
+                    LiquidSlider(value = { GlassEffectConfig.adbmoduleCornerRadius.value }, onValueChange = { GlassEffectConfig.adbmoduleCornerRadius.value = it }, valueRange = 0f..1f, visibilityThreshold = 0.001f, backdrop = backdrop)
+                }
+                Column(verticalArrangement = Arrangement.spacedBy(8f.dp)) {
+                    Row { BasicText(AppStrings.get("refraction_height"), style = TextStyle(contentColor, 14f.sp), modifier = Modifier.weight(1f)); BasicText("${(GlassEffectConfig.adbmoduleRefractionHeight.value * 100).toInt()}%", style = TextStyle(contentColor.copy(alpha = 0.6f), 12f.sp)) }
+                    LiquidSlider(value = { GlassEffectConfig.adbmoduleRefractionHeight.value }, onValueChange = { GlassEffectConfig.adbmoduleRefractionHeight.value = it }, valueRange = 0f..1f, visibilityThreshold = 0.001f, backdrop = backdrop)
+                }
+                Column(verticalArrangement = Arrangement.spacedBy(8f.dp)) {
+                    Row { BasicText(AppStrings.get("refraction_amount"), style = TextStyle(contentColor, 14f.sp), modifier = Modifier.weight(1f)); BasicText("${(GlassEffectConfig.adbmoduleRefractionAmount.value * 100).toInt()}%", style = TextStyle(contentColor.copy(alpha = 0.6f), 12f.sp)) }
+                    LiquidSlider(value = { GlassEffectConfig.adbmoduleRefractionAmount.value }, onValueChange = { GlassEffectConfig.adbmoduleRefractionAmount.value = it }, valueRange = 0f..1f, visibilityThreshold = 0.001f, backdrop = backdrop)
+                }
+            }
+        }
+
+        Spacer(Modifier.height(16f.dp))
+
         // 保存按钮
         LiquidButton(
             onClick = {

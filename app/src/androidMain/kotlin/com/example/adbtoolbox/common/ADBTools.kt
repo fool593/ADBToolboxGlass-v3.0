@@ -39,8 +39,8 @@ actual object ADBTools {
         } catch (e: Exception) {
             false
         }
-        // Shizuku 不可用时，检查 Dhizuku 是否激活（设备所有者权限）
-        val finalResult = if (result) true else (AppCache.useDhizuku.value && isDhizukuActive())
+        // Shizuku 不可用时，检查 Dhizuku 权限（需已激活为设备所有者且已授权给本应用）
+        val finalResult = if (result) true else (AppCache.useDhizuku.value && isDhizukuPermissionGranted())
         shizukuCache = finalResult
         shizukuCacheTime = now
         return finalResult
@@ -79,6 +79,53 @@ actual object ADBTools {
             }
         } catch (e: Exception) {
             null
+        }
+    }
+
+    // 检测 Dhizuku 是否已授权给本应用（通过反射调用 Dhizuku API）
+    actual fun isDhizukuPermissionGranted(): Boolean {
+        if (!isDhizukuActive()) return false
+        return try {
+            val dhizukuClass = Class.forName("com.rosan.dhizuku.api.Dhizuku")
+            try {
+                val method = dhizukuClass.getMethod("isPermissionGranted")
+                method.invoke(null) as Boolean
+            } catch (e: NoSuchMethodException) {
+                try {
+                    val method = dhizukuClass.getMethod("checkSelfPermission", String::class.java)
+                    val result = method.invoke(null, "com.rosan.dhizuku.permission.MANAGE")
+                    result == android.content.pm.PackageManager.PERMISSION_GRANTED
+                } catch (e2: Exception) {
+                    true
+                }
+            }
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    // 请求 Dhizuku 权限（像 MT 管理器一样，Dhizuku 会弹出授权对话框）
+    actual fun requestDhizukuPermission(): Boolean {
+        if (!isDhizukuActive()) return false
+        return try {
+            val dhizukuClass = Class.forName("com.rosan.dhizuku.api.Dhizuku")
+            try {
+                val method = dhizukuClass.getMethod("requestPermission")
+                method.invoke(null)
+                Thread.sleep(500)
+                isDhizukuPermissionGranted()
+            } catch (e: NoSuchMethodException) {
+                try {
+                    val method = dhizukuClass.getMethod("requestPermission", Int::class.javaPrimitiveType)
+                    method.invoke(null, 1001)
+                    Thread.sleep(500)
+                    isDhizukuPermissionGranted()
+                } catch (e2: Exception) {
+                    true
+                }
+            }
+        } catch (e: Exception) {
+            false
         }
     }
 
@@ -832,6 +879,86 @@ actual object ADBTools {
             }
         } catch (e: Exception) {
             CommandResult("", "Remove failed: ${e.message}", -1)
+        }
+    }
+
+    // 获取处理器型号
+    actual fun getCpuModel(): String {
+        return try {
+            val hardware = android.os.Build.HARDWARE.lowercase()
+            when {
+                hardware.contains("mt") || hardware.contains("dimensity") -> {
+                    val cpuInfo = java.io.File("/proc/cpuinfo").readText()
+                    val hardwareLine = cpuInfo.lines().firstOrNull { it.contains("Hardware", ignoreCase = true) }
+                    hardwareLine?.substringAfter(":")?.trim() ?: "MediaTek Dimensity"
+                }
+                hardware.contains("qcom") || hardware.contains("sm") || hardware.contains("kalama") || hardware.contains("pineapple") -> {
+                    when {
+                        hardware.contains("kalama") || hardware.contains("sm8550") -> "Snapdragon 8 Gen 2"
+                        hardware.contains("pineapple") -> "Snapdragon 8 Gen 3"
+                        hardware.contains("sm8450") -> "Snapdragon 8 Gen 1"
+                        hardware.contains("sm8350") -> "Snapdragon 888"
+                        hardware.contains("sm8250") -> "Snapdragon 865"
+                        hardware.contains("sm7450") -> "Snapdragon 7+ Gen 2"
+                        else -> "Qualcomm Snapdragon"
+                    }
+                }
+                else -> "Unknown ($hardware)"
+            }
+        } catch (e: Exception) {
+            "Unknown"
+        }
+    }
+
+    // 获取处理器厂商
+    actual fun getCpuVendor(): String {
+        return try {
+            val hardware = android.os.Build.HARDWARE.lowercase()
+            when {
+                hardware.contains("mt") || hardware.contains("dimensity") -> "mediatek"
+                hardware.contains("qcom") || hardware.contains("sm") || hardware.contains("kalama") || hardware.contains("pineapple") -> "qualcomm"
+                else -> "other"
+            }
+        } catch (e: Exception) {
+            "other"
+        }
+    }
+
+    // 刷入临时 Root 提权包（zip 格式）
+    actual fun flashTempRootModule(zipPath: String): CommandResult {
+        val zipFile = java.io.File(zipPath)
+        if (!zipFile.exists()) {
+            return CommandResult("", "File not found: $zipPath", -1)
+        }
+        return try {
+            val tempDir = java.io.File(appContext.cacheDir, "temp_root_${System.currentTimeMillis()}")
+            tempDir.mkdirs()
+            java.util.zip.ZipFile(zipFile).use { zip ->
+                zip.entries().asSequence().forEach { entry ->
+                    val outFile = java.io.File(tempDir, entry.name)
+                    if (entry.isDirectory) {
+                        outFile.mkdirs()
+                    } else {
+                        outFile.parentFile?.mkdirs()
+                        zip.getInputStream(entry).use { input ->
+                            outFile.outputStream().use { output -> input.copyTo(output) }
+                        }
+                    }
+                }
+            }
+            val scriptFile = tempDir.walkTopDown().firstOrNull {
+                it.name == "run.sh" || it.name == "root.sh" || it.name == "install.sh" || it.name.endsWith(".sh")
+            }
+            if (scriptFile == null) {
+                tempDir.deleteRecursively()
+                return CommandResult("", "No script found in zip package", -1)
+            }
+            scriptFile.setExecutable(true)
+            val result = execCommand("sh ${scriptFile.absolutePath}", 60)
+            tempDir.deleteRecursively()
+            result
+        } catch (e: Exception) {
+            CommandResult("", "Error: ${e.message}", -1)
         }
     }
 

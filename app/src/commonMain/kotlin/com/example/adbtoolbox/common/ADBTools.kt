@@ -44,8 +44,15 @@ expect object ADBTools {
     // Dhizuku 设备所有者
     fun isDhizukuInstalled(): Boolean
     fun isDhizukuActive(): Boolean
+    fun isDhizukuPermissionGranted(): Boolean
+    fun requestDhizukuPermission(): Boolean
     fun activateDhizuku(): CommandResult
     fun removeDhizuku(): CommandResult
+
+    // 临时 Root（提权）相关
+    fun getCpuModel(): String // 返回处理器型号，如 "Dimensity 9200" / "Snapdragon 8 Gen 2"
+    fun getCpuVendor(): String // 返回 "mediatek" / "qualcomm" / "other"
+    fun flashTempRootModule(zipPath: String): CommandResult // 刷入临时 Root 提权包
 }
 
 data class CommandResult(

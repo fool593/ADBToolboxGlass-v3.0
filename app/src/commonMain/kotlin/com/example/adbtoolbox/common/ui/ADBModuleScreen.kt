@@ -74,7 +74,7 @@ fun ADBModuleScreen(
         Spacer(Modifier.height(12f.dp))
 
         // Root模式提示
-        GlassCard(backdrop = backdrop, pageType = "apps") {
+        GlassCard(backdrop = backdrop, pageType = "adbmodule") {
             Column(Modifier.padding(20f.dp)) {
                 BasicText(
                     AppStrings.get("root_mode_hint"),
@@ -86,7 +86,7 @@ fun ADBModuleScreen(
         Spacer(Modifier.height(16f.dp))
 
         // 文件选择
-        GlassCard(backdrop = backdrop, pageType = "apps") {
+        GlassCard(backdrop = backdrop, pageType = "adbmodule") {
             Column(Modifier.padding(20f.dp)) {
                 SectionTitle(AppStrings.get("select_module_file"), contentColor)
                 Row(horizontalArrangement = Arrangement.spacedBy(8f.dp)) {
@@ -139,7 +139,7 @@ fun ADBModuleScreen(
 
         // 刷入日志
         if (installLog.isNotEmpty()) {
-            GlassCard(backdrop = backdrop, pageType = "apps") {
+            GlassCard(backdrop = backdrop, pageType = "adbmodule") {
                 Column(Modifier.padding(20f.dp)) {
                     SectionTitle(AppStrings.get("install_log"), contentColor)
                     BasicText(

@@ -219,8 +219,8 @@ fun LiquidBottomTabs(
                             if (GlassEffectConfig.navEnableVibrancy.value) vibrancy()
                             blur(GlassEffectConfig.navBlurRadius.value.dp.toPx() * 1.5f)
                             lens(
-                                GlassEffectConfig.navRefractionHeight.value * 48f.dp.toPx() * (1f + progress),
-                                GlassEffectConfig.navRefractionAmount.value * 48f.dp.toPx() * (1f + progress),
+                                GlassEffectConfig.navRefractionHeight.value * 72f.dp.toPx() * (1f + progress),
+                                GlassEffectConfig.navRefractionAmount.value * 72f.dp.toPx() * (1f + progress),
                                 chromaticAberration = GlassEffectConfig.navChromaticAberration.value > 0f
                             )
                         },
@@ -255,16 +255,19 @@ fun LiquidBottomTabs(
                 .drawBackdrop(
                     backdrop = rememberCombinedBackdrop(backdrop, tabsBackdrop),
                     shape = {
-                        when (GlassEffectConfig.navIndicatorShape.value) {
-                            "round" -> Capsule()
-                            else -> RoundedRectangle(
-                                (GlassEffectConfig.navIndicatorHeight.value / 2f).dp * GlassEffectConfig.navIndicatorCorner.value
-                            )
+                        // 所有形状都用 RoundedRectangle，通过圆角值区分：round=height/2(胶囊), square=0(正方形), 中间值自由调节
+                        val cornerFactor = when (GlassEffectConfig.navIndicatorShape.value) {
+                            "round" -> 1f
+                            "square" -> 0f
+                            else -> GlassEffectConfig.navIndicatorCorner.value
                         }
+                        RoundedRectangle(
+                            (GlassEffectConfig.navIndicatorHeight.value / 2f).dp * cornerFactor
+                        )
                     },
                     effects = {
                         val progress = dampedDragAnimation.pressProgress
-                        blur(GlassEffectConfig.navIndicatorBlur.value.dp.toPx())
+                        blur(GlassEffectConfig.navIndicatorBlur.value.dp.toPx() * 2f)
                         lens(
                             10f.dp.toPx() * progress,
                             14f.dp.toPx() * progress,
