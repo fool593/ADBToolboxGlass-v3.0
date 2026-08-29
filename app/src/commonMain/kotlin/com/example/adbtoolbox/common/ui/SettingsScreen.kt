@@ -265,6 +265,22 @@ fun SettingsScreen(
                     style = TextStyle(if (dhizukuActive) Color(0xFF34C759) else if (dhizukuInstalled) Color(0xFFFF9500) else Color(0xFFFF3B30), 14f.sp)
                 )
                 Spacer(Modifier.height(8f.dp))
+                // 使用 Dhizuku 权限开关
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    BasicText(AppStrings.get("use_dhizuku"), style = TextStyle(contentColor, 14f.sp), modifier = Modifier.weight(1f))
+                    BasicText(
+                        if (AppCache.useDhizuku.value) AppStrings.get("enabled") else AppStrings.get("disabled"),
+                        style = TextStyle(if (AppCache.useDhizuku.value) Color(0xFF34C759) else Color(0xFF8E8E93), 12f.sp)
+                    )
+                }
+                LiquidSlider(
+                    value = { if (AppCache.useDhizuku.value) 1f else 0f },
+                    onValueChange = { AppCache.useDhizuku.value = it > 0.5f },
+                    valueRange = 0f..1f,
+                    visibilityThreshold = 0.01f,
+                    backdrop = backdrop
+                )
+                Spacer(Modifier.height(8f.dp))
                 BasicText(AppStrings.get("dhizuku_hint"), style = TextStyle(contentColor.copy(alpha = 0.6f), 12f.sp))
                 Spacer(Modifier.height(12f.dp))
                 if (dhizukuMessage.isNotEmpty()) {

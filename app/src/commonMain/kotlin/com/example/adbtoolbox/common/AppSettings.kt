@@ -327,6 +327,7 @@ object AppStrings {
         "risk_warning" to "⚠️ 风险提示",
 
         // Dhizuku
+        "use_dhizuku" to "使用 Dhizuku 权限",
         "dhizuku_hint" to "比 Shizuku 更小一层的权限，基于设备所有者",
         "dhizuku_notice" to "注意：激活前请确保设备上没有其他账户（包括双开空间）",
         "dhizuku_not_installed" to "Dhizuku 未安装",
@@ -689,6 +690,7 @@ object AppStrings {
         "risk_warning" to "⚠️ Risk Warning",
 
         // Dhizuku
+        "use_dhizuku" to "Use Dhizuku Permission",
         "dhizuku_hint" to "A permission one layer lower than Shizuku, based on Device Owner",
         "dhizuku_notice" to "Note: Before activation, ensure no other accounts on the device (including dual-space)",
         "dhizuku_not_installed" to "Dhizuku not installed",
@@ -1021,6 +1023,7 @@ object AppStrings {
         "risk_warning" to "⚠️ जोखिम चेतावनी",
 
         // Dhizuku
+        "use_dhizuku" to "Dhizuku अनुमति का उपयोग करें",
         "dhizuku_hint" to "Shizuku से एक स्तर नीचे की अनुमति, डिवाइस ओनर पर आधारित",
         "dhizuku_notice" to "नोट: सक्रिय करने से पहले सुनिश्चित करें कि डिवाइस पर कोई अन्य खाता नहीं है (डुअल-स्पेस सहित)",
         "dhizuku_not_installed" to "Dhizuku इंस्टॉल नहीं है",

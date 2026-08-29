@@ -40,6 +40,9 @@ object AppCache {
     val dynamicWallpaperVideoPath = mutableStateOf<String?>(null) // 视频动态壁纸文件路径
     val pickDynamicVideoTrigger = mutableStateOf(0) // 触发视频选择器
 
+    // Dhizuku 使用开关（默认开启，激活后自动使用 Dhizuku 权限执行命令）
+    val useDhizuku = mutableStateOf(true)
+
     fun getPermissions(packageName: String): List<PermissionInfoData>? {
         return permissionCache[packageName]
     }

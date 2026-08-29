@@ -40,7 +40,7 @@ actual object ADBTools {
             false
         }
         // Shizuku 不可用时，检查 Dhizuku 是否激活（设备所有者权限）
-        val finalResult = if (result) true else isDhizukuActive()
+        val finalResult = if (result) true else (AppCache.useDhizuku.value && isDhizukuActive())
         shizukuCache = finalResult
         shizukuCacheTime = now
         return finalResult
@@ -194,9 +194,11 @@ actual object ADBTools {
         if (isShizukuAvailable()) {
             val result = execWithShizuku(command, timeout)
             if (result.exitCode != -999) return result
-            // Shizuku 执行失败时，尝试 Dhizuku
-            val dhizukuResult = execWithDhizuku(command, timeout)
-            if (dhizukuResult != null) return dhizukuResult
+            // Shizuku 执行失败时，尝试 Dhizuku（需用户开启使用 Dhizuku 权限）
+            if (AppCache.useDhizuku.value) {
+                val dhizukuResult = execWithDhizuku(command, timeout)
+                if (dhizukuResult != null) return dhizukuResult
+            }
         }
         // 直接尝试用 su 执行（不调用 isRooted 避免无限递归）
         val suResult = execWithSu(command, timeout)
