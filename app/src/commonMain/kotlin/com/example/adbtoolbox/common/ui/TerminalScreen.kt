@@ -36,6 +36,7 @@ import com.example.adbtoolbox.common.ADBTools
 import com.example.adbtoolbox.common.AppCache
 import com.example.adbtoolbox.common.AppStrings
 import com.example.adbtoolbox.common.CommandResult
+import com.example.adbtoolbox.common.GlassEffectConfig
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.catalog.components.LiquidButton
 import com.kyant.backdrop.drawBackdrop
@@ -138,11 +139,17 @@ fun TerminalScreen(
                 .clip(RoundedRectangle(20f.dp))
                 .drawBackdrop(
                     backdrop = backdrop,
-                    shape = { RoundedRectangle(20f.dp) },
+                    shape = { RoundedRectangle(20f.dp * GlassEffectConfig.terminalCornerRadius.value) },
                     effects = {
-                        vibrancy()
-                        blur(20f.dp.toPx())
-                        lens(8f.dp.toPx(), 16f.dp.toPx())
+                        if (GlassEffectConfig.terminalEnableVibrancy.value) vibrancy()
+                        blur(GlassEffectConfig.terminalBlurRadius.value.dp.toPx())
+                        lens(
+                            GlassEffectConfig.terminalRefractionHeight.value * 48f.dp.toPx(),
+                            GlassEffectConfig.terminalRefractionAmount.value * 48f.dp.toPx()
+                        )
+                    },
+                    onDrawSurface = {
+                        drawRect(Color.White.copy(alpha = GlassEffectConfig.terminalOpacity.value * 0.3f))
                     }
                 )
         ) {
@@ -177,11 +184,17 @@ fun TerminalScreen(
                     .clip(RoundedRectangle(16f.dp))
                     .drawBackdrop(
                         backdrop = backdrop,
-                        shape = { RoundedRectangle(16f.dp) },
+                        shape = { RoundedRectangle(16f.dp * GlassEffectConfig.terminalCornerRadius.value) },
                         effects = {
-                            vibrancy()
-                            blur(20f.dp.toPx())
-                            lens(8f.dp.toPx(), 16f.dp.toPx())
+                            if (GlassEffectConfig.terminalEnableVibrancy.value) vibrancy()
+                            blur(GlassEffectConfig.terminalBlurRadius.value.dp.toPx())
+                            lens(
+                                GlassEffectConfig.terminalRefractionHeight.value * 48f.dp.toPx(),
+                                GlassEffectConfig.terminalRefractionAmount.value * 48f.dp.toPx()
+                            )
+                        },
+                        onDrawSurface = {
+                            drawRect(Color.White.copy(alpha = GlassEffectConfig.terminalOpacity.value * 0.3f))
                         }
                     )
                     .padding(horizontal = 16f.dp),
@@ -231,8 +244,13 @@ fun QuickCmdButton(backdrop: Backdrop, label: String, contentColor: Color, onCli
             .clip(RoundedRectangle(12f.dp))
             .drawBackdrop(
                 backdrop = backdrop,
-                shape = { RoundedRectangle(12f.dp) },
-                effects = { blur(10f.dp.toPx()) }
+                shape = { RoundedRectangle(12f.dp * GlassEffectConfig.terminalCornerRadius.value) },
+                effects = {
+                    blur(GlassEffectConfig.terminalBlurRadius.value.dp.toPx() * 0.5f)
+                },
+                onDrawSurface = {
+                    drawRect(Color.White.copy(alpha = GlassEffectConfig.terminalOpacity.value * 0.2f))
+                }
             )
             .clickableNoRipple(onClick)
             .padding(horizontal = 14f.dp, vertical = 8f.dp)

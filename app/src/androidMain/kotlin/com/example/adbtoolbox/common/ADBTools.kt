@@ -39,9 +39,47 @@ actual object ADBTools {
         } catch (e: Exception) {
             false
         }
-        shizukuCache = result
+        // Shizuku 不可用时，检查 Dhizuku 是否激活（设备所有者权限）
+        val finalResult = if (result) true else isDhizukuActive()
+        shizukuCache = finalResult
         shizukuCacheTime = now
-        return result
+        return finalResult
+    }
+
+    // 通过 Dhizuku 执行命令（反射调用 Dhizuku API，避免硬依赖）
+    private fun execWithDhizuku(command: String, timeout: Int): CommandResult? {
+        return try {
+            val dhizukuClass = Class.forName("com.rosan.dhizuku.api.Dhizuku")
+            // 尝试调用 execute(String) 方法
+            try {
+                val execMethod = dhizukuClass.getMethod("execute", String::class.java)
+                val result = execMethod.invoke(null, command)
+                if (result is android.os.Bundle) {
+                    val output = result.getString("output", "")
+                    val error = result.getString("error", "")
+                    val exitCode = result.getInt("exitCode", -1)
+                    CommandResult(output, error, exitCode)
+                } else {
+                    CommandResult(result?.toString() ?: "", "", 0)
+                }
+            } catch (e: NoSuchMethodException) {
+                // 尝试 newProcess 方式
+                try {
+                    val newProcessMethod = dhizukuClass.getMethod("newProcess", Array<String>::class.java)
+                    val process = newProcessMethod.invoke(null, arrayOf("sh", "-c", command))
+                    if (process is Process) {
+                        val output = process.inputStream.bufferedReader().readText()
+                        val error = process.errorStream.bufferedReader().readText()
+                        val exitCode = process.waitFor()
+                        CommandResult(output, error, exitCode)
+                    } else null
+                } catch (e2: Exception) {
+                    null
+                }
+            }
+        } catch (e: Exception) {
+            null
+        }
     }
 
     actual fun requestShizukuPermission() {
@@ -156,6 +194,9 @@ actual object ADBTools {
         if (isShizukuAvailable()) {
             val result = execWithShizuku(command, timeout)
             if (result.exitCode != -999) return result
+            // Shizuku 执行失败时，尝试 Dhizuku
+            val dhizukuResult = execWithDhizuku(command, timeout)
+            if (dhizukuResult != null) return dhizukuResult
         }
         // 直接尝试用 su 执行（不调用 isRooted 避免无限递归）
         val suResult = execWithSu(command, timeout)
