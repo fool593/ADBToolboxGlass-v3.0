@@ -7,8 +7,8 @@ import androidx.compose.runtime.setValue
 object AppSettings {
     var isDarkMode by mutableStateOf(true)
     var language by mutableStateOf("zh") // "zh" or "en" or "hi"
-    var navIndicatorStyle by mutableStateOf("capsule") // "capsule"=胶囊, "round"=圆形
-    var shizukuAutoActivate by mutableStateOf(false) // Shizuku 自动激活
+    var navIndicatorStyle by mutableStateOf("capsule") // "capsule"=capsule shape, "round"=round shape
+    var shizukuAutoActivate by mutableStateOf(false) // Shizuku auto activate
 
     fun toggleDarkMode() {
         isDarkMode = !isDarkMode
@@ -23,7 +23,7 @@ object AppSettings {
     }
 }
 
-// 简单的中英文文本映射
+// Simple multi-language text mapping (zh/en/hi)
 object AppStrings {
     fun get(key: String): String {
         return when (AppSettings.language) {
@@ -488,7 +488,7 @@ object AppStrings {
         "dark_mode" to "Dark Mode",
         "light_mode" to "Light Mode",
         "language" to "Language",
-        "chinese" to "中文",
+        "chinese" to "Chinese",
         "english" to "English",
         "wallpaper" to "Wallpaper",
         "set_wallpaper" to "Set Wallpaper",
@@ -885,7 +885,7 @@ object AppStrings {
         "dark_mode" to "डार्क मोड",
         "light_mode" to "लाइट मोड",
         "language" to "भाषा",
-        "chinese" to "中文",
+        "chinese" to "चीनी",
         "english" to "English",
         "hindi" to "हिन्दी",
         "wallpaper" to "वॉलपेपर",
