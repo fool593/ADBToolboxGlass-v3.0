@@ -12,6 +12,9 @@
     <uses-permission android:name="android.permission.INTERACT_ACROSS_USERS_FULL" />
     <uses-permission android:name="android.permission.VIBRATE" />
 
+    <!-- Dhizuku 权限声明：让应用出现在 Dhizuku 的应用管理里 -->
+    <uses-permission android:name="com.rosan.dhizuku.permission.API" />
+
     <!-- Android 11+ 包可见性：声明 Dhizuku 和 Shizuku 包名，确保能通信并出现在其应用管理里 -->
     <queries>
         <package android:name="com.rosan.dhizuku" />

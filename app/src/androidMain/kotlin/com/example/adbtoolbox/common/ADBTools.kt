@@ -109,21 +109,49 @@ actual object ADBTools {
         if (!isDhizukuActive()) return false
         return try {
             val dhizukuClass = Class.forName("com.rosan.dhizuku.api.Dhizuku")
-            // 最新版 Dhizuku API: requestPermission(int requestCode)
+            val activity = appContext as? android.app.Activity
+            // 方式1：最新版 API: requestPermission(Activity, int)
             try {
-                val method = dhizukuClass.getMethod("requestPermission", Int::class.javaPrimitiveType)
-                method.invoke(null, 1001)
-                Thread.sleep(800) // 等待授权对话框处理
+                val method = dhizukuClass.getMethod("requestPermission", android.app.Activity::class.java, Int::class.javaPrimitiveType)
+                if (activity != null) {
+                    method.invoke(null, activity, 1001)
+                } else {
+                    method.invoke(null, null, 1001)
+                }
+                Thread.sleep(1000)
                 isDhizukuPermissionGranted()
             } catch (e: NoSuchMethodException) {
-                // 旧版 API: requestPermission()
+                // 方式2：requestPermission(int)
                 try {
-                    val method = dhizukuClass.getMethod("requestPermission")
-                    method.invoke(null)
-                    Thread.sleep(800)
+                    val method = dhizukuClass.getMethod("requestPermission", Int::class.javaPrimitiveType)
+                    method.invoke(null, 1001)
+                    Thread.sleep(1000)
                     isDhizukuPermissionGranted()
-                } catch (e2: Exception) {
-                    true
+                } catch (e2: NoSuchMethodException) {
+                    // 方式3：通过 Intent 启动 Dhizuku 的授权页面
+                    try {
+                        val intent = android.content.Intent("com.rosan.dhizuku.action.REQUEST_PERMISSION")
+                        intent.setPackage("com.rosan.dhizuku")
+                        intent.putExtra("packageName", appContext.packageName)
+                        intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                        if (activity != null) {
+                            activity.startActivityForResult(intent, 1001)
+                        } else {
+                            appContext.startActivity(intent)
+                        }
+                        Thread.sleep(1000)
+                        isDhizukuPermissionGranted()
+                    } catch (e3: Exception) {
+                        // 方式4：旧版 requestPermission()
+                        try {
+                            val method = dhizukuClass.getMethod("requestPermission")
+                            method.invoke(null)
+                            Thread.sleep(1000)
+                            isDhizukuPermissionGranted()
+                        } catch (e4: Exception) {
+                            true
+                        }
+                    }
                 }
             }
         } catch (e: Exception) {
