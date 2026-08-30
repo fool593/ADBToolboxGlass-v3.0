@@ -104,21 +104,23 @@ actual object ADBTools {
         }
     }
 
-    // 请求 Dhizuku 权限（像 MT 管理器一样，Dhizuku 会弹出授权对话框）
+    // 请求 Dhizuku 权限（最新版 API 格式，Dhizuku 会弹出授权对话框）
     actual fun requestDhizukuPermission(): Boolean {
         if (!isDhizukuActive()) return false
         return try {
             val dhizukuClass = Class.forName("com.rosan.dhizuku.api.Dhizuku")
+            // 最新版 Dhizuku API: requestPermission(int requestCode)
             try {
-                val method = dhizukuClass.getMethod("requestPermission")
-                method.invoke(null)
-                Thread.sleep(500)
+                val method = dhizukuClass.getMethod("requestPermission", Int::class.javaPrimitiveType)
+                method.invoke(null, 1001)
+                Thread.sleep(800) // 等待授权对话框处理
                 isDhizukuPermissionGranted()
             } catch (e: NoSuchMethodException) {
+                // 旧版 API: requestPermission()
                 try {
-                    val method = dhizukuClass.getMethod("requestPermission", Int::class.javaPrimitiveType)
-                    method.invoke(null, 1001)
-                    Thread.sleep(500)
+                    val method = dhizukuClass.getMethod("requestPermission")
+                    method.invoke(null)
+                    Thread.sleep(800)
                     isDhizukuPermissionGranted()
                 } catch (e2: Exception) {
                     true
@@ -842,32 +844,41 @@ actual object ADBTools {
     }
 
     actual fun isDhizukuActive(): Boolean {
-        // 方式1：通过 Dhizuku API 反射检测（最可靠）
+        // 方式1：通过 Dhizuku API 反射检测 getOwnerComponent()（最可靠）
         try {
             val dhizukuClass = Class.forName("com.rosan.dhizuku.api.Dhizuku")
-            // 尝试 isActive() 方法
+            // 尝试 getOwnerComponent() 方法，如果能获取到说明 Dhizuku 已激活为设备所有者
             try {
-                val method = dhizukuClass.getMethod("isActive")
-                if (method.invoke(null) as Boolean) return true
+                val method = dhizukuClass.getMethod("getOwnerComponent")
+                val component = method.invoke(null)
+                if (component != null) return true
             } catch (e: NoSuchMethodException) {}
-            // 尝试 isDeviceOwner() 方法
+            // 尝试 isPermissionGranted() 方法，如果能调用说明已激活
             try {
-                val method = dhizukuClass.getMethod("isDeviceOwner")
-                if (method.invoke(null) as Boolean) return true
+                val method = dhizukuClass.getMethod("isPermissionGranted")
+                method.invoke(null) // 只要不抛异常说明 Dhizuku 已安装且可通信
+                return true
             } catch (e: NoSuchMethodException) {}
-            // 尝试获取 binder，如果能获取到说明已激活
+            // 尝试 getVersion() 方法
             try {
-                val method = dhizukuClass.getMethod("getBinder")
+                val method = dhizukuClass.getMethod("getVersion")
                 if (method.invoke(null) != null) return true
             } catch (e: NoSuchMethodException) {}
         } catch (e: Exception) {}
 
-        // 方式2：通过命令检测
+        // 方式2：通过 PackageManager 检测 Dhizuku 是否为设备所有者
         return try {
-            val result = execCommand("dumpsys device_policy | grep com.rosan.dhizuku")
-            result.output.contains("com.rosan.dhizuku", ignoreCase = true) &&
-            result.output.contains("device-owner", ignoreCase = true)
-        } catch (e: Exception) { false }
+            val dpm = appContext.getSystemService(android.content.Context.DEVICE_POLICY_SERVICE) as android.app.admin.DevicePolicyManager
+            val admins = dpm.activeAdmins
+            admins?.any { it.packageName == "com.rosan.dhizuku" } == true &&
+            dpm.isDeviceOwnerApp("com.rosan.dhizuku")
+        } catch (e: Exception) {
+            // 方式3：通过命令检测
+            try {
+                val result = execCommand("dumpsys device_policy | grep com.rosan.dhizuku")
+                result.output.contains("com.rosan.dhizuku", ignoreCase = true)
+            } catch (e2: Exception) { false }
+        }
     }
 
     actual fun activateDhizuku(): CommandResult {
