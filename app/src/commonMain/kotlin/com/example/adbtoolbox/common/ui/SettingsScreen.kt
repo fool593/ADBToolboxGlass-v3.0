@@ -265,52 +265,54 @@ fun SettingsScreen(
                     style = TextStyle(if (dhizukuActive) Color(0xFF34C759) else if (dhizukuInstalled) Color(0xFFFF9500) else Color(0xFFFF3B30), 14f.sp)
                 )
                 Spacer(Modifier.height(8f.dp))
-                // 使用 Dhizuku 权限开关
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    BasicText(AppStrings.get("use_dhizuku"), style = TextStyle(contentColor, 14f.sp), modifier = Modifier.weight(1f))
-                    BasicText(
-                        if (AppCache.useDhizuku.value) AppStrings.get("enabled") else AppStrings.get("disabled"),
-                        style = TextStyle(if (AppCache.useDhizuku.value) Color(0xFF34C759) else Color(0xFF8E8E93), 12f.sp)
-                    )
-                }
-                LiquidSlider(
-                    value = { if (AppCache.useDhizuku.value) 1f else 0f },
-                    onValueChange = { AppCache.useDhizuku.value = it > 0.5f },
-                    valueRange = 0f..1f,
-                    visibilityThreshold = 0.01f,
-                    backdrop = backdrop
-                )
-                Spacer(Modifier.height(8f.dp))
                 BasicText(AppStrings.get("dhizuku_hint"), style = TextStyle(contentColor.copy(alpha = 0.6f), 12f.sp))
                 Spacer(Modifier.height(12f.dp))
                 if (dhizukuMessage.isNotEmpty()) {
                     BasicText(dhizukuMessage, style = TextStyle(contentColor.copy(alpha = 0.8f), 12f.sp))
                     Spacer(Modifier.height(8f.dp))
                 }
-                // 请求 Dhizuku 权限按钮（像 MT 管理器一样，Dhizuku 作为设备所有者给应用授权）
+                // 两个按钮：请求权限 + 使用开关
                 if (dhizukuInstalled) {
-                    LiquidButton(
-                        onClick = {
-                            dhizukuLoading = true
-                            dhizukuMessage = if (dhizukuActive) AppStrings.get("dhizuku_requesting") else AppStrings.get("dhizuku_activate_hint")
-                            dhizukuScope.launch {
-                                if (dhizukuActive) {
-                                    val granted = withContext(Dispatchers.Default) { ADBTools.requestDhizukuPermission() }
-                                    dhizukuMessage = if (granted) AppStrings.get("dhizuku_granted") else AppStrings.get("dhizuku_denied")
+                    Row(horizontalArrangement = Arrangement.spacedBy(8f.dp)) {
+                        // 请求 Dhizuku 权限按钮（Dhizuku 作为设备所有者给应用授权）
+                        LiquidButton(
+                            onClick = {
+                                dhizukuLoading = true
+                                dhizukuMessage = if (dhizukuActive) AppStrings.get("dhizuku_requesting") else AppStrings.get("dhizuku_activate_hint")
+                                dhizukuScope.launch {
+                                    if (dhizukuActive) {
+                                        val granted = withContext(Dispatchers.Default) { ADBTools.requestDhizukuPermission() }
+                                        dhizukuMessage = if (granted) AppStrings.get("dhizuku_granted") else AppStrings.get("dhizuku_denied")
+                                    }
+                                    dhizukuActive = ADBTools.isDhizukuActive()
+                                    dhizukuLoading = false
                                 }
-                                dhizukuActive = ADBTools.isDhizukuActive()
-                                dhizukuLoading = false
-                            }
-                        },
-                        backdrop = backdrop,
-                        modifier = Modifier.height(44f.dp).fillMaxWidth(),
-                        tint = if (dhizukuActive) Color(0xFFAF52DE) else Color(0xFFFF9500)
-                    ) {
-                        BasicText(
-                            if (dhizukuLoading) AppStrings.get("dhizuku_requesting") else if (dhizukuActive) AppStrings.get("dhizuku_request") else AppStrings.get("dhizuku_not_active"),
-                            Modifier.padding(horizontal = 8f.dp),
-                            style = TextStyle(Color.White, 14f.sp)
-                        )
+                            },
+                            backdrop = backdrop,
+                            modifier = Modifier.height(44f.dp).weight(1f),
+                            tint = if (dhizukuActive) Color(0xFFAF52DE) else Color(0xFFFF9500)
+                        ) {
+                            BasicText(
+                                if (dhizukuLoading) AppStrings.get("dhizuku_requesting") else if (dhizukuActive) AppStrings.get("dhizuku_request") else AppStrings.get("dhizuku_not_active"),
+                                Modifier.padding(horizontal = 4f.dp),
+                                style = TextStyle(Color.White, 13f.sp)
+                            )
+                        }
+                        // 使用 Dhizuku 权限开关按钮
+                        LiquidButton(
+                            onClick = {
+                                AppCache.useDhizuku.value = !AppCache.useDhizuku.value
+                            },
+                            backdrop = backdrop,
+                            modifier = Modifier.height(44f.dp).weight(1f),
+                            tint = if (AppCache.useDhizuku.value) Color(0xFF34C759) else Color(0xFF8E8E93)
+                        ) {
+                            BasicText(
+                                if (AppCache.useDhizuku.value) AppStrings.get("use_dhizuku") + ": " + AppStrings.get("enabled") else AppStrings.get("use_dhizuku") + ": " + AppStrings.get("disabled"),
+                                Modifier.padding(horizontal = 4f.dp),
+                                style = TextStyle(Color.White, 13f.sp)
+                            )
+                        }
                     }
                 } else {
                     BasicText(AppStrings.get("dhizuku_install_hint"), style = TextStyle(contentColor.copy(alpha = 0.6f), 12f.sp))
