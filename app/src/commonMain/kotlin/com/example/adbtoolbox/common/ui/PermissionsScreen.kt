@@ -1,5 +1,6 @@
 package com.example.adbtoolbox.common.ui
 
+import com.example.adbtoolbox.common.GlassEffectConfig
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -191,9 +192,13 @@ fun Modifier.clipGlass(backdrop: Backdrop, radius: Float): Modifier {
                 backdrop = backdrop,
                 shape = { com.kyant.shapes.RoundedRectangle(radius.dp) },
                 effects = {
-                    vibrancy()
-                    blur(16f.dp.toPx())
-                    lens(6f.dp.toPx(), 12f.dp.toPx())
+                    if (GlassEffectConfig.settingsEnableVibrancy.value) vibrancy()
+                    blur(GlassEffectConfig.settingsBlurRadius.value.dp.toPx())
+                    lens(
+                        GlassEffectConfig.settingsRefractionHeight.value * 48f.dp.toPx(),
+                        GlassEffectConfig.settingsRefractionAmount.value * 48f.dp.toPx(),
+                        chromaticAberration = GlassEffectConfig.chromaticAberration.value > 0f
+                    )
                 }
             )
     )

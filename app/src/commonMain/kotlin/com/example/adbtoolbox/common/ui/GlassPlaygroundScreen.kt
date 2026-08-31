@@ -621,6 +621,11 @@ fun GlassPlaygroundScreen(
                     Row { BasicText(AppStrings.get("refraction_amount"), style = TextStyle(contentColor, 14f.sp), modifier = Modifier.weight(1f)); BasicText("${(GlassEffectConfig.homeRefractionAmount.value * 100).toInt()}%", style = TextStyle(contentColor.copy(alpha = 0.6f), 12f.sp)) }
                     LiquidSlider(value = { GlassEffectConfig.homeRefractionAmount.value }, onValueChange = { GlassEffectConfig.homeRefractionAmount.value = it }, valueRange = 0f..1f, visibilityThreshold = 0.001f, backdrop = backdrop)
                 }
+                // 光域
+                Column(verticalArrangement = Arrangement.spacedBy(8f.dp)) {
+                    Row { BasicText(AppStrings.get("vibrancy"), style = TextStyle(contentColor, 14f.sp), modifier = Modifier.weight(1f)); BasicText(if (GlassEffectConfig.homeEnableVibrancy.value) AppStrings.get("enabled") else AppStrings.get("disabled"), style = TextStyle(contentColor.copy(alpha = 0.6f), 12f.sp)) }
+                    LiquidSlider(value = { if (GlassEffectConfig.homeEnableVibrancy.value) 1f else 0f }, onValueChange = { GlassEffectConfig.homeEnableVibrancy.value = it > 0.5f }, valueRange = 0f..1f, visibilityThreshold = 0.001f, backdrop = backdrop)
+                }
             }
         }
 
@@ -649,6 +654,11 @@ fun GlassPlaygroundScreen(
                 Column(verticalArrangement = Arrangement.spacedBy(8f.dp)) {
                     Row { BasicText(AppStrings.get("refraction_amount"), style = TextStyle(contentColor, 14f.sp), modifier = Modifier.weight(1f)); BasicText("${(GlassEffectConfig.terminalRefractionAmount.value * 100).toInt()}%", style = TextStyle(contentColor.copy(alpha = 0.6f), 12f.sp)) }
                     LiquidSlider(value = { GlassEffectConfig.terminalRefractionAmount.value }, onValueChange = { GlassEffectConfig.terminalRefractionAmount.value = it }, valueRange = 0f..1f, visibilityThreshold = 0.001f, backdrop = backdrop)
+                }
+                // 光域
+                Column(verticalArrangement = Arrangement.spacedBy(8f.dp)) {
+                    Row { BasicText(AppStrings.get("vibrancy"), style = TextStyle(contentColor, 14f.sp), modifier = Modifier.weight(1f)); BasicText(if (GlassEffectConfig.terminalEnableVibrancy.value) AppStrings.get("enabled") else AppStrings.get("disabled"), style = TextStyle(contentColor.copy(alpha = 0.6f), 12f.sp)) }
+                    LiquidSlider(value = { if (GlassEffectConfig.terminalEnableVibrancy.value) 1f else 0f }, onValueChange = { GlassEffectConfig.terminalEnableVibrancy.value = it > 0.5f }, valueRange = 0f..1f, visibilityThreshold = 0.001f, backdrop = backdrop)
                 }
             }
         }
@@ -679,6 +689,11 @@ fun GlassPlaygroundScreen(
                     Row { BasicText(AppStrings.get("refraction_amount"), style = TextStyle(contentColor, 14f.sp), modifier = Modifier.weight(1f)); BasicText("${(GlassEffectConfig.settingsRefractionAmount.value * 100).toInt()}%", style = TextStyle(contentColor.copy(alpha = 0.6f), 12f.sp)) }
                     LiquidSlider(value = { GlassEffectConfig.settingsRefractionAmount.value }, onValueChange = { GlassEffectConfig.settingsRefractionAmount.value = it }, valueRange = 0f..1f, visibilityThreshold = 0.001f, backdrop = backdrop)
                 }
+                // 光域
+                Column(verticalArrangement = Arrangement.spacedBy(8f.dp)) {
+                    Row { BasicText(AppStrings.get("vibrancy"), style = TextStyle(contentColor, 14f.sp), modifier = Modifier.weight(1f)); BasicText(if (GlassEffectConfig.settingsEnableVibrancy.value) AppStrings.get("enabled") else AppStrings.get("disabled"), style = TextStyle(contentColor.copy(alpha = 0.6f), 12f.sp)) }
+                    LiquidSlider(value = { if (GlassEffectConfig.settingsEnableVibrancy.value) 1f else 0f }, onValueChange = { GlassEffectConfig.settingsEnableVibrancy.value = it > 0.5f }, valueRange = 0f..1f, visibilityThreshold = 0.001f, backdrop = backdrop)
+                }
             }
         }
 
@@ -707,6 +722,11 @@ fun GlassPlaygroundScreen(
                 Column(verticalArrangement = Arrangement.spacedBy(8f.dp)) {
                     Row { BasicText(AppStrings.get("refraction_amount"), style = TextStyle(contentColor, 14f.sp), modifier = Modifier.weight(1f)); BasicText("${(GlassEffectConfig.appsRefractionAmount.value * 100).toInt()}%", style = TextStyle(contentColor.copy(alpha = 0.6f), 12f.sp)) }
                     LiquidSlider(value = { GlassEffectConfig.appsRefractionAmount.value }, onValueChange = { GlassEffectConfig.appsRefractionAmount.value = it }, valueRange = 0f..1f, visibilityThreshold = 0.001f, backdrop = backdrop)
+                }
+                // 光域
+                Column(verticalArrangement = Arrangement.spacedBy(8f.dp)) {
+                    Row { BasicText(AppStrings.get("vibrancy"), style = TextStyle(contentColor, 14f.sp), modifier = Modifier.weight(1f)); BasicText(if (GlassEffectConfig.appsEnableVibrancy.value) AppStrings.get("enabled") else AppStrings.get("disabled"), style = TextStyle(contentColor.copy(alpha = 0.6f), 12f.sp)) }
+                    LiquidSlider(value = { if (GlassEffectConfig.appsEnableVibrancy.value) 1f else 0f }, onValueChange = { GlassEffectConfig.appsEnableVibrancy.value = it > 0.5f }, valueRange = 0f..1f, visibilityThreshold = 0.001f, backdrop = backdrop)
                 }
             }
         }
@@ -737,6 +757,11 @@ fun GlassPlaygroundScreen(
                     Row { BasicText(AppStrings.get("refraction_amount"), style = TextStyle(contentColor, 14f.sp), modifier = Modifier.weight(1f)); BasicText("${(GlassEffectConfig.pluginsRefractionAmount.value * 100).toInt()}%", style = TextStyle(contentColor.copy(alpha = 0.6f), 12f.sp)) }
                     LiquidSlider(value = { GlassEffectConfig.pluginsRefractionAmount.value }, onValueChange = { GlassEffectConfig.pluginsRefractionAmount.value = it }, valueRange = 0f..1f, visibilityThreshold = 0.001f, backdrop = backdrop)
                 }
+                // 光域
+                Column(verticalArrangement = Arrangement.spacedBy(8f.dp)) {
+                    Row { BasicText(AppStrings.get("vibrancy"), style = TextStyle(contentColor, 14f.sp), modifier = Modifier.weight(1f)); BasicText(if (GlassEffectConfig.pluginsEnableVibrancy.value) AppStrings.get("enabled") else AppStrings.get("disabled"), style = TextStyle(contentColor.copy(alpha = 0.6f), 12f.sp)) }
+                    LiquidSlider(value = { if (GlassEffectConfig.pluginsEnableVibrancy.value) 1f else 0f }, onValueChange = { GlassEffectConfig.pluginsEnableVibrancy.value = it > 0.5f }, valueRange = 0f..1f, visibilityThreshold = 0.001f, backdrop = backdrop)
+                }
             }
         }
 
@@ -765,6 +790,11 @@ fun GlassPlaygroundScreen(
                 Column(verticalArrangement = Arrangement.spacedBy(8f.dp)) {
                     Row { BasicText(AppStrings.get("refraction_amount"), style = TextStyle(contentColor, 14f.sp), modifier = Modifier.weight(1f)); BasicText("${(GlassEffectConfig.adbmoduleRefractionAmount.value * 100).toInt()}%", style = TextStyle(contentColor.copy(alpha = 0.6f), 12f.sp)) }
                     LiquidSlider(value = { GlassEffectConfig.adbmoduleRefractionAmount.value }, onValueChange = { GlassEffectConfig.adbmoduleRefractionAmount.value = it }, valueRange = 0f..1f, visibilityThreshold = 0.001f, backdrop = backdrop)
+                }
+                // 光域
+                Column(verticalArrangement = Arrangement.spacedBy(8f.dp)) {
+                    Row { BasicText(AppStrings.get("vibrancy"), style = TextStyle(contentColor, 14f.sp), modifier = Modifier.weight(1f)); BasicText(if (GlassEffectConfig.adbmoduleEnableVibrancy.value) AppStrings.get("enabled") else AppStrings.get("disabled"), style = TextStyle(contentColor.copy(alpha = 0.6f), 12f.sp)) }
+                    LiquidSlider(value = { if (GlassEffectConfig.adbmoduleEnableVibrancy.value) 1f else 0f }, onValueChange = { GlassEffectConfig.adbmoduleEnableVibrancy.value = it > 0.5f }, valueRange = 0f..1f, visibilityThreshold = 0.001f, backdrop = backdrop)
                 }
             }
         }

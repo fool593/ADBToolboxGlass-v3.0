@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.adbtoolbox.common.ADBTools
 import com.example.adbtoolbox.common.AppStrings
+import com.example.adbtoolbox.common.GlassEffectConfig
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.catalog.components.LiquidButton
 import com.kyant.backdrop.catalog.components.LiquidToggle
@@ -189,14 +190,18 @@ fun ShellExecutorScreen(
 fun Modifier.clipGlassSmall(backdrop: Backdrop): Modifier {
     return this.then(
         Modifier
-            .clip(com.kyant.shapes.RoundedRectangle(16f.dp))
+            .clip(com.kyant.shapes.RoundedRectangle(32f.dp * GlassEffectConfig.settingsCornerRadius.value))
             .drawBackdrop(
                 backdrop = backdrop,
-                shape = { com.kyant.shapes.RoundedRectangle(16f.dp) },
+                shape = { com.kyant.shapes.RoundedRectangle(32f.dp * GlassEffectConfig.settingsCornerRadius.value) },
                 effects = {
-                    vibrancy()
-                    blur(16f.dp.toPx())
-                    lens(6f.dp.toPx(), 12f.dp.toPx())
+                    if (GlassEffectConfig.settingsEnableVibrancy.value) vibrancy()
+                    blur(GlassEffectConfig.settingsBlurRadius.value.dp.toPx())
+                    lens(
+                        GlassEffectConfig.settingsRefractionHeight.value * 48f.dp.toPx(),
+                        GlassEffectConfig.settingsRefractionAmount.value * 48f.dp.toPx(),
+                        chromaticAberration = GlassEffectConfig.chromaticAberration.value > 0f
+                    )
                 }
             )
     )
