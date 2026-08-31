@@ -40,6 +40,11 @@ object AppCache {
     val dynamicWallpaperVideoPath = mutableStateOf<String?>(null) // 视频动态壁纸文件路径
     val pickDynamicVideoTrigger = mutableStateOf(0) // 触发视频选择器
 
+    // 自定义开屏动画视频
+    val splashVideoPath = mutableStateOf<String?>(null) // 用户自定义开屏视频文件路径
+    val pickSplashVideoTrigger = mutableStateOf(0) // 触发开屏视频选择器
+    val clearSplashVideoTrigger = mutableStateOf(0) // 触发删除开屏视频
+
     // Dhizuku 使用开关（默认开启，激活后自动使用 Dhizuku 权限执行命令）
     val useDhizuku = mutableStateOf(true)
 

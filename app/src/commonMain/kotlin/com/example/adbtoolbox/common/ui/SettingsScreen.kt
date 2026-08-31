@@ -172,6 +172,44 @@ fun SettingsScreen(
 
         Spacer(Modifier.height(16f.dp))
 
+        // 开屏动画设置
+        GlassCard(backdrop = backdrop, pageType = "settings") {
+            Column(Modifier.padding(20f.dp), verticalArrangement = Arrangement.spacedBy(12f.dp)) {
+                BasicText(AppStrings.get("splash_animation"), style = TextStyle(contentColor, 18f.sp, androidx.compose.ui.text.font.FontWeight.Medium))
+                BasicText(AppStrings.get("splash_video_hint"), style = TextStyle(contentColor.copy(alpha = 0.6f), 12f.sp))
+
+                LiquidButton(
+                    onClick = { AppCache.pickSplashVideoTrigger.value++ },
+                    backdrop = backdrop,
+                    modifier = Modifier.height(44f.dp).fillMaxWidth(),
+                    tint = Color(0xFF0088FF)
+                ) {
+                    BasicText(
+                        if (AppCache.splashVideoPath.value != null) AppStrings.get("splash_video_selected") else AppStrings.get("splash_select_video"),
+                        Modifier.padding(horizontal = 8f.dp),
+                        style = TextStyle(Color.White, 14f.sp)
+                    )
+                }
+
+                if (AppCache.splashVideoPath.value != null) {
+                    BasicText(
+                        "${AppStrings.get("splash_current")}: ${AppCache.splashVideoPath.value?.substringAfterLast('/')}",
+                        style = TextStyle(contentColor.copy(alpha = 0.6f), 12f.sp)
+                    )
+                    LiquidButton(
+                        onClick = { AppCache.clearSplashVideoTrigger.value++ },
+                        backdrop = backdrop,
+                        modifier = Modifier.height(40f.dp).fillMaxWidth(),
+                        tint = Color(0xFFFF3B30)
+                    ) {
+                        BasicText(AppStrings.get("splash_clear"), style = TextStyle(Color.White, 14f.sp))
+                    }
+                }
+            }
+        }
+
+        Spacer(Modifier.height(16f.dp))
+
         // 液态玻璃调节
         GlassCard(backdrop = backdrop, pageType = "settings") {
             Column(Modifier.padding(20f.dp)) {

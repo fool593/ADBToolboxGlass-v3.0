@@ -197,12 +197,12 @@ fun LiquidSlider(
                         val progress = dampedDragAnimation.pressProgress
                         val lp = longPressAnim.value
                         val edgeRef = GlassEffectConfig.longPressRefraction.value
-                        // 长按时大幅增强折射，边缘文字/背景会产生明显扭曲；全局渲染强度实时放大
+                        // 长按时大幅增强折射，边缘文字/背景会产生明显扭曲；全局渲染强度实时放大（clamp 防止过强崩溃）
                         val gI = GlassEffectConfig.globalIntensity.value
-                        blur(8f.dp.toPx() * (1f - progress) * (0.5f + gI * 0.5f))
+                        blur((8f.dp.toPx() * (1f - progress) * (0.5f + gI * 0.5f)).coerceAtMost(40f.dp.toPx()))
                         lens(
-                            (10f.dp.toPx() * progress + 22f.dp.toPx() * lp * edgeRef) * gI,
-                            (14f.dp.toPx() * progress + 34f.dp.toPx() * lp * edgeRef) * gI,
+                            ((10f.dp.toPx() * progress + 22f.dp.toPx() * lp * edgeRef) * gI).coerceAtMost(90f.dp.toPx()),
+                            ((14f.dp.toPx() * progress + 34f.dp.toPx() * lp * edgeRef) * gI).coerceAtMost(120f.dp.toPx()),
                             chromaticAberration = true
                         )
                     },

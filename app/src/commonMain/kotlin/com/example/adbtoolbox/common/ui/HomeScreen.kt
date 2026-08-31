@@ -243,10 +243,11 @@ fun GlassCard(
                 effects = {
                     val minDim = size.minDimension
                     if (enableVibrancy) vibrancy()
-                    blur(blurRadius.dp.toPx() * intensity)
+                    blur((blurRadius.dp.toPx() * intensity).coerceAtMost(48f.dp.toPx()))
                     lens(
-                        refractionHeight = refHeight * minDim * 1.0f * intensity,
-                        refractionAmount = refAmount * minDim * 1.5f * intensity,
+                        // 折射量 clamp 到卡片尺寸的合理比例，防止 globalIntensity 过高导致渲染层崩溃、内容消失
+                        refractionHeight = (refHeight * minDim * 1.0f * intensity).coerceAtMost(minDim * 0.3f),
+                        refractionAmount = (refAmount * minDim * 1.5f * intensity).coerceAtMost(minDim * 0.45f),
                         depthEffect = true,
                         chromaticAberration = config.chromaticAberration.value > 0f
                     )

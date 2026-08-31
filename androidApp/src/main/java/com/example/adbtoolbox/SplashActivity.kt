@@ -30,8 +30,30 @@ class SplashActivity : ComponentActivity() {
         rootLayout.addView(videoView)
         setContentView(rootLayout)
 
-        val videoPath = "android.resource://$packageName/raw/splash_video"
-        videoView.setVideoURI(Uri.parse(videoPath))
+        // 优先使用用户自定义的开屏视频（已持久化到 filesDir/splash/splash_video.mp4）
+        var videoUri: Uri? = null
+        try {
+            val customPath = com.example.adbtoolbox.common.AppCache.splashVideoPath.value
+            val splashFile = if (customPath != null && java.io.File(customPath).exists())
+                java.io.File(customPath)
+            else {
+                // 从持久化恢复（若 AppCache 尚未加载）
+                val saved = java.io.File(filesDir, "splash/splash_video.mp4")
+                if (saved.exists()) saved else null
+            }
+            if (splashFile != null && splashFile.length() > 0) {
+                videoUri = Uri.fromFile(splashFile)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        if (videoUri != null) {
+            videoView.setVideoURI(videoUri)
+        } else {
+            val builtinPath = "android.resource://$packageName/raw/splash_video"
+            videoView.setVideoURI(Uri.parse(builtinPath))
+        }
 
         videoView.setOnCompletionListener {
             navigateToMain()

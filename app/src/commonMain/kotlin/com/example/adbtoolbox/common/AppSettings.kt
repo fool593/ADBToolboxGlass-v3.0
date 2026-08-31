@@ -290,6 +290,12 @@ object AppStrings {
 
         // 动态壁纸
         "dynamic_wallpaper" to "动态壁纸",
+        "splash_animation" to "开屏动画",
+        "splash_video_hint" to "使用视频作为开屏动画，自动适配各种分辨率（2K 等），帧率跟随视频本身",
+        "splash_select_video" to "选择开屏视频",
+        "splash_video_selected" to "已设置开屏视频",
+        "splash_current" to "当前开屏视频",
+        "splash_clear" to "恢复默认开屏",
         "enable_dynamic_wallpaper" to "启用动态壁纸",
         "video_file" to "视频文件",
         "select_video" to "选择视频文件",
@@ -671,6 +677,12 @@ object AppStrings {
 
         // Dynamic Wallpaper
         "dynamic_wallpaper" to "Dynamic Wallpaper",
+        "splash_animation" to "Splash Animation",
+        "splash_video_hint" to "Use a video as the splash animation, auto-fit to any resolution (2K etc.), frame rate follows the video",
+        "splash_select_video" to "Select Splash Video",
+        "splash_video_selected" to "Splash video set",
+        "splash_current" to "Current splash video",
+        "splash_clear" to "Restore default splash",
         "enable_dynamic_wallpaper" to "Enable Dynamic Wallpaper",
         "video_file" to "Video File",
         "select_video" to "Select Video File",
@@ -1021,6 +1033,12 @@ object AppStrings {
 
         // Dynamic Wallpaper
         "dynamic_wallpaper" to "डायनेमिक वॉलपेपर",
+        "splash_animation" to "स्प्लैश एनीमेशन",
+        "splash_video_hint" to "वीडियो को स्प्लैश एनीमेशन के रूप में उपयोग करें, किसी भी रिज़ॉल्यूशन (2K आदि) में ऑटो-फ़िट, फ्रेम रेट वीडियो का अनुसरण करता है",
+        "splash_select_video" to "स्प्लैश वीडियो चुनें",
+        "splash_video_selected" to "स्प्लैश वीडियो सेट",
+        "splash_current" to "वर्तमान स्प्लैश वीडियो",
+        "splash_clear" to "डिफ़ॉल्ट स्प्लैश पुनर्स्थापित करें",
         "enable_dynamic_wallpaper" to "डायनेमिक वॉलपेपर चालू करें",
         "video_file" to "वीडियो फ़ाइल",
         "select_video" to "वीडियो फ़ाइल चुनें",

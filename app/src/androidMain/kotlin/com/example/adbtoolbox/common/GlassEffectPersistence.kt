@@ -123,6 +123,10 @@ actual object GlassEffectPersistence {
         val videoPath = AppCache.dynamicWallpaperVideoPath.value
         editor.putString("dynamicWallpaperVideoPath", if (videoPath != null && java.io.File(videoPath).exists()) videoPath else null)
 
+        // 自定义开屏动画视频
+        val splashPath = AppCache.splashVideoPath.value
+        editor.putString("splashVideoPath", if (splashPath != null && java.io.File(splashPath).exists()) splashPath else null)
+
         editor.apply()
     }
 
@@ -238,6 +242,16 @@ actual object GlassEffectPersistence {
             } else {
                 AppCache.dynamicWallpaperVideoPath.value = null
                 AppCache.dynamicWallpaperEnabled.value = false
+            }
+        }
+
+        // 自定义开屏动画视频
+        if (prefs.contains("splashVideoPath")) {
+            val savedSplash = prefs.getString("splashVideoPath", null)
+            if (savedSplash != null && java.io.File(savedSplash).exists()) {
+                AppCache.splashVideoPath.value = savedSplash
+            } else {
+                AppCache.splashVideoPath.value = null
             }
         }
     }

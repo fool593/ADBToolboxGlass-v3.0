@@ -197,6 +197,63 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
+            // 自定义开屏动画视频选择器
+            val splashPicker = rememberLauncherForActivityResult(
+                contract = ActivityResultContracts.GetContent()
+            ) { uri: Uri? ->
+                uri?.let { selectedUri ->
+                    try {
+                        // 复制到 filesDir/splash，确保开屏视频稳定可用
+                        val splashDir = java.io.File(filesDir, "splash")
+                        if (!splashDir.exists()) splashDir.mkdirs()
+                        // 删除旧开屏视频
+                        splashDir.listFiles()?.forEach { it.delete() }
+                        val splashFile = java.io.File(splashDir, "splash_video.mp4")
+                        contentResolver.openInputStream(selectedUri)?.use { input ->
+                            splashFile.outputStream().use { output ->
+                                input.copyTo(output)
+                            }
+                        }
+                        if (splashFile.exists() && splashFile.length() > 0) {
+                            AppCache.splashVideoPath.value = splashFile.absolutePath
+                            // 立即持久化
+                            try { com.example.adbtoolbox.common.GlassEffectPersistence.saveAll() } catch (_: Exception) {}
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+            }
+
+            // 观察开屏视频选择触发器
+            val splashTrigger by androidx.compose.runtime.rememberUpdatedState(AppCache.pickSplashVideoTrigger.value)
+            LaunchedEffect(splashTrigger) {
+                if (splashTrigger > 0) {
+                    AppCache.pickSplashVideoTrigger.value = 0
+                    splashPicker.launch("video/*")
+                }
+            }
+
+            // 观察清除开屏视频触发器
+            val clearSplashTrigger by androidx.compose.runtime.rememberUpdatedState(AppCache.clearSplashVideoTrigger.value)
+            LaunchedEffect(clearSplashTrigger) {
+                if (clearSplashTrigger > 0) {
+                    AppCache.clearSplashVideoTrigger.value = 0
+                    try {
+                        AppCache.splashVideoPath.value?.let { path ->
+                            java.io.File(path).delete()
+                        }
+                        AppCache.splashVideoPath.value = null
+                        // 清理整个 splash 目录
+                        val splashDir = java.io.File(filesDir, "splash")
+                        splashDir.listFiles()?.forEach { it.delete() }
+                        try { com.example.adbtoolbox.common.GlassEffectPersistence.saveAll() } catch (_: Exception) {}
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+            }
+
             MainContent()
         }
     }
