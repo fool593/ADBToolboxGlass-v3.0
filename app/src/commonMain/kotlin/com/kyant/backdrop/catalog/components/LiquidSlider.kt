@@ -21,7 +21,12 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -192,10 +197,12 @@ fun LiquidSlider(
                         val progress = dampedDragAnimation.pressProgress
                         val lp = longPressAnim.value
                         val edgeRef = GlassEffectConfig.longPressRefraction.value
-                        blur(8f.dp.toPx() * (1f - progress))
+                        // 长按时大幅增强折射，边缘文字/背景会产生明显扭曲；全局渲染强度实时放大
+                        val gI = GlassEffectConfig.globalIntensity.value
+                        blur(8f.dp.toPx() * (1f - progress) * (0.5f + gI * 0.5f))
                         lens(
-                            10f.dp.toPx() * progress + 10f.dp.toPx() * lp * edgeRef,
-                            14f.dp.toPx() * progress + 16f.dp.toPx() * lp * edgeRef,
+                            (10f.dp.toPx() * progress + 22f.dp.toPx() * lp * edgeRef) * gI,
+                            (14f.dp.toPx() * progress + 34f.dp.toPx() * lp * edgeRef) * gI,
                             chromaticAberration = true
                         )
                     },
@@ -239,6 +246,35 @@ fun LiquidSlider(
                         drawRect(Color.White.copy(alpha = 1f - progress))
                     }
                 )
+                .drawWithContent {
+                    // 长按时绘制胶囊边缘高光描边
+                    drawContent()
+                    val lp = longPressAnim.value
+                    if (lp > 0.01f) {
+                        val glowIntensity = GlassEffectConfig.longPressGlowIntensity.value
+                        val glowColor = GlassEffectConfig.longPressGlowColor.value
+                        val alpha = (lp * glowIntensity).coerceIn(0f, 1f)
+                        val strokeW = (2.5f.dp.toPx() + 2.5f.dp.toPx() * lp * glowIntensity)
+                        val radius = size.height / 2f
+                        // 外圈高光
+                        drawRoundRect(
+                            color = glowColor.copy(alpha = alpha * 0.9f),
+                            topLeft = Offset(strokeW / 2f, strokeW / 2f),
+                            size = Size(size.width - strokeW, size.height - strokeW),
+                            cornerRadius = CornerRadius(radius, radius),
+                            style = Stroke(width = strokeW)
+                        )
+                        // 内圈白色高光
+                        val innerW = strokeW * 0.5f
+                        drawRoundRect(
+                            color = Color.White.copy(alpha = alpha * 0.7f),
+                            topLeft = Offset(strokeW, strokeW),
+                            size = Size(size.width - strokeW * 2f, size.height - strokeW * 2f),
+                            cornerRadius = CornerRadius(radius - strokeW, radius - strokeW),
+                            style = Stroke(width = innerW)
+                        )
+                    }
+                }
                 .size(40f.dp, 24f.dp)
         )
     }

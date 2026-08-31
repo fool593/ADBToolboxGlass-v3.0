@@ -195,11 +195,12 @@ fun LiquidBottomTabs(
                     backdrop = backdrop,
                     shape = { RoundedRectangle(32f.dp * GlassEffectConfig.navCornerRadius.value) },
                     effects = {
+                        val gI = GlassEffectConfig.globalIntensity.value
                         if (GlassEffectConfig.navEnableVibrancy.value) vibrancy()
-                        blur(GlassEffectConfig.navBlurRadius.value.dp.toPx())
+                        blur(GlassEffectConfig.navBlurRadius.value.dp.toPx() * (0.5f + gI * 0.5f))
                         lens(
-                            GlassEffectConfig.navRefractionHeight.value * 48f.dp.toPx(),
-                            GlassEffectConfig.navRefractionAmount.value * 48f.dp.toPx(),
+                            GlassEffectConfig.navRefractionHeight.value * 48f.dp.toPx() * gI,
+                            GlassEffectConfig.navRefractionAmount.value * 48f.dp.toPx() * gI,
                             chromaticAberration = GlassEffectConfig.navChromaticAberration.value > 0f
                         )
                     },

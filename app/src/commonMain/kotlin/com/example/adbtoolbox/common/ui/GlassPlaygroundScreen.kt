@@ -250,6 +250,33 @@ fun GlassPlaygroundScreen(
                     )
                 }
 
+                // 全局渲染强度（实时渲染增强）
+                Column(verticalArrangement = Arrangement.spacedBy(8f.dp)) {
+                    Row {
+                        BasicText(
+                            AppStrings.get("global_intensity"),
+                            style = TextStyle(contentColor, 14f.sp, androidx.compose.ui.text.font.FontWeight.Bold),
+                            modifier = Modifier.weight(1f)
+                        )
+                        BasicText(
+                            "${(GlassEffectConfig.globalIntensity.value * 100).toInt()}%",
+                            style = TextStyle(contentColor.copy(alpha = 0.6f), 12f.sp)
+                        )
+                    }
+                    LiquidSlider(
+                        value = { GlassEffectConfig.globalIntensity.value },
+                        onValueChange = { GlassEffectConfig.globalIntensity.value = it },
+                        valueRange = 0f..2f,
+                        visibilityThreshold = 0.001f,
+                        backdrop = backdrop
+                    )
+                    BasicText(
+                        AppStrings.get("global_intensity_hint"),
+                        style = TextStyle(contentColor.copy(alpha = 0.6f), 12f.sp)
+                    )
+                }
+                Spacer(Modifier.height(8f.dp))
+
                 // 长按发光效果
                 Spacer(Modifier.height(8f.dp))
                 BasicText(
