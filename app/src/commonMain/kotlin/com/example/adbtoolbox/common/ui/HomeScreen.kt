@@ -242,12 +242,14 @@ fun GlassCard(
                 shape = { RoundedRectangle(cornerDp) },
                 effects = {
                     val minDim = size.minDimension
+                    // 全局渲染强度映射为 0.5~1.5 倍：即使拉到 200% 也不会翻倍压垮渲染，同时保证低强度也有可见效果
+                    val eff = 0.5f + intensity * 0.5f
                     if (enableVibrancy) vibrancy()
-                    blur((blurRadius.dp.toPx() * intensity).coerceAtMost(48f.dp.toPx()))
+                    blur((blurRadius.dp.toPx() * eff).coerceAtMost(40f.dp.toPx()))
                     lens(
-                        // 折射量 clamp 到卡片尺寸的合理比例，防止 globalIntensity 过高导致渲染层崩溃、内容消失
-                        refractionHeight = (refHeight * minDim * 1.0f * intensity).coerceAtMost(minDim * 0.3f),
-                        refractionAmount = (refAmount * minDim * 1.5f * intensity).coerceAtMost(minDim * 0.45f),
+                        // 折射量 clamp 到卡片尺寸的安全比例且保证最小可见效果，防止渲染崩溃、内容消失
+                        refractionHeight = (refHeight * minDim * 1.0f * eff).coerceIn(minDim * 0.05f, minDim * 0.25f),
+                        refractionAmount = (refAmount * minDim * 1.5f * eff).coerceIn(minDim * 0.08f, minDim * 0.35f),
                         depthEffect = true,
                         chromaticAberration = config.chromaticAberration.value > 0f
                     )
