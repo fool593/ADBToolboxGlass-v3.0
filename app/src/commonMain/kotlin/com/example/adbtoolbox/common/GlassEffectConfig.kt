@@ -94,6 +94,12 @@ object GlassEffectConfig {
     // 玻璃颜色（叠加色，alpha 控制透明度）
     val glassColor = mutableStateOf(Color.White.copy(alpha = 0.15f))
 
+    // 长按边缘发光 + 折射效果
+    val longPressGlowIntensity = mutableStateOf(0.6f)  // 长按边缘发光强度 0~1
+    val longPressGlowSize = mutableStateOf(0.5f)       // 光晕大小 0~1
+    val longPressRefraction = mutableStateOf(0.5f)     // 边缘折射/扭曲量 0~1
+    val longPressGlowColor = mutableStateOf(Color.White) // 发光颜色
+
     // 字体颜色
     val fontColor = mutableStateOf(Color.Unspecified) // Unspecified=跟随主题
 
@@ -215,5 +221,9 @@ object GlassEffectConfig {
         buttonOpacity.value = 0.5f
         glassColor.value = Color.White.copy(alpha = 0.15f)
         fontColor.value = Color.Unspecified
+        longPressGlowIntensity.value = 0.6f
+        longPressGlowSize.value = 0.5f
+        longPressRefraction.value = 0.5f
+        longPressGlowColor.value = Color.White
     }
 }

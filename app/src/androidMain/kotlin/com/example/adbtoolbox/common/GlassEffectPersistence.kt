@@ -108,6 +108,12 @@ actual object GlassEffectPersistence {
         editor.putFloat("adbmoduleRefractionAmount", config.adbmoduleRefractionAmount.value)
         editor.putBoolean("adbmoduleEnableVibrancy", config.adbmoduleEnableVibrancy.value)
 
+        // 长按发光效果
+        editor.putFloat("longPressGlowIntensity", config.longPressGlowIntensity.value)
+        editor.putFloat("longPressGlowSize", config.longPressGlowSize.value)
+        editor.putFloat("longPressRefraction", config.longPressRefraction.value)
+        editor.putInt("longPressGlowColor", config.longPressGlowColor.value.value.toInt())
+
         // 颜色（fontColor 用 -1 标记 Unspecified，避免加载时变成透明黑）
         editor.putInt("glassColor", config.glassColor.value.value.toInt())
         editor.putInt("fontColor", if (config.fontColor.value == Color.Unspecified) -1 else config.fontColor.value.value.toInt())
@@ -207,6 +213,12 @@ actual object GlassEffectPersistence {
         if (prefs.contains("adbmoduleRefractionHeight")) config.adbmoduleRefractionHeight.value = prefs.getFloat("adbmoduleRefractionHeight", 0.18f)
         if (prefs.contains("adbmoduleRefractionAmount")) config.adbmoduleRefractionAmount.value = prefs.getFloat("adbmoduleRefractionAmount", 0.18f)
         if (prefs.contains("adbmoduleEnableVibrancy")) config.adbmoduleEnableVibrancy.value = prefs.getBoolean("adbmoduleEnableVibrancy", true)
+
+        // 长按发光效果
+        if (prefs.contains("longPressGlowIntensity")) config.longPressGlowIntensity.value = prefs.getFloat("longPressGlowIntensity", 0.6f)
+        if (prefs.contains("longPressGlowSize")) config.longPressGlowSize.value = prefs.getFloat("longPressGlowSize", 0.5f)
+        if (prefs.contains("longPressRefraction")) config.longPressRefraction.value = prefs.getFloat("longPressRefraction", 0.5f)
+        if (prefs.contains("longPressGlowColor")) config.longPressGlowColor.value = Color(prefs.getInt("longPressGlowColor", Color.White.value.toInt()))
 
         // 颜色
         if (prefs.contains("glassColor")) config.glassColor.value = Color(prefs.getInt("glassColor", Color.White.copy(alpha = 0.15f).value.toInt()))

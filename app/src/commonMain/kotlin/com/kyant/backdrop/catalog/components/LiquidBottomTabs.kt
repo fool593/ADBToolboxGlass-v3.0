@@ -2,6 +2,7 @@ package com.kyant.backdrop.catalog.components
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.EaseOut
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
@@ -18,6 +19,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -52,6 +54,8 @@ import com.kyant.backdrop.shadow.InnerShadow
 import com.kyant.backdrop.shadow.Shadow
 import com.example.adbtoolbox.common.GlassEffectConfig
 import com.kyant.shapes.Capsule
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import com.kyant.shapes.RoundedRectangle
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.drop
@@ -148,6 +152,25 @@ fun LiquidBottomTabs(
                     dampedDragAnimation.animateToValue(index.toFloat())
                     onTabSelected(index)
                 }
+        }
+
+        // 长按导航栏胶囊边缘发光检测：按住 350ms 触发
+        var longPressActive by remember { mutableStateOf(false) }
+        val longPressAnim = remember { Animatable(0f) }
+        LaunchedEffect(dampedDragAnimation) {
+            snapshotFlow { dampedDragAnimation.pressProgress }
+                .collectLatest { progress ->
+                    if (progress > 0.5f) {
+                        delay(350)
+                        longPressActive = true
+                    } else {
+                        longPressActive = false
+                    }
+                }
+        }
+        LaunchedEffect(longPressActive) {
+            if (longPressActive) longPressAnim.animateTo(1f, tween(220))
+            else longPressAnim.animateTo(0f, tween(320))
         }
 
         val interactiveHighlight = remember(animationScope) {
@@ -267,20 +290,30 @@ fun LiquidBottomTabs(
                     },
                     effects = {
                         val progress = dampedDragAnimation.pressProgress
+                        val lp = longPressAnim.value
+                        val edgeRef = GlassEffectConfig.longPressRefraction.value
                         blur(GlassEffectConfig.navIndicatorBlur.value.dp.toPx() * 2f)
                         lens(
-                            10f.dp.toPx() * progress,
-                            14f.dp.toPx() * progress,
+                            10f.dp.toPx() * progress + 12f.dp.toPx() * lp * edgeRef,
+                            14f.dp.toPx() * progress + 18f.dp.toPx() * lp * edgeRef,
                             chromaticAberration = true
                         )
                     },
                     highlight = {
                         val progress = dampedDragAnimation.pressProgress
-                        Highlight.Default.copy(alpha = progress)
+                        val lp = longPressAnim.value
+                        Highlight.Default.copy(alpha = (progress + lp * 0.9f).coerceIn(0f, 1f))
                     },
                     shadow = {
+                        // 边缘外发光：长按时产生光晕
                         val progress = dampedDragAnimation.pressProgress
-                        Shadow(alpha = progress)
+                        val lp = longPressAnim.value
+                        val glowIntensity = GlassEffectConfig.longPressGlowIntensity.value
+                        val glowSize = GlassEffectConfig.longPressGlowSize.value
+                        Shadow(
+                            alpha = (progress + lp * 0.85f * glowIntensity).coerceIn(0f, 1f),
+                            radius = 22f.dp * lp * glowSize
+                        )
                     },
                     innerShadow = {
                         val progress = dampedDragAnimation.pressProgress

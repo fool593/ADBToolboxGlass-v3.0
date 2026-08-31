@@ -250,6 +250,84 @@ fun GlassPlaygroundScreen(
                     )
                 }
 
+                // 长按发光效果
+                Spacer(Modifier.height(8f.dp))
+                BasicText(
+                    AppStrings.get("long_press_effect"),
+                    style = TextStyle(contentColor, 15f.sp, androidx.compose.ui.text.font.FontWeight.Bold)
+                )
+                BasicText(
+                    AppStrings.get("long_press_glow_hint"),
+                    style = TextStyle(contentColor.copy(alpha = 0.6f), 12f.sp)
+                )
+                Spacer(Modifier.height(4f.dp))
+
+                // 长按发光强度
+                Column(verticalArrangement = Arrangement.spacedBy(8f.dp)) {
+                    Row {
+                        BasicText(
+                            AppStrings.get("long_press_glow_intensity"),
+                            style = TextStyle(contentColor, 14f.sp, androidx.compose.ui.text.font.FontWeight.Medium),
+                            modifier = Modifier.weight(1f)
+                        )
+                        BasicText(
+                            "${(GlassEffectConfig.longPressGlowIntensity.value * 100).toInt()}%",
+                            style = TextStyle(contentColor.copy(alpha = 0.6f), 12f.sp)
+                        )
+                    }
+                    LiquidSlider(
+                        value = { GlassEffectConfig.longPressGlowIntensity.value },
+                        onValueChange = { GlassEffectConfig.longPressGlowIntensity.value = it },
+                        valueRange = 0f..1f,
+                        visibilityThreshold = 0.001f,
+                        backdrop = backdrop
+                    )
+                }
+
+                // 光晕大小
+                Column(verticalArrangement = Arrangement.spacedBy(8f.dp)) {
+                    Row {
+                        BasicText(
+                            AppStrings.get("long_press_glow_size"),
+                            style = TextStyle(contentColor, 14f.sp, androidx.compose.ui.text.font.FontWeight.Medium),
+                            modifier = Modifier.weight(1f)
+                        )
+                        BasicText(
+                            "${(GlassEffectConfig.longPressGlowSize.value * 100).toInt()}%",
+                            style = TextStyle(contentColor.copy(alpha = 0.6f), 12f.sp)
+                        )
+                    }
+                    LiquidSlider(
+                        value = { GlassEffectConfig.longPressGlowSize.value },
+                        onValueChange = { GlassEffectConfig.longPressGlowSize.value = it },
+                        valueRange = 0f..1f,
+                        visibilityThreshold = 0.001f,
+                        backdrop = backdrop
+                    )
+                }
+
+                // 边缘折射量
+                Column(verticalArrangement = Arrangement.spacedBy(8f.dp)) {
+                    Row {
+                        BasicText(
+                            AppStrings.get("long_press_refraction"),
+                            style = TextStyle(contentColor, 14f.sp, androidx.compose.ui.text.font.FontWeight.Medium),
+                            modifier = Modifier.weight(1f)
+                        )
+                        BasicText(
+                            "${(GlassEffectConfig.longPressRefraction.value * 100).toInt()}%",
+                            style = TextStyle(contentColor.copy(alpha = 0.6f), 12f.sp)
+                        )
+                    }
+                    LiquidSlider(
+                        value = { GlassEffectConfig.longPressRefraction.value },
+                        onValueChange = { GlassEffectConfig.longPressRefraction.value = it },
+                        valueRange = 0f..1f,
+                        visibilityThreshold = 0.001f,
+                        backdrop = backdrop
+                    )
+                }
+
                 // 玻璃颜色选择
                 Spacer(Modifier.height(8f.dp))
                 BasicText(

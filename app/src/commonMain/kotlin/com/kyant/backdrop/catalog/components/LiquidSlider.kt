@@ -1,5 +1,7 @@
 package com.kyant.backdrop.catalog.components
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -40,6 +42,9 @@ import com.kyant.backdrop.drawBackdrop
 import com.kyant.backdrop.effects.blur
 import com.kyant.backdrop.effects.lens
 import com.kyant.backdrop.highlight.Highlight
+import com.example.adbtoolbox.common.GlassEffectConfig
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import com.kyant.backdrop.shadow.InnerShadow
 import com.kyant.backdrop.shadow.Shadow
 import com.kyant.shapes.Capsule
@@ -108,6 +113,25 @@ fun LiquidSlider(
                 }
         }
 
+        // 长按边缘发光检测：按住 350ms 触发
+        var longPressActive by remember { mutableStateOf(false) }
+        val longPressAnim = remember { Animatable(0f) }
+        LaunchedEffect(dampedDragAnimation) {
+            snapshotFlow { dampedDragAnimation.pressProgress }
+                .collectLatest { progress ->
+                    if (progress > 0.5f) {
+                        delay(350)
+                        longPressActive = true
+                    } else {
+                        longPressActive = false
+                    }
+                }
+        }
+        LaunchedEffect(longPressActive) {
+            if (longPressActive) longPressAnim.animateTo(1f, tween(220))
+            else longPressAnim.animateTo(0f, tween(320))
+        }
+
         Box(Modifier.layerBackdrop(trackBackdrop)) {
             Box(
                 Modifier
@@ -166,25 +190,34 @@ fun LiquidSlider(
                     shape = { Capsule() },
                     effects = {
                         val progress = dampedDragAnimation.pressProgress
+                        val lp = longPressAnim.value
+                        val edgeRef = GlassEffectConfig.longPressRefraction.value
                         blur(8f.dp.toPx() * (1f - progress))
                         lens(
-                            10f.dp.toPx() * progress,
-                            14f.dp.toPx() * progress,
+                            10f.dp.toPx() * progress + 10f.dp.toPx() * lp * edgeRef,
+                            14f.dp.toPx() * progress + 16f.dp.toPx() * lp * edgeRef,
                             chromaticAberration = true
                         )
                     },
                     highlight = {
                         val progress = dampedDragAnimation.pressProgress
+                        val lp = longPressAnim.value
                         Highlight.Ambient.copy(
                             width = Highlight.Ambient.width / 1.5f,
                             blurRadius = Highlight.Ambient.blurRadius / 1.5f,
-                            alpha = progress
+                            alpha = (progress + lp * 0.9f).coerceIn(0f, 1f)
                         )
                     },
                     shadow = {
+                        // 边缘外发光：长按时产生光晕
+                        val lp = longPressAnim.value
+                        val glowIntensity = GlassEffectConfig.longPressGlowIntensity.value
+                        val glowSize = GlassEffectConfig.longPressGlowSize.value
                         Shadow(
-                            radius = 4f.dp,
-                            color = Color.Black.copy(alpha = 0.05f)
+                            radius = 4f.dp + 22f.dp * lp * glowSize,
+                            color = GlassEffectConfig.longPressGlowColor.value.copy(
+                                alpha = (0.05f + 0.65f * lp * glowIntensity).coerceIn(0f, 1f)
+                            )
                         )
                     },
                     innerShadow = {
