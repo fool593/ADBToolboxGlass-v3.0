@@ -120,18 +120,49 @@ fun RootToolScreen(
                                     scope.launch {
                                         executingMethodId = method.id
                                         methodResult = null
-                                        // 临时 root 方法：检测脚本后自动跳转到终端执行
-                                        if (method.id == "redmi_note11tpro_misaka_temp_root" || method.id == "xiaomi_mtk_ldpreload" || method.id == "vivo_mtk_ldpreload") {
+                                        // 判断是否为需要脚本的自动执行方法
+                                        val isAutoMethod = method.autoExecute ||
+                                            method.id == "redmi_note11tpro_misaka_temp_root" ||
+                                            method.id == "xiaomi_mtk_ldpreload" ||
+                                            method.id == "vivo_mtk_ldpreload" ||
+                                            method.id == "dirtypipe_cve_2022_0847"
+                                        if (isAutoMethod) {
+                                            // 第一步：检测本地是否已有脚本
                                             val scriptPath = withContext(Dispatchers.Default) { RootToolManager.findTempRootScript() }
                                             if (scriptPath != null) {
-                                                // 检测到脚本，跳转到终端自动执行
-                                                val terminalCmd = withContext(Dispatchers.Default) { RootToolManager.buildTempRootTerminalCommand(scriptPath) }
-                                                executingMethodId = null
-                                                onNavigateToTerminal(terminalCmd)
+                                                // 检测到脚本，尝试转移到 /data/local/tmp/
+                                                val targetPath = if (method.scriptFileName.isNotBlank()) {
+                                                    withContext(Dispatchers.Default) { RootToolManager.moveScriptToTempDir(method.scriptFileName) }
+                                                } else {
+                                                    scriptPath
+                                                }
+                                                if (targetPath != null) {
+                                                    // 转移成功，跳转到终端自动执行
+                                                    val terminalCmd = withContext(Dispatchers.Default) { RootToolManager.buildOneClickRootCommand(targetPath, method.id) }
+                                                    methodResult = RootResult(true, "✓ 检测到脚本文件: $scriptPath\n✓ 已转移到: $targetPath\n✓ 正在跳转到终端执行...", method.id)
+                                                    executingMethodId = null
+                                                    onNavigateToTerminal(terminalCmd)
+                                                } else {
+                                                    // 转移失败
+                                                    methodResult = RootResult(false, "✗ 脚本转移失败！\n\n检测到脚本: $scriptPath\n但无法转移到 /data/local/tmp/\n\n可能原因：\n1. /data/local/tmp 目录不存在或无写入权限\n2. 存储空间不足\n3. 文件被占用\n\n请手动将脚本复制到 /data/local/tmp/ 后重试", method.id)
+                                                    executingMethodId = null
+                                                }
                                             } else {
-                                                // 未检测到脚本，显示下载指引
-                                                methodResult = RootResult(false, "未检测到临时 root 脚本。\n\n请从酷安 @御坂114515 下载提权脚本，放到 /data/local/tmp/ 或 /sdcard/Download/ 目录下，文件名包含 root/temp/misaka 即可自动识别。\n\n下载后重新点击此方法即可自动跳转到终端执行。", method.id)
-                                                executingMethodId = null
+                                                // 未检测到脚本
+                                                if (method.downloadUrl.isNotBlank()) {
+                                                    // 有下载链接，自动跳转到浏览器下载
+                                                    methodResult = RootResult(false, "✗ 未检测到脚本文件！\n\n正在跳转到浏览器下载...\n下载地址: ${method.downloadUrl}\n\n下载完成后，请将文件放到 /sdcard/Download/ 目录，然后重新点击此方法，系统会自动检测并转移执行。", method.id)
+                                                    executingMethodId = null
+                                                    // 跳转到浏览器
+                                                    val opened = withContext(Dispatchers.Default) { RootToolManager.openUrl(method.downloadUrl) }
+                                                    if (!opened) {
+                                                        methodResult = RootResult(false, "✗ 未检测到脚本文件！\n\n无法自动打开浏览器，请手动访问以下链接下载：\n${method.downloadUrl}\n\n下载完成后，请将文件放到 /sdcard/Download/ 目录，然后重新点击此方法。", method.id)
+                                                    }
+                                                } else {
+                                                    // 没有下载链接，显示手动下载指引
+                                                    methodResult = RootResult(false, "✗ 未检测到脚本文件！\n\n搜索目录：/sdcard/Download、/data/local/tmp\n\n请下载对应提权脚本，放到 /sdcard/Download/ 目录下。\n\n下载后重新点击此方法，系统会自动检测并转移执行。\n\n支持的文件名关键词：root、temp、misaka、exploit、提权、ksu、dirtypipe 等", method.id)
+                                                    executingMethodId = null
+                                                }
                                             }
                                         } else {
                                             // 其他方法：正常执行

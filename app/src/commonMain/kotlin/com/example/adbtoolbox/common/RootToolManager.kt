@@ -66,6 +66,15 @@ expect object RootToolManager {
 
     // 生成临时 root 的终端执行命令
     fun buildTempRootTerminalCommand(scriptPath: String): String
+
+    // 从下载目录查找并复制脚本到 /data/local/tmp/，返回目标路径
+    fun moveScriptToTempDir(scriptFileName: String): String?
+
+    // 生成一键 root 的完整终端命令（复制脚本+授权+执行）
+    fun buildOneClickRootCommand(scriptPath: String, methodId: String): String
+
+    // 打开浏览器访问指定 URL
+    fun openUrl(url: String): Boolean
 }
 
 // Root 方法信息
@@ -79,5 +88,8 @@ data class RootMethodInfo(
     val requiresComputer: Boolean,  // 是否需要电脑
     val requiresKSU: Boolean,    // 是否需要先装 KSU
     val supportedDevices: String, // 支持机型描述
-    val description: String      // 详细描述
+    val description: String,      // 详细描述
+    val downloadUrl: String = "", // 脚本/工具下载链接（网盘/GitHub）
+    val scriptFileName: String = "", // 下载后的脚本文件名（用于检测和匹配）
+    val autoExecute: Boolean = false // 是否支持自动执行（下载后自动转移并执行）
 )

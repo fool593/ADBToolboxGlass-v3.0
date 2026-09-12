@@ -518,7 +518,10 @@ fi
             requiresComputer = false,
             requiresKSU = true,
             supportedDevices = "红米Note 11T Pro/Pro+ (天玑8100)、红米K50/K60系列、Turbo3/4、Redmi 13/14/15等",
-            description = "酷安@御坂114515 开发的天玑临时root工具。1.从酷安下载对应提权工具 2.安装KSU管理器 3.授予ADB权限 4.执行提权脚本，SELinux自动切宽容 5.加载KSU LKM模块获得临时root。重启后失效，需重新执行。支持天玑8100/9000/9200/9300/9400/9500等。"
+            description = "酷安@御坂114515 开发的天玑临时root工具。1.从酷安下载对应提权工具 2.安装KSU管理器 3.授予ADB权限 4.执行提权脚本，SELinux自动切宽容 5.加载KSU LKM模块获得临时root。重启后失效，需重新执行。支持天玑8100/9000/9200/9300/9400/9500等。",
+            downloadUrl = "https://www.coolapk.com/feed/73186643",
+            scriptFileName = "mi_mt6895",
+            autoExecute = true
         ),
         RootMethodInfo(
             id = "redmi_note11tpro_lkb_unlock",
@@ -614,7 +617,10 @@ fi
             requiresComputer = false,
             requiresKSU = true,
             supportedDevices = "Redmi K60/K60E/K50/K50 Pro等HyperOS机型",
-            description = "1.从GitHub(314xxx/Temproot)下载TempRoot APK 2.安装并打开 3.授予ADB/Shizuku权限 4.点击一键临时Root 5.自动执行exploit并加载KSU。支持机型：mondrian(K60)、rembrandt(K60E)、rubens(K50)、matisse(K50 Pro)。"
+            description = "1.从GitHub(314xxx/Temproot)下载TempRoot APK 2.安装并打开 3.授予ADB/Shizuku权限 4.点击一键临时Root 5.自动执行exploit并加载KSU。支持机型：mondrian(K60)、rembrandt(K60E)、rubens(K50)、matisse(K50 Pro)。",
+            downloadUrl = "https://github.com/314xxx/Temproot/releases",
+            scriptFileName = "temproot",
+            autoExecute = false
         ),
         RootMethodInfo(
             id = "vivo_dimensity_9400_temp_root",
@@ -638,7 +644,10 @@ fi
             requiresComputer = false,
             requiresKSU = false,
             supportedDevices = "Linux内核5.8~5.16.11的Android设备（2022年3月前补丁）",
-            description = "1.下载DirtyPipe exploit二进制 2.推送到/data/local/tmp/ 3.chmod +x 4.执行exploit覆盖/system/bin/su 5.执行su获取root。注意：此漏洞在2022年3月安全补丁中已修复，仅老设备可用。"
+            description = "1.下载DirtyPipe exploit二进制 2.推送到/data/local/tmp/ 3.chmod +x 4.执行exploit覆盖/system/bin/su 5.执行su获取root。注意：此漏洞在2022年3月安全补丁中已修复，仅老设备可用。",
+            downloadUrl = "https://github.com/Arinerron/0e99d69d70a778ca13a0087fa6fdfd80",
+            scriptFileName = "dirtypipe",
+            autoExecute = true
         ),
         RootMethodInfo(
             id = "samsung_root_my_galaxy_s25",
@@ -1083,6 +1092,170 @@ fi
             appendLine("echo '  如果显示 uid=0 或 SELinux=Permissive'")
             appendLine("echo '  说明提权成功！接下来执行 KSU late-load'")
             appendLine("echo '========================================'")
+        }
+    }
+
+    // 从下载目录查找并复制脚本到 /data/local/tmp/，返回目标路径
+    // 返回值：成功返回目标路径，失败返回null
+    actual fun moveScriptToTempDir(scriptFileName: String): String? {
+        return try {
+            // 搜索目录（按优先级排序）
+            val searchDirs = listOf(
+                "/sdcard/Download",
+                "/sdcard/download",
+                "/storage/emulated/0/Download",
+                "/data/local/tmp"
+            )
+            // 检查目录是否存在
+            val existingDirs = searchDirs.filter { dir ->
+                val dirFile = java.io.File(dir)
+                dirFile.exists() && dirFile.isDirectory
+            }
+            if (existingDirs.isEmpty()) {
+                // 所有搜索目录都不存在
+                return null
+            }
+            // 在搜索目录中查找文件
+            var foundPath: String? = null
+            var searchedDirs = 0
+            for (dir in existingDirs) {
+                searchedDirs++
+                val dirFile = java.io.File(dir)
+                val files = dirFile.listFiles() ?: continue
+                for (file in files) {
+                    if (!file.isFile) continue
+                    // 匹配文件名（包含关键词即可，不区分大小写）
+                    if (file.name.contains(scriptFileName, ignoreCase = true) ||
+                        (scriptFileName.length > 3 && file.name.contains(scriptFileName.take(6), ignoreCase = true))) {
+                        foundPath = file.absolutePath
+                        break
+                    }
+                }
+                if (foundPath != null) break
+            }
+            if (foundPath == null) {
+                // 搜索了所有目录但没找到文件
+                return null
+            }
+            // 如果已经在 /data/local/tmp/，直接返回
+            if (foundPath.startsWith("/data/local/tmp/")) {
+                // 确保有执行权限
+                exec("chmod 755 '$foundPath' 2>/dev/null")
+                return foundPath
+            }
+            // 复制到 /data/local/tmp/
+            val targetPath = "/data/local/tmp/$scriptFileName"
+            // 先检查目标目录是否存在
+            val targetDir = java.io.File("/data/local/tmp")
+            if (!targetDir.exists() || !targetDir.isDirectory) {
+                // 目标目录不存在，尝试创建
+                exec("mkdir -p /data/local/tmp 2>/dev/null")
+            }
+            // 尝试用 cp 复制
+            val copyResult = exec("cp '$foundPath' '$targetPath' 2>&1 && chmod 755 '$targetPath' && echo 'COPY_OK' || echo 'COPY_FAIL'")
+            if (copyResult.contains("COPY_OK")) {
+                // 验证文件是否真的复制成功
+                val verifyResult = exec("ls -la '$targetPath' 2>/dev/null && echo 'VERIFY_OK' || echo 'VERIFY_FAIL'")
+                if (verifyResult.contains("VERIFY_OK")) {
+                    return targetPath
+                }
+            }
+            // cp 失败，尝试用 cat 方式
+            val catResult = exec("cat '$foundPath' > '$targetPath' 2>&1 && chmod 755 '$targetPath' && echo 'CAT_OK' || echo 'CAT_FAIL'")
+            if (catResult.contains("CAT_OK")) {
+                // 验证
+                val verifyResult = exec("ls -la '$targetPath' 2>/dev/null && echo 'VERIFY_OK' || echo 'VERIFY_FAIL'")
+                if (verifyResult.contains("VERIFY_OK")) {
+                    return targetPath
+                }
+            }
+            // 所有复制方式都失败
+            null
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    // 生成一键 root 的完整终端命令（检查文件+授权+执行+验证）
+    actual fun buildOneClickRootCommand(scriptPath: String, methodId: String): String {
+        return buildString {
+            appendLine("echo '========================================'")
+            appendLine("echo '  一键 Root - $methodId'")
+            appendLine("echo '========================================'")
+            appendLine("echo ''")
+            appendLine("echo '[1/5] 检查脚本文件是否存在...'")
+            appendLine("if [ -f '$scriptPath' ]; then")
+            appendLine("    echo '  ✓ 脚本文件存在: $scriptPath'")
+            appendLine("    ls -la '$scriptPath'")
+            appendLine("else")
+            appendLine("    echo '  ✗ 错误：脚本文件不存在！'")
+            appendLine("    echo '  请检查文件路径是否正确，或重新下载脚本'")
+            appendLine("    exit 1")
+            appendLine("fi")
+            appendLine("echo ''")
+            appendLine("echo '[2/5] 检查目标目录 /data/local/tmp 是否存在...'")
+            appendLine("if [ -d /data/local/tmp ]; then")
+            appendLine("    echo '  ✓ 目标目录存在'")
+            appendLine("else")
+            appendLine("    echo '  ✗ 错误：目标目录 /data/local/tmp 不存在！'")
+            appendLine("    echo '  正在尝试创建...'")
+            appendLine("    mkdir -p /data/local/tmp 2>/dev/null")
+            appendLine("    if [ -d /data/local/tmp ]; then")
+            appendLine("        echo '  ✓ 目录创建成功'")
+            appendLine("    else")
+            appendLine("        echo '  ✗ 目录创建失败，权限不足'")
+            appendLine("        exit 1")
+            appendLine("    fi")
+            appendLine("fi")
+            appendLine("echo ''")
+            appendLine("echo '[3/5] 授予脚本执行权限...'")
+            appendLine("chmod 755 '$scriptPath' 2>&1")
+            appendLine("if [ \$? -eq 0 ]; then")
+            appendLine("    echo '  ✓ 权限授予成功'")
+            appendLine("else")
+            appendLine("    echo '  ✗ 权限授予失败，尝试继续执行...'")
+            appendLine("fi")
+            appendLine("echo ''")
+            appendLine("echo '[4/5] 正在执行提权脚本...'")
+            appendLine("echo '  注意：脚本可能会提示输入密码，请在下方输入密码后按回车'")
+            appendLine("echo ''")
+            appendLine("sh '$scriptPath' 2>&1")
+            appendLine("SCRIPT_EXIT_CODE=\$?")
+            appendLine("echo ''")
+            appendLine("echo '  脚本执行完成，退出码: \$SCRIPT_EXIT_CODE'")
+            appendLine("echo ''")
+            appendLine("echo '[5/5] 检查 root 权限...'")
+            appendLine("echo '  当前用户 ID:'")
+            appendLine("id")
+            appendLine("echo '  SELinux 状态:'")
+            appendLine("getenforce 2>/dev/null || echo '  无法获取 SELinux 状态'")
+            appendLine("echo ''")
+            appendLine("echo '========================================'")
+            appendLine("if echo \$(id) | grep -q 'uid=0'; then")
+            appendLine("    echo '  ✓ 提权成功！已获得 root 权限 (uid=0)'")
+            appendLine("elif [ \$(getenforce 2>/dev/null) = 'Permissive' ]; then")
+            appendLine("    echo '  ✓ 提权成功！SELinux 已切换为宽容模式'")
+            appendLine("else")
+            appendLine("    echo '  ✗ 提权失败：未获得 root 权限'")
+            appendLine("    echo '  可能原因：'")
+            appendLine("    1. 脚本不匹配当前机型/系统版本'")
+            appendLine("    2. 需要在锁屏状态下执行'")
+            appendLine("    3. 安全补丁已修复此漏洞'")
+            appendLine("    4. 密码输入错误'")
+            appendLine("fi")
+            appendLine("echo '========================================'")
+        }
+    }
+
+    // 打开浏览器访问指定 URL
+    actual fun openUrl(url: String): Boolean {
+        return try {
+            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
+            intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            appContext.startActivity(intent)
+            true
+        } catch (e: Exception) {
+            false
         }
     }
 
