@@ -220,8 +220,53 @@ fun LiquidBottomTabs(
                 .fillMaxWidth()
                 .padding(4f.dp),
             verticalAlignment = Alignment.CenterVertically,
-            content = {}
+            content = content
         )
+
+        CompositionLocalProvider(
+            LocalLiquidBottomTabScale provides {
+                lerp(1f, 1.2f, dampedDragAnimation.pressProgress)
+            }
+        ) {
+            Row(
+                Modifier
+                    .clearAndSetSemantics {}
+                    .alpha(0f)
+                    .layerBackdrop(tabsBackdrop)
+                    .graphicsLayer {
+                        translationX = panelOffset
+                    }
+                    .drawBackdrop(
+                        backdrop = backdrop,
+                        shape = { RoundedRectangle(28f.dp * GlassEffectConfig.navCornerRadius.value) },
+                        effects = {
+                            val progress = dampedDragAnimation.pressProgress
+                            if (GlassEffectConfig.navEnableVibrancy.value) vibrancy()
+                            blur(GlassEffectConfig.navBlurRadius.value.dp.toPx() * 1.5f)
+                            lens(
+                                GlassEffectConfig.navRefractionHeight.value * 72f.dp.toPx() * (1f + progress),
+                                GlassEffectConfig.navRefractionAmount.value * 72f.dp.toPx() * (1f + progress),
+                                chromaticAberration = GlassEffectConfig.navChromaticAberration.value > 0f
+                            )
+                        },
+                        highlight = {
+                            val progress = dampedDragAnimation.pressProgress
+                            Highlight.Default.copy(alpha = progress)
+                        },
+                        onDrawSurface = {
+                            drawRect(containerColor.copy(alpha = GlassEffectConfig.navOpacity.value))
+                        }
+                    )
+                    .then(interactiveHighlight.modifier)
+                    .height(56f.dp)
+                    .fillMaxWidth()
+                    .padding(horizontal = 4f.dp)
+                    .graphicsLayer(colorFilter = ColorFilter.tint(accentColor)),
+                verticalAlignment = Alignment.CenterVertically,
+                content = content
+            )
+        }
+
         Box(
             Modifier
                 .padding(horizontal = 4f.dp)
@@ -304,63 +349,5 @@ fun LiquidBottomTabs(
                     }
                 )
         )
-
-        Row(
-            Modifier
-                .graphicsLayer {
-                    translationX = panelOffset
-                }
-                .then(interactiveHighlight.modifier)
-                .height(64f.dp)
-                .fillMaxWidth()
-                .padding(4f.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            content = content
-        )
-
-        CompositionLocalProvider(
-            LocalLiquidBottomTabScale provides {
-                lerp(1f, 1.2f, dampedDragAnimation.pressProgress)
-            }
-        ) {
-            Row(
-                Modifier
-                    .clearAndSetSemantics {}
-                    .alpha(0f)
-                    .layerBackdrop(tabsBackdrop)
-                    .graphicsLayer {
-                        translationX = panelOffset
-                    }
-                    .drawBackdrop(
-                        backdrop = backdrop,
-                        shape = { RoundedRectangle(28f.dp * GlassEffectConfig.navCornerRadius.value) },
-                        effects = {
-                            val progress = dampedDragAnimation.pressProgress
-                            if (GlassEffectConfig.navEnableVibrancy.value) vibrancy()
-                            blur(GlassEffectConfig.navBlurRadius.value.dp.toPx() * 1.5f)
-                            lens(
-                                GlassEffectConfig.navRefractionHeight.value * 72f.dp.toPx() * (1f + progress),
-                                GlassEffectConfig.navRefractionAmount.value * 72f.dp.toPx() * (1f + progress),
-                                chromaticAberration = GlassEffectConfig.navChromaticAberration.value > 0f
-                            )
-                        },
-                        highlight = {
-                            val progress = dampedDragAnimation.pressProgress
-                            Highlight.Default.copy(alpha = progress)
-                        },
-                        onDrawSurface = {
-                            drawRect(containerColor.copy(alpha = GlassEffectConfig.navOpacity.value))
-                        }
-                    )
-                    .then(interactiveHighlight.modifier)
-                    .height(56f.dp)
-                    .fillMaxWidth()
-                    .padding(horizontal = 4f.dp)
-                    .graphicsLayer(colorFilter = ColorFilter.tint(accentColor)),
-                verticalAlignment = Alignment.CenterVertically,
-                content = content
-            )
-        }
-
     }
 }

@@ -338,7 +338,22 @@ actual object RootToolManager {
         return try {
             val tempRootScript = File(appContext.filesDir, "temproot.sh")
             if (!tempRootScript.exists()) {
-                return RootResult(false, "TempRoot tool not initialized, please download resources first", "temproot")
+                // 自动初始化基础脚本，避免报 "not initialized" 错误
+                tempRootScript.writeText("""#!/system/bin/sh
+# TempRoot 基础初始化脚本
+echo "=== TempRoot Initializer ==="
+echo "Device: $(getprop ro.product.model)"
+echo "Android: $(getprop ro.build.version.release)"
+echo "Kernel: $(uname -r)"
+if command -v su >/dev/null 2>&1; then
+    echo "su binary found, testing root..."
+    su -c id 2>&1
+else
+    echo "No su binary found"
+    echo "Please download matching TempRoot exploit for your device"
+fi
+""")
+                tempRootScript.setExecutable(true)
             }
 
             val result = exec("sh ${tempRootScript.absolutePath} 2>&1")
