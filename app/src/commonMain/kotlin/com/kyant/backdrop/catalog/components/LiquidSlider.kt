@@ -180,6 +180,7 @@ fun LiquidSlider(
                             .fastCoerceIn(-size.width / 4f, trackWidth - size.width * 3f / 4f) * if (isLtr) 1f else -1f
                 }
                 .then(dampedDragAnimation.modifier)
+                .size(40f.dp, 24f.dp)
                 .drawBackdrop(
                     backdrop = rememberCombinedBackdrop(
                         backdrop,
@@ -247,7 +248,6 @@ fun LiquidSlider(
                         drawRect(Color.White.copy(alpha = 1f - progress))
                     }
                 )
-                .size(40f.dp, 24f.dp)
                 .drawWithContent {
                     // 长按时绘制胶囊边缘高光描边（必须在 size 之后，否则 size=0 导致负数尺寸渲染异常、整个滑块不显示）
                     drawContent()
