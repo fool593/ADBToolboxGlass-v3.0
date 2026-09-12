@@ -37,6 +37,9 @@ expect object RootToolManager {
     // 检查 KernelSU 是否已安装
     fun isKernelSUInstalled(): Boolean
 
+    // 已检测到 KSU 时，直接通过 KSU 获取 root 权限
+    fun rootWithKSU(): RootResult
+
     // 检查 Magisk 是否已安装
     fun isMagiskInstalled(): Boolean
 

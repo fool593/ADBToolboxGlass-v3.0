@@ -433,6 +433,27 @@ fi
         }
     }
 
+    // 已检测到 KSU 时，直接通过 KSU 获取 root 权限
+    actual fun rootWithKSU(): RootResult {
+        return try {
+            // KSU 提供了 su，直接执行 su -c id 验证 root
+            val result = exec("su -c id 2>&1")
+            if (result.contains("uid=0")) {
+                RootResult(true, "Root acquired via KernelSU!\n\n$result", "ksu")
+            } else {
+                // 尝试 ksud 方式
+                val ksudResult = exec("ksud root 2>&1 || su -c 'id' 2>&1")
+                if (ksudResult.contains("uid=0") || ksudResult.contains("root", ignoreCase = true)) {
+                    RootResult(true, "Root acquired via KernelSU!\n\n$ksudResult", "ksu")
+                } else {
+                    RootResult(false, "KernelSU detected but root access failed. Please grant root permission in KernelSU app.\n\n$result", "ksu")
+                }
+            }
+        } catch (e: Exception) {
+            RootResult(false, "KernelSU root failed: ${e.message}", "ksu")
+        }
+    }
+
     // 获取 KernelSU 版本
     actual fun getKernelSUVersion(): String {
         return try {

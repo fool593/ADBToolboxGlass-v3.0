@@ -268,35 +268,18 @@ fun RootToolScreen(
                                 RootMethod.TEMP_ROOT -> {
                                     currentStep = RootStep.EXTRACTING_BOOT
                                     stepMessage = AppStrings.get("msg_temp_root")
-                                    val tempResult = withContext(Dispatchers.Default) { RootToolManager.tempRoot() }
+                                    // 先检测 KSU 包名，检测到就直接用 KSU 获取 root，不再跳官网
+                                    val hasKSU = withContext(Dispatchers.Default) { RootToolManager.isKernelSUInstalled() }
+                                    val tempResult = if (hasKSU) {
+                                        // 已检测到 KSU，直接通过 KSU 获取 root 权限
+                                        withContext(Dispatchers.Default) { RootToolManager.rootWithKSU() }
+                                    } else {
+                                        // 没有检测到 KSU，执行临时 root
+                                        withContext(Dispatchers.Default) { RootToolManager.tempRoot() }
+                                    }
                                     result = tempResult
                                     currentStep = if (tempResult.success) RootStep.DONE else RootStep.ERROR
-
-                                    // 临时 Root 成功后，自动检测 KSU
-                                    if (tempResult.success) {
-                                        stepMessage = AppStrings.get("msg_check_ksu")
-                                        val hasKSU = withContext(Dispatchers.Default) { RootToolManager.isKernelSUInstalled() }
-                                        if (!hasKSU) {
-                                            // 没有 KSU，跳转到终端页面，生成 KSU 官网
-                                            stepMessage = AppStrings.get("msg_no_ksu")
-                                            val terminalCommand = buildString {
-                                                appendLine("echo '========================================'")
-                                                appendLine("echo '${AppStrings.get("ksu_terminal_banner")}'")
-                                                appendLine("echo '========================================'")
-                                                appendLine("echo ''")
-                                                appendLine("echo '${AppStrings.get("ksu_terminal_website")}$KSU_OFFICIAL_URL'")
-                                                appendLine("echo 'GitHub: $KSU_GITHUB_URL'")
-                                                appendLine("echo ''")
-                                                appendLine("echo '${AppStrings.get("ksu_terminal_copy")}'")
-                                                appendLine("echo '${AppStrings.get("ksu_terminal_open")}'")
-                                                appendLine("echo 'am start -a android.intent.action.VIEW -d $KSU_OFFICIAL_URL'")
-                                                appendLine("echo ''")
-                                                appendLine("am start -a android.intent.action.VIEW -d $KSU_OFFICIAL_URL 2>/dev/null")
-                                                appendLine("echo '${AppStrings.get("ksu_terminal_tried")}'")
-                                            }
-                                            onNavigateToTerminal(terminalCommand)
-                                        }
-                                    }
+                                    // 不再自动跳转到 KSU 官网
                                 }
                                 RootMethod.UNKNOWN -> {}
                             }
