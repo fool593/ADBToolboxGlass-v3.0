@@ -846,16 +846,18 @@ fi
     // 检测临时 root 脚本是否存在，返回脚本路径
     actual fun findTempRootScript(): String? {
         return try {
-            // 搜索目录列表
+            // 搜索目录列表（按优先级排序，优先搜用户下载目录，最后才搜app私有目录）
             val searchDirs = listOf(
-                "/data/local/tmp",
                 "/sdcard/Download",
                 "/sdcard/download",
                 "/storage/emulated/0/Download",
+                "/data/local/tmp",
                 "/data/local",
-                appContext.filesDir.absolutePath,
-                appContext.getExternalFilesDir(null)?.absolutePath ?: ""
+                appContext.getExternalFilesDir(null)?.absolutePath ?: "",
+                appContext.filesDir.absolutePath
             ).filter { it.isNotBlank() }
+            // 需要排除的基础初始化脚本（app自己生成的，不是用户下载的提权工具）
+            val excludeFiles = listOf("temproot.sh", "temp_root.sh", "init.sh", "initializer.sh")
             // 匹配关键词（文件名包含这些词之一即认为是临时 root 工具）
             val keywords = listOf(
                 "root", "temp", "misaka", "exploit", "提权",
@@ -876,6 +878,8 @@ fi
                 for (file in files) {
                     if (!file.isFile) continue
                     val fileName = file.name.lowercase()
+                    // 排除基础初始化脚本
+                    if (excludeFiles.any { fileName == it.lowercase() }) continue
                     val hasKeyword = keywords.any { fileName.contains(it.lowercase()) }
                     val hasValidExt = extensions.any { ext ->
                         if (ext.isEmpty()) !fileName.contains(".") else fileName.endsWith(ext)
