@@ -186,6 +186,88 @@ fun LiquidBottomTabs(
             )
         }
 
+        Box(
+            Modifier
+                .padding(horizontal = 4f.dp)
+                .graphicsLayer {
+                    translationX =
+                        if (isLtr) dampedDragAnimation.value * tabWidth + panelOffset
+                        else size.width - (dampedDragAnimation.value + 1f) * tabWidth + panelOffset
+                }
+                .then(interactiveHighlight.gestureModifier)
+                .then(dampedDragAnimation.modifier)
+                .drawBackdrop(
+                    backdrop = rememberCombinedBackdrop(backdrop, tabsBackdrop),
+                    shape = {
+                        // 所有形状都用 RoundedRectangle，通过圆角值区分：round=height/2(胶囊), square=0(正方形), 中间值自由调节
+                        val cornerFactor = when (GlassEffectConfig.navIndicatorShape.value) {
+                            "round" -> 1f
+                            "square" -> 0f
+                            else -> GlassEffectConfig.navIndicatorCorner.value
+                        }
+                        RoundedRectangle(
+                            (GlassEffectConfig.navIndicatorHeight.value / 2f).dp * cornerFactor
+                        )
+                    },
+                    effects = {
+                        val progress = dampedDragAnimation.pressProgress
+                        val lp = longPressAnim.value
+                        val edgeRef = GlassEffectConfig.longPressRefraction.value
+                        blur(GlassEffectConfig.navIndicatorBlur.value.dp.toPx() * 2f)
+                        lens(
+                            10f.dp.toPx() * progress + 12f.dp.toPx() * lp * edgeRef,
+                            14f.dp.toPx() * progress + 18f.dp.toPx() * lp * edgeRef,
+                            chromaticAberration = true
+                        )
+                    },
+                    highlight = {
+                        val progress = dampedDragAnimation.pressProgress
+                        val lp = longPressAnim.value
+                        Highlight.Default.copy(alpha = (progress + lp * 0.9f).coerceIn(0f, 1f))
+                    },
+                    shadow = {
+                        // 边缘外发光：长按时产生光晕
+                        val progress = dampedDragAnimation.pressProgress
+                        val lp = longPressAnim.value
+                        val glowIntensity = GlassEffectConfig.longPressGlowIntensity.value
+                        val glowSize = GlassEffectConfig.longPressGlowSize.value
+                        Shadow(
+                            alpha = (progress + lp * 0.85f * glowIntensity).coerceIn(0f, 1f),
+                            radius = 22f.dp * lp * glowSize
+                        )
+                    },
+                    innerShadow = {
+                        val progress = dampedDragAnimation.pressProgress
+                        InnerShadow(
+                            radius = 8f.dp * progress,
+                            alpha = progress
+                        )
+                    },
+                    layerBlock = {
+                        scaleX = dampedDragAnimation.scaleX
+                        scaleY = dampedDragAnimation.scaleY
+                        val velocity = dampedDragAnimation.velocity / 10f
+                        scaleX /= 1f - (velocity * 0.75f).fastCoerceIn(-0.2f, 0.2f)
+                        scaleY *= 1f - (velocity * 0.25f).fastCoerceIn(-0.2f, 0.2f)
+                    },
+                    onDrawSurface = {
+                        val progress = dampedDragAnimation.pressProgress
+                        val base = externalAccentColor ?: GlassEffectConfig.navIndicatorColor.value
+                        drawRect(
+                            base.copy(alpha = GlassEffectConfig.navIndicatorOpacity.value * (1f - progress))
+                        )
+                        drawRect(Color.Black.copy(alpha = 0.03f * progress))
+                    }
+                )
+                .height(GlassEffectConfig.navIndicatorHeight.value.coerceAtMost(48f).dp)
+                .then(
+                    if (GlassEffectConfig.navIndicatorWidth.value > 0f) {
+                        Modifier.width(GlassEffectConfig.navIndicatorWidth.value.dp)
+                    } else {
+                        Modifier.fillMaxWidth(1f / tabsCount)
+                    }
+                )
+        )
         Row(
             Modifier
                 .graphicsLayer {
@@ -267,87 +349,5 @@ fun LiquidBottomTabs(
             )
         }
 
-        Box(
-            Modifier
-                .padding(horizontal = 4f.dp)
-                .graphicsLayer {
-                    translationX =
-                        if (isLtr) dampedDragAnimation.value * tabWidth + panelOffset
-                        else size.width - (dampedDragAnimation.value + 1f) * tabWidth + panelOffset
-                }
-                .then(interactiveHighlight.gestureModifier)
-                .then(dampedDragAnimation.modifier)
-                .drawBackdrop(
-                    backdrop = rememberCombinedBackdrop(backdrop, tabsBackdrop),
-                    shape = {
-                        // 所有形状都用 RoundedRectangle，通过圆角值区分：round=height/2(胶囊), square=0(正方形), 中间值自由调节
-                        val cornerFactor = when (GlassEffectConfig.navIndicatorShape.value) {
-                            "round" -> 1f
-                            "square" -> 0f
-                            else -> GlassEffectConfig.navIndicatorCorner.value
-                        }
-                        RoundedRectangle(
-                            (GlassEffectConfig.navIndicatorHeight.value / 2f).dp * cornerFactor
-                        )
-                    },
-                    effects = {
-                        val progress = dampedDragAnimation.pressProgress
-                        val lp = longPressAnim.value
-                        val edgeRef = GlassEffectConfig.longPressRefraction.value
-                        blur(GlassEffectConfig.navIndicatorBlur.value.dp.toPx() * 2f)
-                        lens(
-                            10f.dp.toPx() * progress + 12f.dp.toPx() * lp * edgeRef,
-                            14f.dp.toPx() * progress + 18f.dp.toPx() * lp * edgeRef,
-                            chromaticAberration = true
-                        )
-                    },
-                    highlight = {
-                        val progress = dampedDragAnimation.pressProgress
-                        val lp = longPressAnim.value
-                        Highlight.Default.copy(alpha = (progress + lp * 0.9f).coerceIn(0f, 1f))
-                    },
-                    shadow = {
-                        // 边缘外发光：长按时产生光晕
-                        val progress = dampedDragAnimation.pressProgress
-                        val lp = longPressAnim.value
-                        val glowIntensity = GlassEffectConfig.longPressGlowIntensity.value
-                        val glowSize = GlassEffectConfig.longPressGlowSize.value
-                        Shadow(
-                            alpha = (progress + lp * 0.85f * glowIntensity).coerceIn(0f, 1f),
-                            radius = 22f.dp * lp * glowSize
-                        )
-                    },
-                    innerShadow = {
-                        val progress = dampedDragAnimation.pressProgress
-                        InnerShadow(
-                            radius = 8f.dp * progress,
-                            alpha = progress
-                        )
-                    },
-                    layerBlock = {
-                        scaleX = dampedDragAnimation.scaleX
-                        scaleY = dampedDragAnimation.scaleY
-                        val velocity = dampedDragAnimation.velocity / 10f
-                        scaleX /= 1f - (velocity * 0.75f).fastCoerceIn(-0.2f, 0.2f)
-                        scaleY *= 1f - (velocity * 0.25f).fastCoerceIn(-0.2f, 0.2f)
-                    },
-                    onDrawSurface = {
-                        val progress = dampedDragAnimation.pressProgress
-                        val base = externalAccentColor ?: GlassEffectConfig.navIndicatorColor.value
-                        drawRect(
-                            base.copy(alpha = GlassEffectConfig.navIndicatorOpacity.value * (1f - progress))
-                        )
-                        drawRect(Color.Black.copy(alpha = 0.03f * progress))
-                    }
-                )
-                .height(GlassEffectConfig.navIndicatorHeight.value.dp)
-                .then(
-                    if (GlassEffectConfig.navIndicatorWidth.value > 0f) {
-                        Modifier.width(GlassEffectConfig.navIndicatorWidth.value.dp)
-                    } else {
-                        Modifier.fillMaxWidth(1f / tabsCount)
-                    }
-                )
-        )
     }
 }

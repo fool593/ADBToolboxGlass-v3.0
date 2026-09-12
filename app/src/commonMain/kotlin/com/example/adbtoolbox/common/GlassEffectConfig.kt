@@ -27,11 +27,11 @@ object GlassEffectConfig {
 
     // 导航栏胶囊指示器参数
     val navIndicatorShape = mutableStateOf("capsule") // "round"=圆球, "capsule"=胶囊, "square"=正方形
-    val navIndicatorHeight = mutableStateOf(50f)      // 胶囊高度/圆球直径 dp
+    val navIndicatorHeight = mutableStateOf(36f)      // 胶囊高度/圆球直径 dp（默认36，不遮文字；上限48）
     val navIndicatorWidth = mutableStateOf(0f)         // 胶囊长度 0=自适应, >0=固定宽度 dp
     val navIndicatorCorner = mutableStateOf(0.5f)      // 胶囊圆角比例 0~1 (0=直角, 1=全圆)
     val navIndicatorBlur = mutableStateOf(12f)         // 胶囊模糊半径
-    val navIndicatorOpacity = mutableStateOf(0.6f)     // 胶囊透明度
+    val navIndicatorOpacity = mutableStateOf(0.4f)     // 胶囊透明度（默认0.4，半透明不遮文字）
     val navIndicatorColor = mutableStateOf(Color(0xFF007AFF).copy(alpha = 0.5f)) // 胶囊颜色
 
     // 主界面液态玻璃参数
