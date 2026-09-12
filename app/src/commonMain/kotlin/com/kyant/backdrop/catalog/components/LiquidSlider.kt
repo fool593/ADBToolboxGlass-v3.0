@@ -247,21 +247,22 @@ fun LiquidSlider(
                         drawRect(Color.White.copy(alpha = 1f - progress))
                     }
                 )
+                .size(40f.dp, 24f.dp)
                 .drawWithContent {
-                    // 长按时绘制胶囊边缘高光描边
+                    // 长按时绘制胶囊边缘高光描边（必须在 size 之后，否则 size=0 导致负数尺寸渲染异常、整个滑块不显示）
                     drawContent()
                     val lp = longPressAnim.value
-                    if (lp > 0.01f) {
+                    if (lp > 0.01f && size.width > 0f && size.height > 0f) {
                         val glowIntensity = GlassEffectConfig.longPressGlowIntensity.value
                         val glowColor = GlassEffectConfig.longPressGlowColor.value
                         val alpha = (lp * glowIntensity).coerceIn(0f, 1f)
-                        val strokeW = (2.5f.dp.toPx() + 2.5f.dp.toPx() * lp * glowIntensity)
+                        val strokeW = (2.5f.dp.toPx() + 2.5f.dp.toPx() * lp * glowIntensity).coerceAtMost(size.minDimension * 0.4f)
                         val radius = size.height / 2f
                         // 外圈高光
                         drawRoundRect(
                             color = glowColor.copy(alpha = alpha * 0.9f),
                             topLeft = Offset(strokeW / 2f, strokeW / 2f),
-                            size = Size(size.width - strokeW, size.height - strokeW),
+                            size = Size((size.width - strokeW).coerceAtLeast(0f), (size.height - strokeW).coerceAtLeast(0f)),
                             cornerRadius = CornerRadius(radius, radius),
                             style = Stroke(width = strokeW)
                         )
@@ -270,13 +271,12 @@ fun LiquidSlider(
                         drawRoundRect(
                             color = Color.White.copy(alpha = alpha * 0.7f),
                             topLeft = Offset(strokeW, strokeW),
-                            size = Size(size.width - strokeW * 2f, size.height - strokeW * 2f),
-                            cornerRadius = CornerRadius(radius - strokeW, radius - strokeW),
+                            size = Size((size.width - strokeW * 2f).coerceAtLeast(0f), (size.height - strokeW * 2f).coerceAtLeast(0f)),
+                            cornerRadius = CornerRadius((radius - strokeW).coerceAtLeast(0f), (radius - strokeW).coerceAtLeast(0f)),
                             style = Stroke(width = innerW)
                         )
                     }
                 }
-                .size(40f.dp, 24f.dp)
         )
     }
 }
