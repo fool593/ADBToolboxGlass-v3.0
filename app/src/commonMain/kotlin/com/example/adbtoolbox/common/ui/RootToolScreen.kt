@@ -120,8 +120,24 @@ fun RootToolScreen(
                                     scope.launch {
                                         executingMethodId = method.id
                                         methodResult = null
-                                        methodResult = withContext(Dispatchers.Default) { RootToolManager.executeRootMethod(method.id) }
-                                        executingMethodId = null
+                                        // 临时 root 方法：检测脚本后自动跳转到终端执行
+                                        if (method.id == "redmi_note11tpro_misaka_temp_root" || method.id == "xiaomi_mtk_ldpreload" || method.id == "vivo_mtk_ldpreload") {
+                                            val scriptPath = withContext(Dispatchers.Default) { RootToolManager.findTempRootScript() }
+                                            if (scriptPath != null) {
+                                                // 检测到脚本，跳转到终端自动执行
+                                                val terminalCmd = withContext(Dispatchers.Default) { RootToolManager.buildTempRootTerminalCommand(scriptPath) }
+                                                executingMethodId = null
+                                                onNavigateToTerminal(terminalCmd)
+                                            } else {
+                                                // 未检测到脚本，显示下载指引
+                                                methodResult = RootResult(false, "未检测到临时 root 脚本。\n\n请从酷安 @御坂114515 下载提权脚本，放到 /data/local/tmp/ 或 /sdcard/Download/ 目录下，文件名包含 root/temp/misaka 即可自动识别。\n\n下载后重新点击此方法即可自动跳转到终端执行。", method.id)
+                                                executingMethodId = null
+                                            }
+                                        } else {
+                                            // 其他方法：正常执行
+                                            methodResult = withContext(Dispatchers.Default) { RootToolManager.executeRootMethod(method.id) }
+                                            executingMethodId = null
+                                        }
                                     }
                                 }
                                 .padding(vertical = 10.dp, horizontal = 4.dp),

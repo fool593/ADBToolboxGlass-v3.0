@@ -60,6 +60,12 @@ expect object RootToolManager {
 
     // 获取所有内置的 root 方法（含不支持当前设备的，用于展示）
     fun getAllRootMethods(): List<RootMethodInfo>
+
+    // 检测临时 root 脚本是否存在，返回脚本路径（不存在返回null）
+    fun findTempRootScript(): String?
+
+    // 生成临时 root 的终端执行命令
+    fun buildTempRootTerminalCommand(scriptPath: String): String
 }
 
 // Root 方法信息

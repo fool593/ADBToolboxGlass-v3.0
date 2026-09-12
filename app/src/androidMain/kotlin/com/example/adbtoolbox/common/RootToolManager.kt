@@ -649,6 +649,8 @@ fi
                              hardware.contains("qualcomm")
 
             allRootMethods.filter { method ->
+                // 过滤掉需要电脑的方法，只显示手机端可直接执行的
+                if (method.requiresComputer) return@filter false
                 // 品牌匹配
                 val brandMatch = method.brand == "generic" ||
                     method.brand == brand ||
@@ -772,18 +774,52 @@ fi
                 }
                 "redmi_note11tpro_misaka_temp_root" -> {
                     // 红米 Note 11T Pro 天玑8100 临时Root（酷安@御坂114515）
-                    val exploitExists = exec("ls /data/local/tmp/misaka_root.sh 2>/dev/null || ls /data/local/tmp/temproot.sh 2>/dev/null || echo ''")
-                    if (exploitExists.isBlank()) {
-                        RootResult(false, "红米Note11T Pro 天玑8100 临时Root（酷安@御坂114515）\n\n操作步骤：\n1. 酷安搜索 @御坂114515 或 红米临时root，下载最新提权工具\n2. 安装 KernelSU 管理器\n3. 将提权脚本推送到 /data/local/tmp/\n4. 授予 ADB 权限（Shizuku/Dhizuku均可）\n5. 执行提权脚本，SELinux自动切宽容模式\n6. 加载 KSU LKM 模块获得临时root\n\n支持机型：Note 11T Pro/Pro+、K50/K60、Turbo3/4、Redmi 13/14/15等天玑机型\n注意：重启后root失效，需重新执行；操作有变砖风险，请谨慎。", methodId)
+                    // 自动扫描所有常见提权脚本路径
+                    val scriptScan = exec("ls /data/local/tmp/*.sh 2>/dev/null; ls /sdcard/Download/*.sh 2>/dev/null; ls /sdcard/*.sh 2>/dev/null; echo '---END---'")
+                    val scriptLines = scriptScan.split("\n").map { it.trim() }.filter { it.isNotBlank() && !it.startsWith("---") && it.endsWith(".sh") }
+                    val scriptPath = scriptLines.firstOrNull() ?: ""
+
+                    if (scriptPath.isBlank()) {
+                        RootResult(false, "未检测到提权脚本。请从酷安 @御坂114515 下载红米临时root工具，将 .sh 脚本放到 /data/local/tmp/ 或 /sdcard/Download/ 目录后重试。\n\n支持机型：Note 11T Pro/Pro+、K50/K60、Turbo3/4、Redmi 13/14/15等天玑机型", methodId)
                     } else {
-                        val scriptPath = exploitExists.trim().split("\n").firstOrNull() ?: "/data/local/tmp/temproot.sh"
+                        // 第一步：设置脚本可执行
+                        exec("chmod 755 $scriptPath 2>/dev/null")
+                        // 第二步：执行提权脚本（密码在终端里由用户输入）
                         val result = exec("sh $scriptPath 2>&1")
-                        val idResult = exec("id")
-                        val selinux = exec("getenforce 2>/dev/null")
-                        if (idResult.contains("uid=0") || selinux.contains("Permissive", ignoreCase = true)) {
-                            RootResult(true, "提权成功！SELinux: $selinux\n\n$result\n\n接下来请执行 KSU late-load 加载模块", methodId)
+                        // 第三步：检查 SELinux 状态
+                        val selinux = exec("getenforce 2>/dev/null").trim()
+                        // 第四步：自动加载 KSU LKM 模块
+                        val ksudPath = exec("find /data/app -name libksud.so 2>/dev/null | grep me.weishu.kernelsu | head -n 1").trim()
+                        var ksuLoadResult = ""
+                        if (ksudPath.isNotBlank()) {
+                            ksuLoadResult = exec("$ksudPath late-load --allow-shell --package-name me.weishu.kernelsu 2>&1")
                         } else {
-                            RootResult(false, "提权脚本执行完成但未获得root，请检查：\n1. 脚本是否匹配当前机型/系统版本\n2. 是否已授予ADB权限\n3. 是否已安装KSU管理器\n\n输出：$result", methodId)
+                            // 尝试 ksud 命令
+                            ksuLoadResult = exec("ksud late-load --allow-shell --package-name me.weishu.kernelsu 2>&1")
+                        }
+                        // 第五步：验证 root
+                        val idResult = exec("id").trim()
+                        val hasRoot = idResult.contains("uid=0") || selinux.contains("Permissive", ignoreCase = true)
+
+                        val output = buildString {
+                            appendLine("=== 提权脚本执行 ===")
+                            appendLine("脚本路径: $scriptPath")
+                            appendLine()
+                            appendLine(result.take(500))
+                            appendLine()
+                            appendLine("=== SELinux 状态: $selinux ===")
+                            appendLine()
+                            appendLine("=== KSU LKM 加载 ===")
+                            appendLine(ksuLoadResult.take(300))
+                            appendLine()
+                            appendLine("=== Root 验证 ===")
+                            appendLine(idResult)
+                        }
+
+                        if (hasRoot) {
+                            RootResult(true, "提权成功！已自动执行脚本并加载 KSU LKM 模块。\n\n$output", methodId)
+                        } else {
+                            RootResult(false, "脚本已执行但未获得 root。可能原因：\n1. 脚本不匹配当前机型/系统版本\n2. 需要在终端中输入密码（请在终端执行时输入）\n3. ADB 权限不足\n\n$output", methodId)
                         }
                     }
                 }
@@ -804,6 +840,61 @@ fi
             }
         } catch (e: Exception) {
             RootResult(false, "执行 root 方法失败：${e.message}", methodId)
+        }
+    }
+
+    // 检测临时 root 脚本是否存在，返回脚本路径
+    actual fun findTempRootScript(): String? {
+        return try {
+            // 检测常见的临时 root 脚本路径
+            val paths = listOf(
+                "/data/local/tmp/misaka_root.sh",
+                "/data/local/tmp/temproot.sh",
+                "/data/local/tmp/root.sh",
+                "/data/local/tmp/exploit.sh",
+                "/sdcard/Download/temproot.sh",
+                "/sdcard/Download/root.sh"
+            )
+            for (path in paths) {
+                val check = exec("ls $path 2>/dev/null || echo ''")
+                if (check.isNotBlank() && check.contains(path)) {
+                    return path
+                }
+            }
+            // 用 find 命令搜索
+            val findResult = exec("find /data/local/tmp /sdcard/Download -name '*root*.sh' -o -name '*temp*.sh' -o -name '*misaka*' 2>/dev/null | head -n 5")
+            if (findResult.isNotBlank()) {
+                findResult.trim().split("\n").firstOrNull()?.trim()
+            } else null
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    // 生成临时 root 的终端执行命令
+    actual fun buildTempRootTerminalCommand(scriptPath: String): String {
+        return buildString {
+            appendLine("echo '========================================'")
+            appendLine("echo '  红米Note11T Pro 天玑8100 临时Root'")
+            appendLine("echo '  酷安@御坂114515'")
+            appendLine("echo '========================================'")
+            appendLine("echo ''")
+            appendLine("echo '[1/4] 检查脚本权限...'")
+            appendLine("chmod 755 $scriptPath")
+            appendLine("echo '[2/4] 正在执行提权脚本...'")
+            appendLine("echo '      脚本可能会提示输入密码，请在下方输入'")
+            appendLine("echo ''")
+            appendLine("sh $scriptPath")
+            appendLine("echo ''")
+            appendLine("echo '[3/4] 检查 SELinux 状态...'")
+            appendLine("getenforce")
+            appendLine("echo '[4/4] 检查 root 权限...'")
+            appendLine("id")
+            appendLine("echo ''")
+            appendLine("echo '========================================'")
+            appendLine("echo '  如果显示 uid=0 或 SELinux=Permissive'")
+            appendLine("echo '  说明提权成功！接下来执行 KSU late-load'")
+            appendLine("echo '========================================'")
         }
     }
 
