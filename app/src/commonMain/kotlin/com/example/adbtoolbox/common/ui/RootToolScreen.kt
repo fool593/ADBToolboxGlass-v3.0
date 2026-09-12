@@ -40,11 +40,17 @@ fun RootToolScreen(
     var isLoading by remember { mutableStateOf(false) }
     var result by remember { mutableStateOf<RootResult?>(null) }
     var isRooted by remember { mutableStateOf(false) }
+    var availableMethods by remember { mutableStateOf<List<RootMethodInfo>>(emptyList()) }
+    var recommendedMethod by remember { mutableStateOf<RootMethodInfo?>(null) }
+    var executingMethodId by remember { mutableStateOf<String?>(null) }
+    var methodResult by remember { mutableStateOf<RootResult?>(null) }
 
     LaunchedEffect(Unit) {
         isLoading = true
         deviceInfo = withContext(Dispatchers.Default) { RootToolManager.detectDevice() }
         isRooted = withContext(Dispatchers.Default) { RootToolManager.isRooted() }
+        availableMethods = withContext(Dispatchers.Default) { RootToolManager.getAvailableRootMethods() }
+        recommendedMethod = withContext(Dispatchers.Default) { RootToolManager.detectRootMethod() }
         isLoading = false
     }
 
@@ -92,6 +98,67 @@ fun RootToolScreen(
             }
         }
         Spacer(Modifier.height(16.dp))
+
+        // 自动检测到的可用 Root 方法（基于网上公开漏洞与教程）
+        if (availableMethods.isNotEmpty()) {
+            GlassCard(backdrop = backdrop, pageType = "plugins") {
+                Column(Modifier.padding(16.dp)) {
+                    BasicText("可用 Root 方法 (${availableMethods.size})", style = TextStyle(contentColor, 16.sp, FontWeight.Bold))
+                    Spacer(Modifier.height(4.dp))
+                    if (recommendedMethod != null) {
+                        BasicText("推荐: ${recommendedMethod!!.name}", style = TextStyle(Color(0xFFAF52DE), 13.sp, FontWeight.Bold))
+                    }
+                    Spacer(Modifier.height(12.dp))
+
+                    availableMethods.forEach { method ->
+                        val isExecuting = executingMethodId == method.id
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .clickable(enabled = !isExecuting) {
+                                    scope.launch {
+                                        executingMethodId = method.id
+                                        methodResult = null
+                                        methodResult = withContext(Dispatchers.Default) { RootToolManager.executeRootMethod(method.id) }
+                                        executingMethodId = null
+                                    }
+                                }
+                                .padding(vertical = 10.dp, horizontal = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(Modifier.weight(1f)) {
+                                BasicText(method.name, style = TextStyle(contentColor, 14.sp, FontWeight.Bold))
+                                Spacer(Modifier.height(2.dp))
+                                BasicText(
+                                    "${method.principle.take(60)}...",
+                                    style = TextStyle(contentColor.copy(alpha = 0.5f), 11.sp)
+                                )
+                                Spacer(Modifier.height(2.dp))
+                                BasicText(
+                                    "风险: ${method.riskLevel} | ${if (method.requiresComputer) "需电脑" else "手机端"} | ${if (method.requiresKSU) "需KSU" else "无需KSU"}",
+                                    style = TextStyle(contentColor.copy(alpha = 0.4f), 10.sp)
+                                )
+                            }
+                            if (isExecuting) {
+                                BasicText("...", style = TextStyle(Color(0xFFAF52DE), 16.sp, FontWeight.Bold))
+                            } else {
+                                BasicText("▶", style = TextStyle(contentColor.copy(alpha = 0.4f), 12.sp))
+                            }
+                        }
+                        if (methodResult != null && executingMethodId == null && methodResult!!.step == method.id) {
+                            Spacer(Modifier.height(6.dp))
+                            BasicText(
+                                if (methodResult!!.success) "✓ ${methodResult!!.message.take(200)}" else "✗ ${methodResult!!.message.take(200)}",
+                                style = TextStyle(if (methodResult!!.success) Color(0xFF34C759) else Color(0xFFFF3B30), 11.sp)
+                            )
+                        }
+                        Spacer(Modifier.height(4.dp))
+                    }
+                }
+            }
+            Spacer(Modifier.height(16.dp))
+        }
 
         // Root 方案选择
         if (deviceInfo != null && deviceInfo!!.supportedMethods.isNotEmpty()) {

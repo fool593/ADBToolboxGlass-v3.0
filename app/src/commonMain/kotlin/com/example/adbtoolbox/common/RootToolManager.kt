@@ -48,4 +48,30 @@ expect object RootToolManager {
 
     // 获取 Magisk 版本
     fun getMagiskVersion(): String
+
+    // 自动检测设备并推荐最合适的 root 方法
+    fun detectRootMethod(): RootMethodInfo
+
+    // 获取当前设备可用的所有 root 方法列表
+    fun getAvailableRootMethods(): List<RootMethodInfo>
+
+    // 执行指定的 root 方法
+    fun executeRootMethod(methodId: String): RootResult
+
+    // 获取所有内置的 root 方法（含不支持当前设备的，用于展示）
+    fun getAllRootMethods(): List<RootMethodInfo>
 }
+
+// Root 方法信息
+data class RootMethodInfo(
+    val id: String,
+    val name: String,
+    val brand: String,           // 支持品牌：vivo/xiaomi/oneplus/samsung/mtk/generic
+    val chipset: String,         // 支持芯片：mediatek/qualcomm/generic
+    val principle: String,       // 原理说明
+    val riskLevel: String,       // 风险等级：low/medium/high
+    val requiresComputer: Boolean,  // 是否需要电脑
+    val requiresKSU: Boolean,    // 是否需要先装 KSU
+    val supportedDevices: String, // 支持机型描述
+    val description: String      // 详细描述
+)

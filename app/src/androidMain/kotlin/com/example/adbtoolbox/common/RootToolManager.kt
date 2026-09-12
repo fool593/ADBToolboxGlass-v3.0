@@ -480,6 +480,284 @@ fi
         }
     }
 
+    // ==================== Root 方法自动检测与执行 ====================
+
+    // 所有内置的 root 方法列表（基于网上公开的漏洞与教程）
+    private val allRootMethods = listOf(
+        RootMethodInfo(
+            id = "vivo_mtk_ldpreload",
+            name = "vivo/iQOO 天玑 LD_PRELOAD 临时Root",
+            brand = "vivo",
+            chipset = "mediatek",
+            principle = "利用 LD_PRELOAD 环境变量注入 preload.so，在系统开机阶段绕过权限校验获取临时Root",
+            riskLevel = "medium",
+            requiresComputer = true,
+            requiresKSU = true,
+            supportedDevices = "iQOO Neo10 Pro+/Neo11/Z10 Turbo Pro/Neo9 等天玑机型",
+            description = "降级指定版本→推送preload.so→锁屏重启→锁屏状态提权→加载KSU late-load。重启后失效，需重新操作。"
+        ),
+        RootMethodInfo(
+            id = "xiaomi_mtk_ldpreload",
+            name = "小米/红米 天玑 LDPRELOAD 临时Root",
+            brand = "xiaomi",
+            chipset = "mediatek",
+            principle = "利用Linux内核LDPRELOAD环境变量提权漏洞，开机阶段注入动态链接库绕过权限校验",
+            riskLevel = "medium",
+            requiresComputer = true,
+            requiresKSU = true,
+            supportedDevices = "红米Turbo4/Turbo5/Note系列等天玑机型",
+            description = "全程在系统相册完成操作，不用进入MTK底层刷机模式。拿到临时Root后可刷入KSU。"
+        ),
+        RootMethodInfo(
+            id = "xiaomi_fastboot_cmdline",
+            name = "小米 fastboot cmdline 免解BL Root",
+            brand = "xiaomi",
+            chipset = "generic",
+            principle = "利用fastboot cmdline漏洞修改启动参数使SELinux宽容，再利用小米质量服务漏洞以root运行ksud",
+            riskLevel = "high",
+            requiresComputer = true,
+            requiresKSU = true,
+            supportedDevices = "小米K80/红米系列等支持fastboot cmdline漏洞的机型",
+            description = "获取ksud→fastboot修改cmdline→SELinux宽容→利用miui.mqsas漏洞运行ksud→late-load模式→软重启注入Zygisk。"
+        ),
+        RootMethodInfo(
+            id = "oneplus_qualcomm_jailbreak",
+            name = "一加/小米 骁龙 越狱模式临时Root",
+            brand = "oneplus",
+            chipset = "qualcomm",
+            principle = "KernelSU官方越狱模式，利用fastboot漏洞临时启动修改后的boot获取root",
+            riskLevel = "low",
+            requiresComputer = true,
+            requiresKSU = true,
+            supportedDevices = "骁龙8gen2及以上机型（一加Ace6T/小米14等）",
+            description = "下载可越狱版本KSU→进入fastboot→残芯ADB一键临时root→重启后KSU显示已root。需过深度测试。"
+        ),
+        RootMethodInfo(
+            id = "samsung_wssyncmldm",
+            name = "三星锁BL Root (wssyncmldm漏洞)",
+            brand = "samsung",
+            chipset = "generic",
+            principle = "利用wssyncmldm系统服务漏洞，通过Root My Galaxy应用触发提权",
+            riskLevel = "medium",
+            requiresComputer = false,
+            requiresKSU = true,
+            supportedDevices = "部分三星锁BL机型",
+            description = "安装Root My Galaxy→点击Security Check→安装KernelSU→按提示完成。可能需要多次点击Security Check。"
+        ),
+        RootMethodInfo(
+            id = "mtk_generic_old",
+            name = "MTK通用临时Root (老漏洞)",
+            brand = "generic",
+            chipset = "mediatek",
+            principle = "XDA大神针对MTK的提权漏洞，2020年3月安全更新后被修复",
+            riskLevel = "low",
+            requiresComputer = true,
+            requiresKSU = false,
+            supportedDevices = "2020年3月前未打安全补丁的MTK机型",
+            description = "仅适用于老款MTK机型，新系统已修复此漏洞。"
+        ),
+        RootMethodInfo(
+            id = "cve_2025_21479",
+            name = "CVE-2025-21479 vivo Neo9 提权",
+            brand = "vivo",
+            chipset = "mediatek",
+            principle = "利用CVE-2025-21479内核漏洞提权，推送exploit二进制执行",
+            riskLevel = "high",
+            requiresComputer = true,
+            requiresKSU = false,
+            supportedDevices = "vivo iQOO Neo9 (特定固件版本)",
+            description = "推送exploit_vivo_neo9/rootc/su到/data/local/tmp→设置可执行→重启获取→执行exploit提权。"
+        ),
+        RootMethodInfo(
+            id = "ksu_late_load",
+            name = "KernelSU late-load 模式",
+            brand = "generic",
+            chipset = "generic",
+            principle = "通过已获取的临时root权限，加载KSU的ksud并使用late-load模式注入系统",
+            riskLevel = "low",
+            requiresComputer = false,
+            requiresKSU = true,
+            supportedDevices = "所有已安装KSU且已获取临时root的设备",
+            description = "找到libksud.so路径→执行late-load --allow-shell --package-name me.weishu.kernelsu→KSU弹框授权→获得root。"
+        ),
+        RootMethodInfo(
+            id = "magisk_patch_boot",
+            name = "Magisk 修补boot (需解BL)",
+            brand = "generic",
+            chipset = "generic",
+            principle = "提取boot.img→Magisk修补→fastboot刷入修补后的boot",
+            riskLevel = "low",
+            requiresComputer = true,
+            requiresKSU = false,
+            supportedDevices = "所有已解锁Bootloader的设备",
+            description = "标准Magisk root流程，需先解锁BL。提取boot→Magisk修补→fastboot flash boot→重启。"
+        ),
+        RootMethodInfo(
+            id = "ksu_patch_boot",
+            name = "KernelSU 修补boot (需解BL)",
+            brand = "generic",
+            chipset = "generic",
+            principle = "提取boot.img→KernelSU修补→fastboot刷入修补后的boot",
+            riskLevel = "low",
+            requiresComputer = true,
+            requiresKSU = true,
+            supportedDevices = "所有已解锁Bootloader且内核支持KSU的设备",
+            description = "标准KernelSU root流程，需先解锁BL。提取boot→KSU修补→fastboot flash boot→重启安装KSU管理器。"
+        )
+    )
+
+    // 获取所有内置的 root 方法
+    actual fun getAllRootMethods(): List<RootMethodInfo> = allRootMethods
+
+    // 获取当前设备可用的 root 方法（根据品牌/芯片/系统版本匹配）
+    actual fun getAvailableRootMethods(): List<RootMethodInfo> {
+        return try {
+            val info = detectDevice()
+            val brand = info.brand.lowercase()
+            // 直接用命令检测芯片类型
+            val hardware = exec("getprop ro.hardware 2>/dev/null").lowercase()
+            val chipsetName = exec("getprop ro.board.platform 2>/dev/null").lowercase()
+            val isMTK = hardware.contains("mt") || chipsetName.contains("mt") ||
+                        chipsetName.contains("mediatek") || chipsetName.contains("dimensity") ||
+                        hardware.contains("mediatek")
+            val isQualcomm = hardware.contains("qcom") || chipsetName.contains("sm") ||
+                             chipsetName.contains("qualcomm") || chipsetName.contains("snapdragon") ||
+                             hardware.contains("qualcomm")
+
+            allRootMethods.filter { method ->
+                // 品牌匹配
+                val brandMatch = method.brand == "generic" ||
+                    method.brand == brand ||
+                    (brand.contains("redmi") && method.brand == "xiaomi") ||
+                    (brand.contains("poco") && method.brand == "xiaomi") ||
+                    (brand.contains("iqoo") && method.brand == "vivo") ||
+                    (brand.contains("realme") && method.brand == "oneplus")
+                // 芯片匹配
+                val chipMatch = method.chipset == "generic" ||
+                    (method.chipset == "mediatek" && isMTK) ||
+                    (method.chipset == "qualcomm" && isQualcomm)
+                brandMatch && chipMatch
+            }
+        } catch (e: Exception) {
+            allRootMethods.filter { it.brand == "generic" }
+        }
+    }
+
+    // 自动检测设备并推荐最合适的 root 方法
+    actual fun detectRootMethod(): RootMethodInfo {
+        return try {
+            val available = getAvailableRootMethods()
+            // 优先推荐：已装KSU的late-load > 品牌专用临时root > 通用方法
+            val hasKSU = isKernelSUInstalled()
+            if (hasKSU) {
+                val lateLoad = available.find { it.id == "ksu_late_load" }
+                if (lateLoad != null) return lateLoad
+            }
+            // 优先品牌专用的临时root方法（风险低/中）
+            val tempRoot = available.find { it.id.contains("temp") || it.id.contains("ldpreload") || it.id.contains("jailbreak") }
+            if (tempRoot != null) return tempRoot
+            // 其次品牌专用
+            val brandSpecific = available.find { it.brand != "generic" }
+            if (brandSpecific != null) return brandSpecific
+            // 最后通用方法
+            available.firstOrNull() ?: allRootMethods.last()
+        } catch (e: Exception) {
+            allRootMethods.find { it.id == "magisk_patch_boot" } ?: allRootMethods.last()
+        }
+    }
+
+    // 执行指定的 root 方法
+    actual fun executeRootMethod(methodId: String): RootResult {
+        return try {
+            when (methodId) {
+                "ksu_late_load" -> {
+                    // KernelSU late-load 模式：找到 libksud.so 并执行 late-load
+                    val findResult = exec("find /data/app -name libksud.so 2>/dev/null | grep me.weishu.kernelsu | head -n 1")
+                    if (findResult.isBlank()) {
+                        RootResult(false, "未找到 KernelSU 的 libksud.so，请先安装 KernelSU 管理器", "ksu_late_load")
+                    } else {
+                        val ksudPath = findResult.trim()
+                        val result = exec("$ksudPath late-load --allow-shell --package-name me.weishu.kernelsu 2>&1")
+                        val idResult = exec("id")
+                        if (idResult.contains("uid=0")) {
+                            RootResult(true, "KernelSU late-load 成功！已获得root权限\n\n$result", "ksu_late_load")
+                        } else {
+                            RootResult(false, "KernelSU late-load 执行完成但未获得root，请在KSU管理器中授权\n\n$result", "ksu_late_load")
+                        }
+                    }
+                }
+                "vivo_mtk_ldpreload", "xiaomi_mtk_ldpreload" -> {
+                    // LD_PRELOAD 临时root：需要 preload.so 文件，检测是否存在
+                    val preloadExists = exec("ls /data/local/tmp/preload.so 2>/dev/null || ls /data/local/tmp/libpreload.so 2>/dev/null || echo ''")
+                    if (preloadExists.isBlank()) {
+                        RootResult(false, "未找到 preload.so 文件。请先从对应教程下载 preload.so 并推送到 /data/local/tmp/\n\n操作步骤：\n1. 下载对应机型的 preload.so\n2. adb push preload.so /data/local/tmp/\n3. 锁屏状态下重启\n4. 锁屏状态执行提权命令\n5. 亮屏后加载KSU", methodId)
+                    } else {
+                        // 执行 LD_PRELOAD 提权
+                        val result = exec("LD_PRELOAD=/data/local/tmp/preload.so /system/bin/sh -c 'id' 2>&1")
+                        if (result.contains("uid=0")) {
+                            RootResult(true, "LD_PRELOAD 提权成功！已获得临时root\n\n$result\n\n接下来请执行 KSU late-load 加载模块", methodId)
+                        } else {
+                            RootResult(false, "LD_PRELOAD 提权失败，请确认：\n1. 系统版本是否在支持范围内\n2. 是否在锁屏状态下执行\n3. preload.so 是否匹配当前机型\n\n输出：$result", methodId)
+                        }
+                    }
+                }
+                "oneplus_qualcomm_jailbreak" -> {
+                    // 骁龙越狱模式：需要进入 fastboot，这里只提供指引
+                    RootResult(false, "骁龙越狱模式需要在 fastboot 模式下操作：\n\n1. 下载可越狱版本的 KernelSU\n2. 手机进入 fastboot 模式（关机后按住音量下+电源）\n3. 电脑执行 fastboot 启动修改后的 boot\n4. 重启后打开 KSU 管理器\n\n注意：此操作需要电脑配合，无法在手机端直接完成", methodId)
+                }
+                "xiaomi_fastboot_cmdline" -> {
+                    // fastboot cmdline 漏洞：需要电脑操作
+                    RootResult(false, "fastboot cmdline 免解BL Root 需要电脑操作：\n\n1. 从 KSU APK 提取 libksud.so 重命名为 ksud\n2. adb push ksud /data/local/tmp/\n3. 进入 fastboot：adb reboot bootloader\n4. fastboot oem cdmslot-info（查看槽位）\n5. fastboot reboot fastboot\n6. 修改 cmdline 使 SELinux 宽容\n7. 利用 miui.mqsas 漏洞运行 ksud\n\n注意：此操作风险较高，建议先备份数据", methodId)
+                }
+                "magisk_patch_boot" -> {
+                    // Magisk 修补 boot
+                    val extractResult = extractBootImage()
+                    if (!extractResult.success) {
+                        RootResult(false, "提取 boot.img 失败：${extractResult.message}", methodId)
+                    } else {
+                        val patchResult = patchWithMagisk(extractResult.message)
+                        patchResult
+                    }
+                }
+                "ksu_patch_boot" -> {
+                    // KSU 修补 boot
+                    val extractResult = extractBootImage()
+                    if (!extractResult.success) {
+                        RootResult(false, "提取 boot.img 失败：${extractResult.message}", methodId)
+                    } else {
+                        val patchResult = patchWithKernelSU(extractResult.message)
+                        patchResult
+                    }
+                }
+                "samsung_wssyncmldm" -> {
+                    RootResult(false, "三星锁BL Root 需要安装 Root My Galaxy 应用：\n\n1. 从 GitHub 下载 Root My Galaxy\n2. 安装并打开\n3. 点击 Security Check 按钮（可能需要多次点击）\n4. 按提示安装 KernelSU\n5. 完成后获得 root 权限\n\n注意：此方法仅支持部分三星机型", methodId)
+                }
+                "cve_2025_21479" -> {
+                    val exploitExists = exec("ls /data/local/tmp/exploit_vivo_neo9 2>/dev/null || echo ''")
+                    if (exploitExists.isBlank()) {
+                        RootResult(false, "未找到 CVE-2025-21479 exploit 文件。\n\n请从 GitHub (reaizuguo/vivo_iqoo_neo_9_root_research_on_cve-2025-21479) 下载：\n1. exploit_vivo_neo9\n2. rootc\n3. su\n推送到 /data/local/tmp/ 并设置可执行后重试", methodId)
+                    } else {
+                        val result = exec("/data/local/tmp/exploit_vivo_neo9 2>&1")
+                        val idResult = exec("id")
+                        if (idResult.contains("uid=0")) {
+                            RootResult(true, "CVE-2025-21479 提权成功！\n\n$result", methodId)
+                        } else {
+                            RootResult(false, "CVE-2025-21479 提权失败：$result", methodId)
+                        }
+                    }
+                }
+                "mtk_generic_old" -> {
+                    RootResult(false, "MTK通用老漏洞已在2020年3月安全更新中修复，当前系统大概率不受影响。\n\n如果您的设备是2020年前的老款MTK机型且未更新安全补丁，可以尝试从XDA下载对应exploit。", methodId)
+                }
+                else -> {
+                    RootResult(false, "未知的 root 方法：$methodId", methodId)
+                }
+            }
+        } catch (e: Exception) {
+            RootResult(false, "执行 root 方法失败：${e.message}", methodId)
+        }
+    }
+
     // 执行命令
     private fun exec(command: String): String {
         return try {

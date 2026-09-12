@@ -1,0 +1,119 @@
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/9.5.0/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+Reusing configuration cache.
+> Task :app:androidPreBuild UP-TO-DATE
+> Task :backdrop:androidPreBuild UP-TO-DATE
+> Task :androidApp:preBuild UP-TO-DATE
+> Task :androidApp:preDebugBuild UP-TO-DATE
+> Task :app:preAndroidMainBuild UP-TO-DATE
+> Task :backdrop:preAndroidMainBuild UP-TO-DATE
+> Task :androidApp:mergeDebugNativeDebugMetadata NO-SOURCE
+> Task :app:convertXmlValueResourcesForCommonMain NO-SOURCE
+> Task :app:convertXmlValueResourcesForAndroidMain NO-SOURCE
+> Task :app:copyNonXmlValueResourcesForAndroidMain NO-SOURCE
+> Task :app:kmpPartiallyResolvedDependenciesChecker
+> Task :app:copyNonXmlValueResourcesForCommonMain UP-TO-DATE
+> Task :app:generateExpectResourceCollectorsForCommonMain UP-TO-DATE
+> Task :app:generateComposeResClass UP-TO-DATE
+> Task :androidApp:generateDebugResources UP-TO-DATE
+> Task :backdrop:kmpPartiallyResolvedDependenciesChecker
+> Task :backdrop:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :app:prepareComposeResourcesTaskForAndroidMain NO-SOURCE
+> Task :backdrop:generateAndroidMainEmptyResourceFiles UP-TO-DATE
+> Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :app:generateAndroidMainEmptyResourceFiles UP-TO-DATE
+> Task :backdrop:generateComposeResClass SKIPPED
+> Task :backdrop:convertXmlValueResourcesForAndroidMain NO-SOURCE
+> Task :backdrop:copyNonXmlValueResourcesForAndroidMain NO-SOURCE
+> Task :app:generateResourceAccessorsForAndroidMain NO-SOURCE
+> Task :backdrop:generateExpectResourceCollectorsForCommonMain SKIPPED
+> Task :app:generateAndroidMainAssets UP-TO-DATE
+> Task :androidApp:generateDebugAssets UP-TO-DATE
+> Task :backdrop:convertXmlValueResourcesForCommonMain NO-SOURCE
+> Task :backdrop:prepareComposeResourcesTaskForAndroidMain NO-SOURCE
+> Task :backdrop:copyNonXmlValueResourcesForCommonMain NO-SOURCE
+> Task :backdrop:generateResourceAccessorsForAndroidMain SKIPPED
+> Task :app:prepareComposeResourcesTaskForCommonMain UP-TO-DATE
+> Task :androidApp:generateDebugGlobalSynthetics UP-TO-DATE
+> Task :androidApp:javaPreCompileDebug UP-TO-DATE
+> Task :app:generateResourceAccessorsForCommonMain UP-TO-DATE
+> Task :backdrop:prepareComposeResourcesTaskForCommonMain NO-SOURCE
+> Task :androidApp:desugarDebugFileDependencies UP-TO-DATE
+> Task :app:generateActualResourceCollectorsForAndroidMain UP-TO-DATE
+> Task :backdrop:generateResourceAccessorsForCommonMain SKIPPED
+> Task :backdrop:generateActualResourceCollectorsForAndroidMain SKIPPED
+> Task :app:copyAndroidMainComposeResourcesToAndroidAssets UP-TO-DATE
+> Task :androidApp:mapDebugSourceSetPaths UP-TO-DATE
+> Task :app:writeAndroidMainAarMetadata UP-TO-DATE
+> Task :backdrop:writeAndroidMainAarMetadata UP-TO-DATE
+> Task :androidApp:createDebugCompatibleScreenManifests UP-TO-DATE
+> Task :androidApp:extractDeepLinksDebug UP-TO-DATE
+> Task :androidApp:packageDebugResources UP-TO-DATE
+> Task :app:mergeAndroidMainAssets UP-TO-DATE
+> Task :app:packageAndroidMainResources UP-TO-DATE
+> Task :app:processAndroidMainManifest UP-TO-DATE
+> Task :backdrop:processAndroidMainManifest UP-TO-DATE
+> Task :app:parseAndroidMainLocalResources UP-TO-DATE
+> Task :app:generateAndroidMainRFile UP-TO-DATE
+> Task :app:mapAndroidMainSourceSetPaths UP-TO-DATE
+> Task :app:compileAndroidMainLibraryResources UP-TO-DATE
+> Task :androidApp:mergeDebugJniLibFolders UP-TO-DATE
+> Task :app:mergeAndroidMainJniLibFolders UP-TO-DATE
+> Task :app:mergeAndroidMainNativeLibs NO-SOURCE
+> Task :app:copyAndroidMainJniLibsProjectOnly UP-TO-DATE
+> Task :backdrop:mergeAndroidMainJniLibFolders UP-TO-DATE
+> Task :backdrop:mergeAndroidMainNativeLibs NO-SOURCE
+> Task :backdrop:copyAndroidMainJniLibsProjectOnly UP-TO-DATE
+> Task :backdrop:compileAndroidMain UP-TO-DATE
+> Task :backdrop:bundleAndroidMainClassesToCompileJar UP-TO-DATE
+> Task :androidApp:checkDebugDuplicateClasses UP-TO-DATE
+> Task :backdrop:processAndroidMainJavaRes UP-TO-DATE
+> Task :androidApp:mergeDebugResources UP-TO-DATE
+> Task :androidApp:mergeDebugAssets UP-TO-DATE
+> Task :androidApp:checkDebugAarMetadata UP-TO-DATE
+> Task :androidApp:processDebugNavigationResources UP-TO-DATE
+> Task :androidApp:parseDebugLocalResources UP-TO-DATE
+> Task :androidApp:compileDebugNavigationResources UP-TO-DATE
+> Task :androidApp:compressDebugAssets UP-TO-DATE
+> Task :androidApp:validateSigningDebug UP-TO-DATE
+> Task :backdrop:bundleLibRuntimeToDirAndroidMain UP-TO-DATE
+> Task :androidApp:writeDebugSigningConfigVersions UP-TO-DATE
+> Task :androidApp:writeDebugAppMetadata UP-TO-DATE
+> Task :androidApp:generateDebugRFile UP-TO-DATE
+> Task :androidApp:mergeDebugNativeLibs UP-TO-DATE
+> Task :androidApp:stripDebugDebugSymbols UP-TO-DATE
+> Task :androidApp:processDebugMainManifest UP-TO-DATE
+> Task :androidApp:processDebugManifest UP-TO-DATE
+> Task :androidApp:processDebugManifestForPackage UP-TO-DATE
+> Task :androidApp:mergeExtDexDebug UP-TO-DATE
+> Task :androidApp:processDebugResources UP-TO-DATE
+> Task :app:compileAndroidMain
+w: ATTENTION!
+This build uses unsafe internal compiler arguments:
+
+-XXLanguage:+ContextParameters
+
+This mode is not recommended for production use,
+as no stability/compatibility guarantees are given on
+compiler or generated code. Use it at your own risk!
+
+e: file:///C:/Users/32568/Doubao/chats/2026-08-22/new-chat/ADBToolboxGlass/app/src/androidMain/kotlin/com/example/adbtoolbox/common/RootToolManager.kt:617:32 Unresolved reference 'chipset'.
+
+> Task :app:compileAndroidMain FAILED
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':app:compileAndroidMain' (registered by plugin 'com.android.internal.kotlin.multiplatform.library').
+> A failure occurred while executing org.jetbrains.kotlin.compilerRunner.btapi.BuildToolsApiCompilationWork
+   > Compilation error. See log for more details
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights from a Build Scan (powered by Develocity).
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 1m 4s
+58 actionable tasks: 3 executed, 55 up-to-date
+Configuration cache entry reused.
