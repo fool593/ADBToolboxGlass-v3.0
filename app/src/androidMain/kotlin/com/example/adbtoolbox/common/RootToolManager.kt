@@ -584,6 +584,18 @@ fi
             description = "全品牌通用方法。1.进入fastboot模式 2.执行 fastboot oem set-gpu-preemption 0 androidboot.selinux=permissive 3.重启后SELinux宽容 4.利用miui.mqsas或其他系统服务漏洞运行ksud 5.KSU late-load获取root。注意：需2026年2月前安全补丁。"
         ),
         RootMethodInfo(
+            id = "qualcomm_mobile_permissive",
+            name = "手机端骁龙强制注入宽容模式 (无需电脑)",
+            brand = "generic",
+            chipset = "qualcomm",
+            principle = "在手机端直接通过Shizuku/Dhizuku/Root权限执行setenforce 0，强制将SELinux切换为宽容模式，然后加载KSU获取root。无需电脑，手机直接操作。",
+            riskLevel = "medium",
+            requiresComputer = false,
+            requiresKSU = true,
+            supportedDevices = "所有高通骁龙机型（需已开启Shizuku/Dhizuku或已有root权限）。Redmi K60/K50/K40等机型测试可用。",
+            description = "手机端直接执行，无需电脑。1.确保已开启Shizuku或Dhizuku权限（或已有root） 2.点击执行按钮，自动执行 setenforce 0 切换SELinux为宽容模式 3.检测SELinux状态 4.如果已安装KSU，自动执行 ksud live 加载KSU获取root 5.如果未安装KSU，提示先安装KSU管理器。注意：此方法需要Shizuku/Dhizuku或root权限才能执行setenforce。"
+        ),
+        RootMethodInfo(
             id = "xiaomi_qc_temp_root",
             name = "小米高通QC免解BL临时Root",
             brand = "xiaomi",
@@ -921,6 +933,38 @@ fi
                         RootResult(false, "红米Note11T Pro LKB单刷解BL需要电脑配合：\n\n1. 下载对应机型专属LKB单刷文件（搜索 红米Note11T Pro LKB单刷）\n2. 手机进入fastboot模式（关机后按住音量下+电源）\n3. 电脑打开MiFlash工具，只勾选LKB项\n4. 刷入修改版LKB镜像\n5. 用配套工具完成最终解锁（会清除全部数据，请先备份）\n6. 解BL后刷入KSU/Magisk获取root", methodId)
                     } else {
                         RootResult(false, "检测到 lkb.img，但LKB单刷需要在fastboot模式下用电脑MiFlash工具刷入，无法在手机端直接执行。", methodId)
+                    }
+                }
+                "qualcomm_mobile_permissive" -> {
+                    // 手机端骁龙强制注入宽容模式
+                    val hasShizuku = try { ADBTools.isShizukuAvailable() } catch (e: Exception) { false }
+                    val hasDhizuku = try { ADBTools.isDhizukuActive() } catch (e: Exception) { false }
+                    val hasRoot = isRooted()
+                    if (!hasShizuku && !hasDhizuku && !hasRoot) {
+                        RootResult(false, "✗ 无法执行！\n\n此方法需要 Shizuku、Dhizuku 或 Root 权限才能执行 setenforce 命令。\n\n请先开启以下任一权限：\n1. Shizuku（通过ADB或无线调试激活）\n2. Dhizuku（设备所有者权限）\n3. Root权限\n\n开启权限后重新点击执行按钮。", methodId)
+                    } else {
+                        // 执行 setenforce 0
+                        val setenforceResult = ADBTools.execCommand("setenforce 0")
+                        val getenforceResult = ADBTools.execCommand("getenforce")
+                        val isPermissive = getenforceResult.output.contains("Permissive", ignoreCase = true) ||
+                                           getenforceResult.output.contains("0", ignoreCase = true)
+                        if (isPermissive) {
+                            // SELinux 已切换为宽容模式，尝试加载 KSU
+                            val ksuInstalled = isKernelSUInstalled()
+                            if (ksuInstalled) {
+                                val ksudResult = ADBTools.execCommand("/data/adb/ksud live 2>&1 || ksud live 2>&1")
+                                val idResult = ADBTools.execCommand("id")
+                                if (idResult.output.contains("uid=0")) {
+                                    RootResult(true, "✓ 执行成功！\n\n1. setenforce 0 执行成功\n2. SELinux 已切换为宽容模式\n3. KSU 已加载\n4. 已获得 root 权限 (uid=0)\n\n当前状态：\nSELinux: Permissive\nID: ${idResult.output.trim()}", methodId)
+                                } else {
+                                    RootResult(true, "✓ SELinux 已切换为宽容模式！\n\n1. setenforce 0 执行成功\n2. SELinux: Permissive\n3. KSU 加载命令已执行\n\n请打开 KernelSU 管理器确认 root 状态。\n如果未获得 root，请手动在终端执行：/data/adb/ksud live", methodId)
+                                }
+                            } else {
+                                RootResult(true, "✓ SELinux 已切换为宽容模式！\n\n1. setenforce 0 执行成功\n2. SELinux 当前状态: Permissive\n\n但未检测到 KernelSU 安装。\n请先安装 KernelSU 管理器，然后重新执行此方法加载 KSU 获取 root。", methodId)
+                            }
+                        } else {
+                            RootResult(false, "✗ setenforce 执行失败！\n\n尝试执行 setenforce 0，但 SELinux 仍为 Enforcing。\n\n可能原因：\n1. Shizuku/Dhizuku 权限不足\n2. 系统限制修改 SELinux\n3. 需要 root 权限才能执行\n\n当前 SELinux 状态: ${getenforceResult.output.trim()}\nsetenforce 输出: ${setenforceResult.output.trim()} ${setenforceResult.error.trim()}", methodId)
+                        }
                     }
                 }
                 "qualcomm_cmdline_injection" -> {

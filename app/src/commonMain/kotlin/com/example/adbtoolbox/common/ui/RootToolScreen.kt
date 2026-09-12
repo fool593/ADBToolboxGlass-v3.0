@@ -1,5 +1,6 @@
 package com.example.adbtoolbox.common.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -44,6 +45,7 @@ fun RootToolScreen(
     var recommendedMethod by remember { mutableStateOf<RootMethodInfo?>(null) }
     var executingMethodId by remember { mutableStateOf<String?>(null) }
     var methodResult by remember { mutableStateOf<RootResult?>(null) }
+    var expandedMethodId by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
         isLoading = true
@@ -112,101 +114,147 @@ fun RootToolScreen(
 
                     availableMethods.forEach { method ->
                         val isExecuting = executingMethodId == method.id
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
-                                .clickable(enabled = !isExecuting) {
-                                    scope.launch {
-                                        executingMethodId = method.id
-                                        methodResult = null
-                                        // 判断是否为需要脚本的自动执行方法
-                                        val isAutoMethod = method.autoExecute ||
-                                            method.id == "redmi_note11tpro_misaka_temp_root" ||
-                                            method.id == "xiaomi_mtk_ldpreload" ||
-                                            method.id == "vivo_mtk_ldpreload" ||
-                                            method.id == "dirtypipe_cve_2022_0847"
-                                        // 需要电脑的方法：跳转到终端显示完整命令列表，方便复制
-                                        if (method.requiresComputer && !isAutoMethod) {
-                                            val terminalCmd = withContext(Dispatchers.Default) { RootToolManager.buildComputerMethodCommand(method.id) }
-                                            methodResult = RootResult(true, "✓ 已生成电脑端操作命令\n正在跳转到终端显示...\n\n你可以在终端中直接复制命令到电脑执行。", method.id)
-                                            executingMethodId = null
-                                            onNavigateToTerminal(terminalCmd)
-                                        } else if (isAutoMethod) {
-                                            // 第一步：检测本地是否已有脚本
-                                            val scriptPath = withContext(Dispatchers.Default) { RootToolManager.findTempRootScript() }
-                                            if (scriptPath != null) {
-                                                // 检测到脚本，尝试转移到 /data/local/tmp/
-                                                val targetPath = if (method.scriptFileName.isNotBlank()) {
-                                                    withContext(Dispatchers.Default) { RootToolManager.moveScriptToTempDir(method.scriptFileName) }
-                                                } else {
-                                                    scriptPath
-                                                }
-                                                if (targetPath != null) {
-                                                    // 转移成功，跳转到终端自动执行
-                                                    val terminalCmd = withContext(Dispatchers.Default) { RootToolManager.buildOneClickRootCommand(targetPath, method.id) }
-                                                    methodResult = RootResult(true, "✓ 检测到脚本文件: $scriptPath\n✓ 已转移到: $targetPath\n✓ 正在跳转到终端执行...", method.id)
-                                                    executingMethodId = null
-                                                    onNavigateToTerminal(terminalCmd)
-                                                } else {
-                                                    // 转移失败
-                                                    methodResult = RootResult(false, "✗ 脚本转移失败！\n\n检测到脚本: $scriptPath\n但无法转移到 /data/local/tmp/\n\n可能原因：\n1. /data/local/tmp 目录不存在或无写入权限\n2. 存储空间不足\n3. 文件被占用\n\n请手动将脚本复制到 /data/local/tmp/ 后重试", method.id)
-                                                    executingMethodId = null
-                                                }
-                                            } else {
-                                                // 未检测到脚本
-                                                if (method.downloadUrl.isNotBlank()) {
-                                                    // 有下载链接，自动跳转到浏览器下载
-                                                    methodResult = RootResult(false, "✗ 未检测到脚本文件！\n\n正在跳转到浏览器下载...\n下载地址: ${method.downloadUrl}\n\n下载完成后，请将文件放到 /sdcard/Download/ 目录，然后重新点击此方法，系统会自动检测并转移执行。", method.id)
-                                                    executingMethodId = null
-                                                    // 跳转到浏览器
-                                                    val opened = withContext(Dispatchers.Default) { RootToolManager.openUrl(method.downloadUrl) }
-                                                    if (!opened) {
-                                                        methodResult = RootResult(false, "✗ 未检测到脚本文件！\n\n无法自动打开浏览器，请手动访问以下链接下载：\n${method.downloadUrl}\n\n下载完成后，请将文件放到 /sdcard/Download/ 目录，然后重新点击此方法。", method.id)
+                        val isExpanded = expandedMethodId == method.id
+                        Column {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .padding(vertical = 8.dp, horizontal = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                // 左边：方法名称和简介（点击展开详情）
+                                Column(
+                                    Modifier
+                                        .weight(1f)
+                                        .clickable {
+                                            expandedMethodId = if (isExpanded) null else method.id
+                                        }
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        BasicText(
+                                            if (isExpanded) "▼ " else "▶ ",
+                                            style = TextStyle(Color(0xFFAF52DE), 10.sp, FontWeight.Bold)
+                                        )
+                                        BasicText(method.name, style = TextStyle(contentColor, 14.sp, FontWeight.Bold))
+                                    }
+                                    Spacer(Modifier.height(2.dp))
+                                    BasicText(
+                                        "${method.principle.take(50)}...",
+                                        style = TextStyle(contentColor.copy(alpha = 0.5f), 11.sp)
+                                    )
+                                    Spacer(Modifier.height(2.dp))
+                                    BasicText(
+                                        "风险:${method.riskLevel} | ${if (method.requiresComputer) "需电脑" else "手机端"} | ${if (method.requiresKSU) "需KSU" else "无需KSU"}",
+                                        style = TextStyle(contentColor.copy(alpha = 0.4f), 10.sp)
+                                    )
+                                }
+                                // 右边：紫色玻璃执行按钮
+                                LiquidButton(
+                                    onClick = {
+                                        scope.launch {
+                                            executingMethodId = method.id
+                                            methodResult = null
+                                            // 判断是否为需要脚本的自动执行方法
+                                            val isAutoMethod = method.autoExecute ||
+                                                method.id == "redmi_note11tpro_misaka_temp_root" ||
+                                                method.id == "xiaomi_mtk_ldpreload" ||
+                                                method.id == "vivo_mtk_ldpreload" ||
+                                                method.id == "dirtypipe_cve_2022_0847" ||
+                                                method.id == "qualcomm_mobile_permissive"
+                                            // 需要电脑的方法：跳转到终端显示完整命令列表，方便复制
+                                            if (method.requiresComputer && !isAutoMethod) {
+                                                val terminalCmd = withContext(Dispatchers.Default) { RootToolManager.buildComputerMethodCommand(method.id) }
+                                                methodResult = RootResult(true, "✓ 已生成电脑端操作命令\n正在跳转到终端显示...\n\n你可以在终端中直接复制命令到电脑执行。", method.id)
+                                                executingMethodId = null
+                                                onNavigateToTerminal(terminalCmd)
+                                            } else if (isAutoMethod) {
+                                                // 第一步：检测本地是否已有脚本
+                                                val scriptPath = withContext(Dispatchers.Default) { RootToolManager.findTempRootScript() }
+                                                if (scriptPath != null) {
+                                                    val targetPath = if (method.scriptFileName.isNotBlank()) {
+                                                        withContext(Dispatchers.Default) { RootToolManager.moveScriptToTempDir(method.scriptFileName) }
+                                                    } else { scriptPath }
+                                                    if (targetPath != null) {
+                                                        val terminalCmd = withContext(Dispatchers.Default) { RootToolManager.buildOneClickRootCommand(targetPath, method.id) }
+                                                        methodResult = RootResult(true, "✓ 检测到脚本: $scriptPath\n✓ 已转移到: $targetPath\n✓ 正在跳转到终端执行...", method.id)
+                                                        executingMethodId = null
+                                                        onNavigateToTerminal(terminalCmd)
+                                                    } else {
+                                                        methodResult = RootResult(false, "✗ 脚本转移失败！\n检测到脚本: $scriptPath\n但无法转移到 /data/local/tmp/\n可能原因：目录不存在/无写入权限/存储空间不足\n请手动将脚本复制到 /data/local/tmp/ 后重试", method.id)
+                                                        executingMethodId = null
                                                     }
                                                 } else {
-                                                    // 没有下载链接，显示手动下载指引
-                                                    methodResult = RootResult(false, "✗ 未检测到脚本文件！\n\n搜索目录：/sdcard/Download、/data/local/tmp\n\n请下载对应提权脚本，放到 /sdcard/Download/ 目录下。\n\n下载后重新点击此方法，系统会自动检测并转移执行。\n\n支持的文件名关键词：root、temp、misaka、exploit、提权、ksu、dirtypipe 等", method.id)
-                                                    executingMethodId = null
+                                                    if (method.downloadUrl.isNotBlank()) {
+                                                        methodResult = RootResult(false, "✗ 未检测到脚本！\n正在跳转到浏览器下载...\n下载地址: ${method.downloadUrl}\n下载完成后放到 /sdcard/Download/ 目录，重新点击执行按钮。", method.id)
+                                                        executingMethodId = null
+                                                        val opened = withContext(Dispatchers.Default) { RootToolManager.openUrl(method.downloadUrl) }
+                                                        if (!opened) {
+                                                            methodResult = RootResult(false, "✗ 未检测到脚本！\n无法自动打开浏览器，请手动访问：\n${method.downloadUrl}\n下载后放到 /sdcard/Download/ 目录重试。", method.id)
+                                                        }
+                                                    } else {
+                                                        methodResult = RootResult(false, "✗ 未检测到脚本！\n搜索目录：/sdcard/Download、/data/local/tmp\n请下载对应提权脚本放到 /sdcard/Download/ 目录。\n支持关键词：root、temp、misaka、exploit、提权、ksu、dirtypipe", method.id)
+                                                        executingMethodId = null
+                                                    }
                                                 }
+                                            } else {
+                                                methodResult = withContext(Dispatchers.Default) { RootToolManager.executeRootMethod(method.id) }
+                                                executingMethodId = null
                                             }
-                                        } else {
-                                            // 其他方法：正常执行
-                                            methodResult = withContext(Dispatchers.Default) { RootToolManager.executeRootMethod(method.id) }
-                                            executingMethodId = null
+                                        }
+                                    },
+                                    backdrop = backdrop,
+                                    modifier = Modifier.height(36.dp),
+                                    tint = Color(0xFFAF52DE)
+                                ) {
+                                    if (isExecuting) {
+                                        BasicText("...", Modifier.padding(horizontal = 16.dp), style = TextStyle(Color.White, 12.sp, FontWeight.Bold))
+                                    } else {
+                                        BasicText("执行", Modifier.padding(horizontal = 16.dp), style = TextStyle(Color.White, 12.sp, FontWeight.Bold))
+                                    }
+                                }
+                            }
+                            // 展开详情区域
+                            if (isExpanded) {
+                                Spacer(Modifier.height(8.dp))
+                                Box(
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(Color(0xFFAF52DE).copy(alpha = 0.08f))
+                                        .padding(12.dp)
+                                ) {
+                                    Column {
+                                        BasicText("【原理】", style = TextStyle(Color(0xFFAF52DE), 12.sp, FontWeight.Bold))
+                                        Spacer(Modifier.height(2.dp))
+                                        BasicText(method.principle, style = TextStyle(contentColor.copy(alpha = 0.8f), 11.sp))
+                                        Spacer(Modifier.height(8.dp))
+                                        BasicText("【支持机型】", style = TextStyle(Color(0xFFAF52DE), 12.sp, FontWeight.Bold))
+                                        Spacer(Modifier.height(2.dp))
+                                        BasicText(method.supportedDevices, style = TextStyle(contentColor.copy(alpha = 0.8f), 11.sp))
+                                        Spacer(Modifier.height(8.dp))
+                                        BasicText("【风险等级】${method.riskLevel} | ${if (method.requiresComputer) "需要电脑配合" else "可直接在手机执行"} | ${if (method.requiresKSU) "需要先安装KSU" else "无需KSU"}", style = TextStyle(contentColor.copy(alpha = 0.7f), 11.sp))
+                                        Spacer(Modifier.height(8.dp))
+                                        BasicText("【操作步骤】", style = TextStyle(Color(0xFFAF52DE), 12.sp, FontWeight.Bold))
+                                        Spacer(Modifier.height(2.dp))
+                                        BasicText(method.description, style = TextStyle(contentColor.copy(alpha = 0.8f), 11.sp))
+                                        if (method.downloadUrl.isNotBlank()) {
+                                            Spacer(Modifier.height(6.dp))
+                                            BasicText("【下载地址】${method.downloadUrl}", style = TextStyle(Color(0xFF0088FF), 10.sp))
                                         }
                                     }
                                 }
-                                .padding(vertical = 10.dp, horizontal = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(Modifier.weight(1f)) {
-                                BasicText(method.name, style = TextStyle(contentColor, 14.sp, FontWeight.Bold))
-                                Spacer(Modifier.height(2.dp))
+                            }
+                            // 执行结果显示
+                            if (methodResult != null && executingMethodId == null && methodResult!!.step == method.id) {
+                                Spacer(Modifier.height(6.dp))
                                 BasicText(
-                                    "${method.principle.take(60)}...",
-                                    style = TextStyle(contentColor.copy(alpha = 0.5f), 11.sp)
-                                )
-                                Spacer(Modifier.height(2.dp))
-                                BasicText(
-                                    "风险: ${method.riskLevel} | ${if (method.requiresComputer) "需电脑" else "手机端"} | ${if (method.requiresKSU) "需KSU" else "无需KSU"}",
-                                    style = TextStyle(contentColor.copy(alpha = 0.4f), 10.sp)
+                                    if (methodResult!!.success) "✓ ${methodResult!!.message.take(300)}" else "✗ ${methodResult!!.message.take(300)}",
+                                    style = TextStyle(if (methodResult!!.success) Color(0xFF34C759) else Color(0xFFFF3B30), 11.sp)
                                 )
                             }
-                            if (isExecuting) {
-                                BasicText("...", style = TextStyle(Color(0xFFAF52DE), 16.sp, FontWeight.Bold))
-                            } else {
-                                BasicText("▶", style = TextStyle(contentColor.copy(alpha = 0.4f), 12.sp))
-                            }
-                        }
-                        if (methodResult != null && executingMethodId == null && methodResult!!.step == method.id) {
                             Spacer(Modifier.height(6.dp))
-                            BasicText(
-                                if (methodResult!!.success) "✓ ${methodResult!!.message.take(200)}" else "✗ ${methodResult!!.message.take(200)}",
-                                style = TextStyle(if (methodResult!!.success) Color(0xFF34C759) else Color(0xFFFF3B30), 11.sp)
-                            )
                         }
-                        Spacer(Modifier.height(4.dp))
                     }
                 }
             }
