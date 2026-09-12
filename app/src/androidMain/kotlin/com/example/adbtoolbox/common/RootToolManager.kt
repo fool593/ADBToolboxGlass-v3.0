@@ -393,20 +393,31 @@ fi
     // 获取 GhostLock 支持的一加机型
     fun getGhostLockSupportedDevices(): List<String> = ghostLockDevices
 
-    // 检查 KernelSU 是否已安装
+    // 检查 KernelSU 是否已安装（多维度检测：包名+命令+特征文件+内核接口）
     actual fun isKernelSUInstalled(): Boolean {
         return try {
-            // 检查 KernelSU 应用包名
+            // 1. 检查 KernelSU 应用包名（官方及各分支）
             val pm = appContext.packageManager
             val packages = pm.getInstalledPackages(0)
             val hasKSUApp = packages.any {
                 it.packageName == "me.weishu.kernelsu" ||
                 it.packageName == "com.kernelsu" ||
+                it.packageName == "me.bmax.kernelsu" ||
                 it.packageName.contains("kernelsu", ignoreCase = true)
             }
-            // 检查内核是否有 KernelSU
-            val ksuCheck = exec("cat /proc/ksu_version 2>/dev/null || echo ''")
-            hasKSUApp || ksuCheck.isNotBlank()
+            // 2. 用 pm 命令检测（比 PackageManager 更可靠）
+            val pmCheck = exec("pm list packages 2>/dev/null | grep -i kernelsu")
+            val hasKSUPm = pmCheck.contains("kernelsu", ignoreCase = true)
+            // 3. 检查 ksud 命令是否可用
+            val ksudCheck = exec("ls /data/adb/ksud 2>/dev/null || which ksud 2>/dev/null || echo ''")
+            val hasKsud = ksudCheck.contains("ksud")
+            // 4. 检查内核接口 /proc/ksu_version
+            val ksuVersion = exec("cat /proc/ksu_version 2>/dev/null || echo ''")
+            val hasKSUProc = ksuVersion.isNotBlank()
+            // 5. 检查 /data/adb/ksu 目录
+            val ksuDir = exec("ls -d /data/adb/ksu 2>/dev/null || echo ''")
+            val hasKSUDir = ksuDir.contains("/data/adb/ksu")
+            hasKSUApp || hasKSUPm || hasKsud || hasKSUProc || hasKSUDir
         } catch (e: Exception) {
             false
         }

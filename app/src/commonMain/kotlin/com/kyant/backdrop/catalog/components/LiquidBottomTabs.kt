@@ -294,11 +294,12 @@ fun LiquidBottomTabs(
                         val progress = dampedDragAnimation.pressProgress
                         val lp = longPressAnim.value
                         val edgeRef = GlassEffectConfig.longPressRefraction.value
-                        blur(GlassEffectConfig.navIndicatorBlur.value.dp.toPx() * 2f)
+                        // 指示器胶囊模糊/折射绑定到导航栏可调节参数，滑块调节即时生效
+                        blur(GlassEffectConfig.navIndicatorBlur.value.dp.toPx())
                         lens(
-                            10f.dp.toPx() * progress + 12f.dp.toPx() * lp * edgeRef,
-                            14f.dp.toPx() * progress + 18f.dp.toPx() * lp * edgeRef,
-                            chromaticAberration = true
+                            (GlassEffectConfig.navRefractionHeight.value * 48f.dp.toPx() + 10f.dp.toPx() * progress + 12f.dp.toPx() * lp * edgeRef).coerceAtMost(120f.dp.toPx()),
+                            (GlassEffectConfig.navRefractionAmount.value * 48f.dp.toPx() + 14f.dp.toPx() * progress + 18f.dp.toPx() * lp * edgeRef).coerceAtMost(150f.dp.toPx()),
+                            chromaticAberration = GlassEffectConfig.navChromaticAberration.value > 0f
                         )
                     },
                     highlight = {
