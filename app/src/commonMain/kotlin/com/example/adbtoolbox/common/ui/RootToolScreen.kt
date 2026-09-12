@@ -126,7 +126,13 @@ fun RootToolScreen(
                                             method.id == "xiaomi_mtk_ldpreload" ||
                                             method.id == "vivo_mtk_ldpreload" ||
                                             method.id == "dirtypipe_cve_2022_0847"
-                                        if (isAutoMethod) {
+                                        // 需要电脑的方法：跳转到终端显示完整命令列表，方便复制
+                                        if (method.requiresComputer && !isAutoMethod) {
+                                            val terminalCmd = withContext(Dispatchers.Default) { RootToolManager.buildComputerMethodCommand(method.id) }
+                                            methodResult = RootResult(true, "✓ 已生成电脑端操作命令\n正在跳转到终端显示...\n\n你可以在终端中直接复制命令到电脑执行。", method.id)
+                                            executingMethodId = null
+                                            onNavigateToTerminal(terminalCmd)
+                                        } else if (isAutoMethod) {
                                             // 第一步：检测本地是否已有脚本
                                             val scriptPath = withContext(Dispatchers.Default) { RootToolManager.findTempRootScript() }
                                             if (scriptPath != null) {

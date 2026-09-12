@@ -75,6 +75,9 @@ expect object RootToolManager {
 
     // 打开浏览器访问指定 URL
     fun openUrl(url: String): Boolean
+
+    // 生成需要电脑执行的方法的完整命令列表（用于终端显示和复制）
+    fun buildComputerMethodCommand(methodId: String): String
 }
 
 // Root 方法信息

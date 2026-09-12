@@ -60,9 +60,10 @@ fun RootManagerScreen(
                 var error = ""
                 try {
                     val process = Runtime.getRuntime().exec(arrayOf("su", "-c", command))
-                    output = process.inputStream.bufferedReader().readText()
-                    error = process.errorStream.bufferedReader().readText()
+                    output = process.inputStream.bufferedReader().use { it.readText() }
+                    error = process.errorStream.bufferedReader().use { it.readText() }
                     exitCode = process.waitFor()
+                    process.destroy()
                 } catch (e: Exception) {
                     error = e.message ?: "Unknown error"
                 }

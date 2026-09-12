@@ -753,22 +753,11 @@ fi
                              chipsetName.contains("qualcomm") || chipsetName.contains("snapdragon") ||
                              hardware.contains("qualcomm")
 
-            allRootMethods.filter { method ->
-                // 品牌匹配
-                val brandMatch = method.brand == "generic" ||
-                    method.brand == brand ||
-                    (brand.contains("redmi") && method.brand == "xiaomi") ||
-                    (brand.contains("poco") && method.brand == "xiaomi") ||
-                    (brand.contains("iqoo") && method.brand == "vivo") ||
-                    (brand.contains("realme") && method.brand == "oneplus")
-                // 芯片匹配
-                val chipMatch = method.chipset == "generic" ||
-                    (method.chipset == "mediatek" && isMTK) ||
-                    (method.chipset == "qualcomm" && isQualcomm)
-                brandMatch && chipMatch
-            }
+            // 所有方法全部显示，不按品牌/芯片过滤
+            // 用户可以自行查看所有方法，选择适合自己设备的
+            allRootMethods
         } catch (e: Exception) {
-            allRootMethods.filter { it.brand == "generic" }
+            allRootMethods
         }
     }
 
@@ -1256,6 +1245,305 @@ fi
             true
         } catch (e: Exception) {
             false
+        }
+    }
+
+    // 生成需要电脑执行的方法的完整命令列表
+    actual fun buildComputerMethodCommand(methodId: String): String {
+        return buildString {
+            appendLine("echo '========================================'")
+            appendLine("echo '  电脑端操作命令 - $methodId'")
+            appendLine("echo '  请在电脑上依次执行以下命令'")
+            appendLine("echo '========================================'")
+            appendLine("echo ''")
+            when (methodId) {
+                "vivo_mtk_ldpreload" -> {
+                    appendLine("echo '=== vivo/iQOO 天玑 LD_PRELOAD 临时Root ==='")
+                    appendLine("echo ''")
+                    appendLine("echo '# 1. 下载 preload.so 和提权脚本'")
+                    appendLine("echo '# 从酷安 @御坂114515 或对应帖子下载'")
+                    appendLine("echo ''")
+                    appendLine("echo '# 2. 手机开启USB调试，连接电脑'")
+                    appendLine("adb devices")
+                    appendLine("echo ''")
+                    appendLine("echo '# 3. 推送文件到手机'")
+                    appendLine("adb push preload.so /data/local/tmp/")
+                    appendLine("adb push temproot.sh /data/local/tmp/")
+                    appendLine("echo ''")
+                    appendLine("echo '# 4. 授予执行权限'")
+                    appendLine("adb shell chmod 755 /data/local/tmp/temproot.sh")
+                    appendLine("echo ''")
+                    appendLine("echo '# 5. 锁屏状态下执行提权（关键：不要解锁屏幕）'")
+                    appendLine("adb shell sh /data/local/tmp/temproot.sh")
+                    appendLine("echo ''")
+                    appendLine("echo '# 6. 出现 success 后再亮屏解锁'")
+                    appendLine("echo '# 7. 打开KernelSU管理器，点击越狱获取root'")
+                }
+                "xiaomi_mtk_ldpreload" -> {
+                    appendLine("echo '=== 小米/红米 天玑 LDPRELOAD 临时Root ==='")
+                    appendLine("echo ''")
+                    appendLine("echo '# 1. 下载对应机型的提权工具包'")
+                    appendLine("echo '# 从酷安搜索 天玑临时root 下载'")
+                    appendLine("echo ''")
+                    appendLine("echo '# 2. 手机开启USB调试，连接电脑'")
+                    appendLine("adb devices")
+                    appendLine("echo ''")
+                    appendLine("echo '# 3. 推送文件到手机'")
+                    appendLine("adb push preload.so /data/local/tmp/")
+                    appendLine("adb push temproot.sh /data/local/tmp/")
+                    appendLine("echo ''")
+                    appendLine("echo '# 4. 授予执行权限'")
+                    appendLine("adb shell chmod 755 /data/local/tmp/temproot.sh")
+                    appendLine("echo ''")
+                    appendLine("echo '# 5. 锁屏状态下执行提权'")
+                    appendLine("adb shell sh /data/local/tmp/temproot.sh")
+                    appendLine("echo ''")
+                    appendLine("echo '# 6. 成功后打开KernelSU获取root'")
+                }
+                "qualcomm_cmdline_injection" -> {
+                    appendLine("echo '=== 高通骁龙 SELinux宽容模式提权 (cmdline注入) ==='")
+                    appendLine("echo ''")
+                    appendLine("echo '# 1. 手机进入fastboot模式（关机后按住音量下+电源）'")
+                    appendLine("adb reboot bootloader")
+                    appendLine("echo ''")
+                    appendLine("echo '# 2. 执行cmdline注入，修改SELinux为宽容模式'")
+                    appendLine("fastboot oem set-gpu-preemption 0 androidboot.selinux=permissive")
+                    appendLine("echo ''")
+                    appendLine("echo '# 3. 重启手机'")
+                    appendLine("fastboot reboot")
+                    appendLine("echo ''")
+                    appendLine("echo '# 4. 重启后SELinux变为宽容模式'")
+                    appendLine("echo '# 5. 利用系统服务漏洞运行ksud（如小米miui.mqsas）'")
+                    appendLine("adb shell")
+                    appendLine("echo '# 6. 执行 KSU late-load 获取root'")
+                    appendLine("/data/adb/ksud live")
+                }
+                "xiaomi_qc_temp_root" -> {
+                    appendLine("echo '=== 小米高通QC免解BL临时Root ==='")
+                    appendLine("echo ''")
+                    appendLine("echo '# 1. 酷安搜索 @莫离然然 下载对应机型的QC免解BL工具包'")
+                    appendLine("echo '# 2. 手机降级到2月补丁之前的版本（如已在旧版本可跳过）'")
+                    appendLine("echo ''")
+                    appendLine("echo '# 3. 手机进入fastboot模式'")
+                    appendLine("adb reboot bootloader")
+                    appendLine("echo ''")
+                    appendLine("echo '# 4. 电脑执行一键root脚本（Windows双击run.bat，Linux/Mac执行flash_all.sh）'")
+                    appendLine("./flash_all.sh")
+                    appendLine("echo ''")
+                    appendLine("echo '# 5. 手机自动重启'")
+                    appendLine("echo '# 6. 打开KernelSU管理器点击越狱'")
+                }
+                "ghostlock_oneplus" -> {
+                    appendLine("echo '=== GhostLock 一加锁BL越狱 ==='")
+                    appendLine("echo ''")
+                    appendLine("echo '# 1. 从GitHub(joinchang/ghostlock-oneplus)下载GhostLock工具'")
+                    appendLine("echo '# 2. 下载对应机型的修改版boot镜像'")
+                    appendLine("echo ''")
+                    appendLine("echo '# 3. 手机进入fastboot模式'")
+                    appendLine("adb reboot bootloader")
+                    appendLine("echo ''")
+                    appendLine("echo '# 4. 电脑执行GhostLock，临时启动修改后的boot（不刷入）'")
+                    appendLine("ghostlock boot modified_boot.img")
+                    appendLine("echo ''")
+                    appendLine("echo '# 5. 手机临时启动修改后的boot'")
+                    appendLine("echo '# 6. 打开KernelSU获取root'")
+                    appendLine("echo '# 注意：重启后root失效，需重新操作'")
+                }
+                "vivo_dimensity_9400_temp_root" -> {
+                    appendLine("echo '=== vivo天玑9400免拆临时Root ==='")
+                    appendLine("echo ''")
+                    appendLine("echo '# 1. 下载对应机型的天玑9400临时Root工具包（酷安搜索）'")
+                    appendLine("echo ''")
+                    appendLine("echo '# 2. 手机开启USB调试，连接电脑'")
+                    appendLine("adb devices")
+                    appendLine("echo ''")
+                    appendLine("echo '# 3. 执行提权脚本推送preload文件到手机'")
+                    appendLine("adb push preload.so /data/local/tmp/")
+                    appendLine("adb push temproot.sh /data/local/tmp/")
+                    appendLine("echo ''")
+                    appendLine("echo '# 4. 锁屏状态下重启手机（关键：不要解锁屏幕）'")
+                    appendLine("adb reboot")
+                    appendLine("echo ''")
+                    appendLine("echo '# 5. 锁屏状态下执行提权命令'")
+                    appendLine("adb shell sh /data/local/tmp/temproot.sh")
+                    appendLine("echo ''")
+                    appendLine("echo '# 6. 出现success后再亮屏解锁'")
+                    appendLine("echo '# 7. 加载KSU获取临时root'")
+                }
+                "mtk_generic_old" -> {
+                    appendLine("echo '=== MTK通用临时Root (老漏洞) ==='")
+                    appendLine("echo ''")
+                    appendLine("echo '# 1. 下载MTK提权工具（XDA搜索 MTK root exploit）'")
+                    appendLine("echo ''")
+                    appendLine("echo '# 2. 手机开启USB调试，连接电脑'")
+                    appendLine("adb devices")
+                    appendLine("echo ''")
+                    appendLine("echo '# 3. 推送exploit到手机'")
+                    appendLine("adb push mtk_exploit /data/local/tmp/")
+                    appendLine("echo ''")
+                    appendLine("echo '# 4. 授予执行权限并运行'")
+                    appendLine("adb shell chmod 755 /data/local/tmp/mtk_exploit")
+                    appendLine("adb shell /data/local/tmp/mtk_exploit")
+                    appendLine("echo ''")
+                    appendLine("echo '# 注意：此漏洞在2020年3月安全补丁后已修复，仅老设备可用'")
+                }
+                "gbl_root_canoe" -> {
+                    appendLine("echo '=== GBL Root Canoe 通用Bootloader漏洞 ==='")
+                    appendLine("echo ''")
+                    appendLine("echo '# 1. 从GitHub(stnt04/gbl_root_canoe)下载工具'")
+                    appendLine("echo ''")
+                    appendLine("echo '# 2. 手机进入fastboot模式'")
+                    appendLine("adb reboot bootloader")
+                    appendLine("echo ''")
+                    appendLine("echo '# 3. 电脑执行漏洞利用脚本'")
+                    appendLine("./gbl_root_canoe.sh")
+                    appendLine("echo ''")
+                    appendLine("echo '# 4. ABL加载嵌入式superfastboot BDS'")
+                    appendLine("echo '# 5. 实现Fake Locked状态'")
+                    appendLine("echo '# 6. 启动修改后的boot获取root'")
+                    appendLine("echo '# 注意：此方法较新，支持机型有限，操作有变砖风险'")
+                }
+                "xiaomi_fastboot_cmdline" -> {
+                    appendLine("echo '=== 小米fastboot cmdline免解BL临时Root ==='")
+                    appendLine("echo ''")
+                    appendLine("echo '# 1. 手机进入fastboot模式'")
+                    appendLine("adb reboot bootloader")
+                    appendLine("echo ''")
+                    appendLine("echo '# 2. 执行cmdline注入'")
+                    appendLine("fastboot oem set-gpu-preemption 0 androidboot.selinux=permissive")
+                    appendLine("echo ''")
+                    appendLine("echo '# 3. 重启手机'")
+                    appendLine("fastboot reboot")
+                    appendLine("echo ''")
+                    appendLine("echo '# 4. SELinux变为宽容模式后加载KSU'")
+                }
+                "oneplus_snapdragon_jailbreak" -> {
+                    appendLine("echo '=== 一加骁龙越狱模式 ==='")
+                    appendLine("echo ''")
+                    appendLine("echo '# 1. 手机进入fastboot模式'")
+                    appendLine("adb reboot bootloader")
+                    appendLine("echo ''")
+                    appendLine("echo '# 2. 执行越狱模式命令'")
+                    appendLine("fastboot oem jailbreak")
+                    appendLine("echo ''")
+                    appendLine("echo '# 3. 重启后加载KSU获取root'")
+                }
+                "samsung_wssyncmldm" -> {
+                    appendLine("echo '=== 三星wssyncmldm漏洞临时Root ==='")
+                    appendLine("echo ''")
+                    appendLine("echo '# 1. 下载Root My Galaxy APK'")
+                    appendLine("echo '# 2. 安装并打开'")
+                    appendLine("echo '# 3. 点击Security Check按钮（可能需要多次点击）'")
+                    appendLine("echo '# 4. 按提示安装KernelSU'")
+                    appendLine("echo '# 5. 完成后获得root权限'")
+                    appendLine("echo '# 注意：不触发Knox，不解锁BL，重启后root失效'")
+                }
+                "ksu_late_load" -> {
+                    appendLine("echo '=== KSU late-load 模式 ==='")
+                    appendLine("echo ''")
+                    appendLine("echo '# 1. 确保已安装KernelSU管理器'")
+                    appendLine("echo '# 2. 手机开启USB调试，连接电脑'")
+                    appendLine("adb devices")
+                    appendLine("echo ''")
+                    appendLine("echo '# 3. 推送ksud到手机'")
+                    appendLine("adb push ksud /data/local/tmp/")
+                    appendLine("echo ''")
+                    appendLine("echo '# 4. 授予执行权限'")
+                    appendLine("adb shell chmod 755 /data/local/tmp/ksud")
+                    appendLine("echo ''")
+                    appendLine("echo '# 5. 执行late-load获取root'")
+                    appendLine("adb shell /data/local/tmp/ksud live")
+                    appendLine("echo ''")
+                    appendLine("echo '# 6. 打开KernelSU管理器确认root状态'")
+                }
+                "magisk_patch_boot" -> {
+                    appendLine("echo '=== Magisk/KSU修补boot ==='")
+                    appendLine("echo ''")
+                    appendLine("echo '# 1. 提取boot.img（需要root或fastboot）'")
+                    appendLine("adb shell dd if=/dev/block/by-name/boot of=/sdcard/boot.img")
+                    appendLine("adb pull /sdcard/boot.img")
+                    appendLine("echo ''")
+                    appendLine("echo '# 2. 用Magisk/KSU修补boot.img'")
+                    appendLine("echo '#   打开Magisk应用 → 安装 → 选择并修补一个文件 → 选择boot.img'")
+                    appendLine("echo ''")
+                    appendLine("echo '# 3. 把修补后的boot推回手机'")
+                    appendLine("adb push magisk_patched.img /sdcard/")
+                    appendLine("echo ''")
+                    appendLine("echo '# 4. 刷入修补后的boot（需要解锁BL）'")
+                    appendLine("adb reboot bootloader")
+                    appendLine("fastboot flash boot magisk_patched.img")
+                    appendLine("fastboot reboot")
+                }
+                "redmi_note11tpro_lkb" -> {
+                    appendLine("echo '=== 红米Note11T Pro LKB单刷解BL ==='")
+                    appendLine("echo ''")
+                    appendLine("echo '# 1. 下载LKB单刷工具（酷安搜索）'")
+                    appendLine("echo '# 2. 手机进入fastboot模式'")
+                    appendLine("adb reboot bootloader")
+                    appendLine("echo ''")
+                    appendLine("echo '# 3. 电脑执行LKB单刷脚本'")
+                    appendLine("./lkb_unlock.sh")
+                    appendLine("echo ''")
+                    appendLine("echo '# 4. 解锁BL后刷入Magisk/KSU获取永久root'")
+                    appendLine("echo '# 注意：解锁BL会清除所有数据，请先备份'")
+                }
+                "qualcomm_selinux_permissive" -> {
+                    appendLine("echo '=== 高通骁龙SELinux宽容模式提权 ==='")
+                    appendLine("echo ''")
+                    appendLine("echo '# 1. 手机进入fastboot模式'")
+                    appendLine("adb reboot bootloader")
+                    appendLine("echo ''")
+                    appendLine("echo '# 2. 执行cmdline注入'")
+                    appendLine("fastboot oem set-gpu-preemption 0 androidboot.selinux=permissive")
+                    appendLine("echo ''")
+                    appendLine("echo '# 3. 重启手机'")
+                    appendLine("fastboot reboot")
+                    appendLine("echo ''")
+                    appendLine("echo '# 4. SELinux宽容后利用系统服务漏洞运行ksud'")
+                    appendLine("adb shell /data/adb/ksud live")
+                }
+                "xiaomi_qc_temp_root_2" -> {
+                    appendLine("echo '=== 小米高通QC免解BL临时Root ==='")
+                    appendLine("echo ''")
+                    appendLine("echo '# 1. 酷安 @莫离然然 下载对应机型工具包'")
+                    appendLine("echo '# 2. 手机进入fastboot模式'")
+                    appendLine("adb reboot bootloader")
+                    appendLine("echo ''")
+                    appendLine("echo '# 3. 电脑执行一键root脚本'")
+                    appendLine("./run.sh")
+                    appendLine("echo ''")
+                    appendLine("echo '# 4. 手机自动重启后打开KSU获取root'")
+                }
+                "cve_2025_21479" -> {
+                    appendLine("echo '=== CVE-2025-21479 高通Adreno GPU漏洞 ==='")
+                    appendLine("echo ''")
+                    appendLine("echo '# 1. 下载exploit（GitHub搜索 CVE-2025-21479）'")
+                    appendLine("echo '# 2. 手机开启USB调试，连接电脑'")
+                    appendLine("adb devices")
+                    appendLine("echo ''")
+                    appendLine("echo '# 3. 推送exploit到手机'")
+                    appendLine("adb push exploit /data/local/tmp/")
+                    appendLine("echo ''")
+                    appendLine("echo '# 4. 授予执行权限并运行'")
+                    appendLine("adb shell chmod 755 /data/local/tmp/exploit")
+                    appendLine("adb shell /data/local/tmp/exploit")
+                    appendLine("echo ''")
+                    appendLine("echo '# 5. 获取root后加载KSU'")
+                }
+                else -> {
+                    appendLine("echo '=== 通用操作步骤 ==='")
+                    appendLine("echo ''")
+                    appendLine("echo '# 1. 手机开启USB调试，连接电脑'")
+                    appendLine("adb devices")
+                    appendLine("echo ''")
+                    appendLine("echo '# 2. 请根据方法描述执行对应操作'")
+                    appendLine("echo '# 3. 具体命令请参考该方法的详细说明'")
+                }
+            }
+            appendLine("echo ''")
+            appendLine("echo '========================================'")
+            appendLine("echo '  以上命令可直接复制到电脑终端执行'")
+            appendLine("echo '========================================'")
         }
     }
 

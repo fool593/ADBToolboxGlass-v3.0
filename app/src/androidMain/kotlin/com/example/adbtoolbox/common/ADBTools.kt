@@ -239,16 +239,16 @@ actual object ADBTools {
                 val finished = waitForMethod.invoke(process, 5L, TimeUnit.SECONDS) as Boolean
                 sb.appendLine("6. waitFor finished: $finished")
 
-                // 反射调用 getInputStream
+                // 反射调用 getInputStream（使用 use 确保关闭）
                 val inputStreamMethod = process.javaClass.getMethod("getInputStream")
                 val inputStream = inputStreamMethod.invoke(process) as? java.io.InputStream
-                val output = try { inputStream?.bufferedReader()?.readText() ?: "(empty)" } catch (e: Exception) { "ERROR: ${e.message}" }
+                val output = try { inputStream?.bufferedReader()?.use { it.readText() } ?: "(empty)" } catch (e: Exception) { "ERROR: ${e.message}" }
                 sb.appendLine("7. stdout: $output")
 
-                // 反射调用 getErrorStream
+                // 反射调用 getErrorStream（使用 use 确保关闭）
                 val errorStreamMethod = process.javaClass.getMethod("getErrorStream")
                 val errorStream = errorStreamMethod.invoke(process) as? java.io.InputStream
-                val error = try { errorStream?.bufferedReader()?.readText() ?: "(empty)" } catch (e: Exception) { "ERROR: ${e.message}" }
+                val error = try { errorStream?.bufferedReader()?.use { it.readText() } ?: "(empty)" } catch (e: Exception) { "ERROR: ${e.message}" }
                 sb.appendLine("8. stderr: $error")
 
                 // 反射调用 exitValue
@@ -453,13 +453,13 @@ actual object ADBTools {
                 return CommandResult("", "Command timeout after ${timeout}s", -1)
             }
 
-            // 反射调用 getInputStream
+            // 反射调用 getInputStream（使用 use 确保关闭）
             val inputStream = process.javaClass.getMethod("getInputStream").invoke(process) as? java.io.InputStream
-            val output = try { inputStream?.bufferedReader()?.readText() ?: "" } catch (e: Exception) { "" }
+            val output = try { inputStream?.bufferedReader()?.use { it.readText() } ?: "" } catch (e: Exception) { "" }
 
-            // 反射调用 getErrorStream
+            // 反射调用 getErrorStream（使用 use 确保关闭）
             val errorStream = process.javaClass.getMethod("getErrorStream").invoke(process) as? java.io.InputStream
-            val error = try { errorStream?.bufferedReader()?.readText() ?: "" } catch (e: Exception) { "" }
+            val error = try { errorStream?.bufferedReader()?.use { it.readText() } ?: "" } catch (e: Exception) { "" }
 
             // 反射调用 exitValue
             val exitCode = process.javaClass.getMethod("exitValue").invoke(process) as Int
