@@ -569,6 +569,102 @@ fi
             description = "安装Root My Galaxy→点击Security Check→安装KernelSU→按提示完成。可能需要多次点击Security Check。"
         ),
         RootMethodInfo(
+            id = "qualcomm_cmdline_injection",
+            name = "高通骁龙 SELinux宽容模式提权 (cmdline注入)",
+            brand = "generic",
+            chipset = "qualcomm",
+            principle = "利用fastboot oem set-gpu-preemption命令注入漏洞，修改启动参数使SELinux变为宽容模式，再利用系统服务漏洞提权",
+            riskLevel = "high",
+            requiresComputer = true,
+            requiresKSU = true,
+            supportedDevices = "高通骁龙8 Gen2及以上全品牌机型（小米/一加/OPPO/vivo等）",
+            description = "全品牌通用方法。1.进入fastboot模式 2.执行 fastboot oem set-gpu-preemption 0 androidboot.selinux=permissive 3.重启后SELinux宽容 4.利用miui.mqsas或其他系统服务漏洞运行ksud 5.KSU late-load获取root。注意：需2026年2月前安全补丁。"
+        ),
+        RootMethodInfo(
+            id = "xiaomi_qc_temp_root",
+            name = "小米高通QC免解BL临时Root",
+            brand = "xiaomi",
+            chipset = "qualcomm",
+            principle = "小米QC免解BL工具，利用高通平台漏洞在fastboot模式下临时启动修改后的boot获取root",
+            riskLevel = "medium",
+            requiresComputer = true,
+            requiresKSU = true,
+            supportedDevices = "骁龙8 Gen1到8e5的小米/红米机型（需2月补丁之前）",
+            description = "1.下载对应机型的QC免解BL工具包 2.手机进入fastboot模式 3.电脑执行一键root脚本 4.手机自动重启 5.打开KSU管理器点击越狱。注意：老机型(8Gen1/8Gen2)降级后成功率更高。"
+        ),
+        RootMethodInfo(
+            id = "ghostlock_oneplus",
+            name = "GhostLock 一加锁BL越狱",
+            brand = "oneplus",
+            chipset = "qualcomm",
+            principle = "利用一加Bootloader漏洞，在锁BL状态下临时启动修改后的boot获取root权限",
+            riskLevel = "high",
+            requiresComputer = true,
+            requiresKSU = true,
+            supportedDevices = "OnePlus Ace 6T、OnePlus 15、小米17（骁龙8 Elite/8Gen5）",
+            description = "1.下载GhostLock工具和对应机型的boot镜像 2.手机进入fastboot模式 3.电脑执行 ghostlock boot modified_boot.img 4.手机临时启动修改后的boot 5.打开KSU获取root。重启后root失效，需重新操作。"
+        ),
+        RootMethodInfo(
+            id = "temproot_hyperos",
+            name = "TempRoot HyperOS一键临时Root",
+            brand = "xiaomi",
+            chipset = "generic",
+            principle = "HyperOS专用一键临时Root应用，内置多机型exploit，自动检测设备并执行对应提权",
+            riskLevel = "medium",
+            requiresComputer = false,
+            requiresKSU = true,
+            supportedDevices = "Redmi K60/K60E/K50/K50 Pro等HyperOS机型",
+            description = "1.从GitHub(314xxx/Temproot)下载TempRoot APK 2.安装并打开 3.授予ADB/Shizuku权限 4.点击一键临时Root 5.自动执行exploit并加载KSU。支持机型：mondrian(K60)、rembrandt(K60E)、rubens(K50)、matisse(K50 Pro)。"
+        ),
+        RootMethodInfo(
+            id = "vivo_dimensity_9400_temp_root",
+            name = "vivo天玑9400免拆临时Root",
+            brand = "vivo",
+            chipset = "mediatek",
+            principle = "vivo X200 Pro等天玑9400新机的免拆临时Root方案，不碰硬件不丢保修重启清零",
+            riskLevel = "medium",
+            requiresComputer = true,
+            requiresKSU = true,
+            supportedDevices = "vivo X200 Pro、X200、iQOO 13等天玑9400机型",
+            description = "1.下载对应机型的天玑9400临时Root工具包 2.手机开启USB调试连接电脑 3.执行提权脚本推送preload文件 4.锁屏状态下重启 5.锁屏状态执行提权命令 6.亮屏后加载KSU获取临时root。注意：操作有变砖风险，请谨慎。"
+        ),
+        RootMethodInfo(
+            id = "dirtypipe_cve_2022_0847",
+            name = "DirtyPipe (CVE-2022-0847) 临时Root",
+            brand = "generic",
+            chipset = "generic",
+            principle = "Linux内核DirtyPipe漏洞，非root用户可覆盖任意只读文件，通过覆盖su二进制获取临时root",
+            riskLevel = "medium",
+            requiresComputer = false,
+            requiresKSU = false,
+            supportedDevices = "Linux内核5.8~5.16.11的Android设备（2022年3月前补丁）",
+            description = "1.下载DirtyPipe exploit二进制 2.推送到/data/local/tmp/ 3.chmod +x 4.执行exploit覆盖/system/bin/su 5.执行su获取root。注意：此漏洞在2022年3月安全补丁中已修复，仅老设备可用。"
+        ),
+        RootMethodInfo(
+            id = "samsung_root_my_galaxy_s25",
+            name = "三星Root My Galaxy S25临时Root",
+            brand = "samsung",
+            chipset = "qualcomm",
+            principle = "利用三星系统服务漏洞，通过Root My Galaxy应用触发提权，不触发Knox不解锁BL",
+            riskLevel = "medium",
+            requiresComputer = false,
+            requiresKSU = true,
+            supportedDevices = "Galaxy S25 Ultra（完全支持）、S25/S25+/S24系列（测试中）",
+            description = "1.从GitHub下载Root My Galaxy APK 2.安装并打开 3.点击Security Check按钮（可能需要多次点击） 4.按提示安装KernelSU 5.完成后获得root权限。注意：不触发Knox，不解锁BL，重启后root失效。Exynos处理器机型不支持。"
+        ),
+        RootMethodInfo(
+            id = "gbl_root_canoe",
+            name = "GBL Root Canoe 通用Bootloader漏洞",
+            brand = "generic",
+            chipset = "qualcomm",
+            principle = "利用GBL(Generic Bootloader Loader)漏洞，让真实ABL加载嵌入式superfastboot BDS，实现Fake Locked Bootloader状态",
+            riskLevel = "high",
+            requiresComputer = true,
+            requiresKSU = false,
+            supportedDevices = "骁龙8 Gen5/8 Elite(Gen5)机型",
+            description = "1.下载GBL Root Canoe工具 2.手机进入fastboot模式 3.电脑执行漏洞利用脚本 4.ABL加载嵌入式superfastboot BDS 5.实现Fake Locked状态并启动修改后的boot。注意：此方法较新，支持机型有限，操作有变砖风险。"
+        ),
+        RootMethodInfo(
             id = "mtk_generic_old",
             name = "MTK通用临时Root (老漏洞)",
             brand = "generic",
@@ -649,8 +745,6 @@ fi
                              hardware.contains("qualcomm")
 
             allRootMethods.filter { method ->
-                // 过滤掉需要电脑的方法，只显示手机端可直接执行的
-                if (method.requiresComputer) return@filter false
                 // 品牌匹配
                 val brandMatch = method.brand == "generic" ||
                     method.brand == brand ||
@@ -830,6 +924,61 @@ fi
                     } else {
                         RootResult(false, "检测到 lkb.img，但LKB单刷需要在fastboot模式下用电脑MiFlash工具刷入，无法在手机端直接执行。", methodId)
                     }
+                }
+                "qualcomm_cmdline_injection" -> {
+                    // 高通骁龙 SELinux 宽容模式提权（cmdline注入）
+                    RootResult(false, "高通骁龙 SELinux宽容模式提权（cmdline注入）\n\n操作步骤（需电脑配合）：\n1. 手机进入fastboot模式（关机后按住音量下+电源）\n2. 电脑执行：fastboot oem set-gpu-preemption 0 androidboot.selinux=permissive\n3. 手机自动重启，SELinux变为宽容模式\n4. 利用系统服务漏洞运行ksud（如小米miui.mqsas）\n5. 执行 KSU late-load 获取root\n\n注意：需2026年2月前安全补丁；操作有变砖风险。", methodId)
+                }
+                "xiaomi_qc_temp_root" -> {
+                    // 小米高通QC免解BL临时Root
+                    RootResult(false, "小米高通QC免解BL临时Root\n\n操作步骤（需电脑配合）：\n1. 酷安搜索 @莫离然然 下载对应机型的QC免解BL工具包\n2. 手机降级到2月补丁之前的版本（如已在旧版本可跳过）\n3. 手机进入fastboot模式\n4. 电脑执行一键root脚本（run.bat或flash_all.sh）\n5. 手机自动重启\n6. 打开KernelSU管理器点击越狱\n\n支持：骁龙8 Gen1到8e5的小米/红米机型。注意：老机型(8Gen1/8Gen2)成功率更高。", methodId)
+                }
+                "ghostlock_oneplus" -> {
+                    // GhostLock 一加锁BL越狱
+                    RootResult(false, "GhostLock 一加锁BL越狱\n\n操作步骤（需电脑配合）：\n1. 从GitHub(joinchang/ghostlock-oneplus)下载GhostLock工具\n2. 下载对应机型的修改版boot镜像\n3. 手机进入fastboot模式\n4. 电脑执行：ghostlock boot modified_boot.img\n5. 手机临时启动修改后的boot（不刷入，重启后恢复）\n6. 打开KernelSU获取root\n\n支持：OnePlus Ace 6T、OnePlus 15、小米17（骁龙8 Elite/8Gen5）。注意：重启后root失效，需重新操作。", methodId)
+                }
+                "temproot_hyperos" -> {
+                    // TempRoot HyperOS一键临时Root
+                    val apkExists = exec("pm list packages 2>/dev/null | grep -i temproot")
+                    if (apkExists.isNotBlank()) {
+                        // 已安装TempRoot，尝试启动
+                        RootResult(false, "检测到已安装TempRoot应用。请手动打开TempRoot应用，点击一键临时Root按钮执行。\n\n应用包名：${apkExists.trim()}", methodId)
+                    } else {
+                        RootResult(false, "TempRoot HyperOS一键临时Root\n\n操作步骤：\n1. 从GitHub(314xxx/Temproot)下载TempRoot APK\n2. 安装并打开TempRoot应用\n3. 授予ADB/Shizuku权限\n4. 点击一键临时Root按钮\n5. 自动执行exploit并加载KSU\n\n支持机型：Redmi K60(mondrian)、K60E(rembrandt)、K50(rubens)、K50 Pro(matisse)。", methodId)
+                    }
+                }
+                "vivo_dimensity_9400_temp_root" -> {
+                    // vivo天玑9400免拆临时Root
+                    RootResult(false, "vivo天玑9400免拆临时Root\n\n操作步骤（需电脑配合）：\n1. 下载对应机型的天玑9400临时Root工具包（酷安搜索）\n2. 手机开启USB调试，连接电脑\n3. 执行提权脚本推送preload文件到手机\n4. 锁屏状态下重启手机（关键：不要解锁屏幕）\n5. 锁屏状态下执行提权命令\n6. 出现success后再亮屏解锁\n7. 加载KSU获取临时root\n\n支持：vivo X200 Pro、X200、iQOO 13等天玑9400机型。注意：操作有变砖风险。", methodId)
+                }
+                "dirtypipe_cve_2022_0847" -> {
+                    // DirtyPipe 漏洞提权
+                    val exploitExists = exec("ls /data/local/tmp/dirtypipe 2>/dev/null || ls /data/local/tmp/dirtypipe* 2>/dev/null || echo ''")
+                    if (exploitExists.isNotBlank()) {
+                        val exploitPath = exploitExists.trim().split("\n").firstOrNull() ?: "/data/local/tmp/dirtypipe"
+                        val result = exec("chmod 755 $exploitPath && $exploitPath 2>&1")
+                        val idResult = exec("id")
+                        if (idResult.contains("uid=0")) {
+                            RootResult(true, "DirtyPipe提权成功！\n\n$result\n\n$idResult", methodId)
+                        } else {
+                            RootResult(false, "DirtyPipe执行完成但未获得root。可能原因：\n1. 内核版本不在5.8~5.16.11范围内\n2. 安全补丁已修复此漏洞\n3. exploit不匹配当前设备\n\n输出：$result\n$idResult", methodId)
+                        }
+                    } else {
+                        RootResult(false, "DirtyPipe (CVE-2022-0847) 临时Root\n\n操作步骤：\n1. 下载DirtyPipe exploit二进制（适配你的设备架构）\n2. 推送到 /data/local/tmp/dirtypipe\n3. 点击此方法自动执行\n\n注意：此漏洞在2022年3月安全补丁中已修复，仅内核5.8~5.16.11的老设备可用。", methodId)
+                    }
+                }
+                "samsung_root_my_galaxy_s25" -> {
+                    // 三星Root My Galaxy S25
+                    val apkExists = exec("pm list packages 2>/dev/null | grep -i -E 'rootmygalaxy|root_my_galaxy'")
+                    if (apkExists.isNotBlank()) {
+                        RootResult(false, "检测到已安装Root My Galaxy应用。请手动打开应用，点击Security Check按钮（可能需要多次点击），按提示完成root。", methodId)
+                    } else {
+                        RootResult(false, "三星Root My Galaxy S25临时Root\n\n操作步骤：\n1. 从GitHub下载Root My Galaxy APK\n2. 安装并打开\n3. 点击Security Check按钮（可能需要多次点击才能生效）\n4. 按提示安装KernelSU\n5. 完成后获得root权限\n\n支持：Galaxy S25 Ultra（完全支持）、S25/S25+/S24系列（测试中）。注意：不触发Knox，不解锁BL，重启后root失效。Exynos机型不支持。", methodId)
+                    }
+                }
+                "gbl_root_canoe" -> {
+                    // GBL Root Canoe
+                    RootResult(false, "GBL Root Canoe 通用Bootloader漏洞\n\n操作步骤（需电脑配合）：\n1. 从GitHub(stnt04/gbl_root_canoe)下载工具\n2. 手机进入fastboot模式\n3. 电脑执行漏洞利用脚本\n4. ABL加载嵌入式superfastboot BDS\n5. 实现Fake Locked状态\n6. 启动修改后的boot获取root\n\n支持：骁龙8 Gen5/8 Elite(Gen5)机型。注意：此方法较新，支持机型有限，操作有变砖风险，请谨慎。", methodId)
                 }
                 "mtk_generic_old" -> {
                     RootResult(false, "MTK通用老漏洞已在2020年3月安全更新中修复，当前系统大概率不受影响。\n\n如果您的设备是2020年前的老款MTK机型且未更新安全补丁，可以尝试从XDA下载对应exploit。", methodId)
