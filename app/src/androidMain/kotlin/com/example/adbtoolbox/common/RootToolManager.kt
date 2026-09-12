@@ -852,36 +852,33 @@ fi
                 "/sdcard/Download",
                 "/sdcard/download",
                 "/storage/emulated/0/Download",
-                "/data/local"
-            )
+                "/data/local",
+                appContext.filesDir.absolutePath,
+                appContext.getExternalFilesDir(null)?.absolutePath ?: ""
+            ).filter { it.isNotBlank() }
             // 匹配关键词（文件名包含这些词之一即认为是临时 root 工具）
             val keywords = listOf(
                 "root", "temp", "misaka", "exploit", "提权",
-                "temproot", "ksu", "kernelsu", "越狱", "jailbreak"
+                "temproot", "ksu", "kernelsu", "越狱", "jailbreak",
+                "cve", "patch", "boot"
             )
             // 支持的文件扩展名
-            val extensions = listOf(".sh", ".zip", ".bin", ".apk", "")
+            val extensions = listOf(".sh", ".zip", ".bin", ".apk", ".img", ".tar", ".gz")
 
-            for (dir in searchDirs) {
-                // 列出目录内容
-                val lsResult = exec("ls -1 $dir 2>/dev/null || echo ''")
-                if (lsResult.isBlank()) continue
-                val files = lsResult.trim().split("\n").map { it.trim() }.filter { it.isNotBlank() }
+            for (dirPath in searchDirs) {
+                val dir = java.io.File(dirPath)
+                if (!dir.exists() || !dir.isDirectory) continue
+                val files = dir.listFiles() ?: continue
                 for (file in files) {
-                    val fileName = file.lowercase()
+                    if (!file.isFile) continue
+                    val fileName = file.name.lowercase()
                     // 检查文件名是否包含关键词
                     val hasKeyword = keywords.any { fileName.contains(it.lowercase()) }
                     // 检查文件扩展名
-                    val hasValidExt = extensions.any { ext ->
-                        if (ext.isEmpty()) !fileName.contains(".") else fileName.endsWith(ext)
-                    }
+                    val hasValidExt = extensions.any { ext -> fileName.endsWith(ext) } ||
+                                      !fileName.contains(".")
                     if (hasKeyword && hasValidExt) {
-                        val fullPath = "$dir/$file"
-                        // 验证文件确实存在
-                        val verify = exec("test -f '$fullPath' && echo 'EXISTS' || echo ''")
-                        if (verify.contains("EXISTS")) {
-                            return fullPath
-                        }
+                        return file.absolutePath
                     }
                 }
             }
