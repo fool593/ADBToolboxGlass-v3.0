@@ -846,26 +846,46 @@ fi
     // 检测临时 root 脚本是否存在，返回脚本路径
     actual fun findTempRootScript(): String? {
         return try {
-            // 检测常见的临时 root 脚本路径
-            val paths = listOf(
-                "/data/local/tmp/misaka_root.sh",
-                "/data/local/tmp/temproot.sh",
-                "/data/local/tmp/root.sh",
-                "/data/local/tmp/exploit.sh",
-                "/sdcard/Download/temproot.sh",
-                "/sdcard/Download/root.sh"
+            // 搜索目录列表
+            val searchDirs = listOf(
+                "/data/local/tmp",
+                "/sdcard/Download",
+                "/sdcard/download",
+                "/storage/emulated/0/Download",
+                "/data/local"
             )
-            for (path in paths) {
-                val check = exec("ls $path 2>/dev/null || echo ''")
-                if (check.isNotBlank() && check.contains(path)) {
-                    return path
+            // 匹配关键词（文件名包含这些词之一即认为是临时 root 工具）
+            val keywords = listOf(
+                "root", "temp", "misaka", "exploit", "提权",
+                "temproot", "ksu", "kernelsu", "越狱", "jailbreak"
+            )
+            // 支持的文件扩展名
+            val extensions = listOf(".sh", ".zip", ".bin", ".apk", "")
+
+            for (dir in searchDirs) {
+                // 列出目录内容
+                val lsResult = exec("ls -1 $dir 2>/dev/null || echo ''")
+                if (lsResult.isBlank()) continue
+                val files = lsResult.trim().split("\n").map { it.trim() }.filter { it.isNotBlank() }
+                for (file in files) {
+                    val fileName = file.lowercase()
+                    // 检查文件名是否包含关键词
+                    val hasKeyword = keywords.any { fileName.contains(it.lowercase()) }
+                    // 检查文件扩展名
+                    val hasValidExt = extensions.any { ext ->
+                        if (ext.isEmpty()) !fileName.contains(".") else fileName.endsWith(ext)
+                    }
+                    if (hasKeyword && hasValidExt) {
+                        val fullPath = "$dir/$file"
+                        // 验证文件确实存在
+                        val verify = exec("test -f '$fullPath' && echo 'EXISTS' || echo ''")
+                        if (verify.contains("EXISTS")) {
+                            return fullPath
+                        }
+                    }
                 }
             }
-            // 用 find 命令搜索
-            val findResult = exec("find /data/local/tmp /sdcard/Download -name '*root*.sh' -o -name '*temp*.sh' -o -name '*misaka*' 2>/dev/null | head -n 5")
-            if (findResult.isNotBlank()) {
-                findResult.trim().split("\n").firstOrNull()?.trim()
-            } else null
+            null
         } catch (e: Exception) {
             null
         }
