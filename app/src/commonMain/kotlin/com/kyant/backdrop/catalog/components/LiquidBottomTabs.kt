@@ -186,6 +186,42 @@ fun LiquidBottomTabs(
             )
         }
 
+        Row(
+            Modifier
+                .graphicsLayer {
+                    translationX = panelOffset
+                }
+                .drawBackdrop(
+                    backdrop = backdrop,
+                    shape = { RoundedRectangle(32f.dp * GlassEffectConfig.navCornerRadius.value) },
+                    effects = {
+                        val gI = GlassEffectConfig.globalIntensity.value
+                        val gEff = 0.5f + gI * 0.5f
+                        if (GlassEffectConfig.navEnableVibrancy.value) vibrancy()
+                        blur((GlassEffectConfig.navBlurRadius.value.dp.toPx() * gEff).coerceAtMost(40f.dp.toPx()))
+                        lens(
+                            (GlassEffectConfig.navRefractionHeight.value * 48f.dp.toPx() * gEff).coerceAtMost(72f.dp.toPx()),
+                            (GlassEffectConfig.navRefractionAmount.value * 48f.dp.toPx() * gEff).coerceAtMost(90f.dp.toPx()),
+                            chromaticAberration = GlassEffectConfig.navChromaticAberration.value > 0f
+                        )
+                    },
+                    layerBlock = {
+                        val progress = dampedDragAnimation.pressProgress
+                        val scale = lerp(1f, 1f + 16f.dp.toPx() / size.width, progress)
+                        scaleX = scale
+                        scaleY = scale
+                    },
+                    onDrawSurface = {
+                        drawRect(containerColor.copy(alpha = GlassEffectConfig.navOpacity.value))
+                    }
+                )
+                .then(interactiveHighlight.modifier)
+                .height(64f.dp)
+                .fillMaxWidth()
+                .padding(4f.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            content = {}
+        )
         Box(
             Modifier
                 .padding(horizontal = 4f.dp)
@@ -268,35 +304,12 @@ fun LiquidBottomTabs(
                     }
                 )
         )
+
         Row(
             Modifier
                 .graphicsLayer {
                     translationX = panelOffset
                 }
-                .drawBackdrop(
-                    backdrop = backdrop,
-                    shape = { RoundedRectangle(32f.dp * GlassEffectConfig.navCornerRadius.value) },
-                    effects = {
-                        val gI = GlassEffectConfig.globalIntensity.value
-                        val gEff = 0.5f + gI * 0.5f
-                        if (GlassEffectConfig.navEnableVibrancy.value) vibrancy()
-                        blur((GlassEffectConfig.navBlurRadius.value.dp.toPx() * gEff).coerceAtMost(40f.dp.toPx()))
-                        lens(
-                            (GlassEffectConfig.navRefractionHeight.value * 48f.dp.toPx() * gEff).coerceAtMost(72f.dp.toPx()),
-                            (GlassEffectConfig.navRefractionAmount.value * 48f.dp.toPx() * gEff).coerceAtMost(90f.dp.toPx()),
-                            chromaticAberration = GlassEffectConfig.navChromaticAberration.value > 0f
-                        )
-                    },
-                    layerBlock = {
-                        val progress = dampedDragAnimation.pressProgress
-                        val scale = lerp(1f, 1f + 16f.dp.toPx() / size.width, progress)
-                        scaleX = scale
-                        scaleY = scale
-                    },
-                    onDrawSurface = {
-                        drawRect(containerColor.copy(alpha = GlassEffectConfig.navOpacity.value))
-                    }
-                )
                 .then(interactiveHighlight.modifier)
                 .height(64f.dp)
                 .fillMaxWidth()
