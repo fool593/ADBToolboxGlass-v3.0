@@ -160,8 +160,7 @@ fun RootToolScreen(
                                                 method.id == "redmi_note11tpro_misaka_temp_root" ||
                                                 method.id == "xiaomi_mtk_ldpreload" ||
                                                 method.id == "vivo_mtk_ldpreload" ||
-                                                method.id == "dirtypipe_cve_2022_0847" ||
-                                                method.id == "qualcomm_mobile_permissive"
+                                                method.id == "dirtypipe_cve_2022_0847"
                                             // 需要电脑的方法：跳转到终端显示完整命令列表，方便复制
                                             if (method.requiresComputer && !isAutoMethod) {
                                                 val terminalCmd = withContext(Dispatchers.Default) { RootToolManager.buildComputerMethodCommand(method.id) }

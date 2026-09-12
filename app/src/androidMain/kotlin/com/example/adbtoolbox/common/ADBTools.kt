@@ -68,8 +68,8 @@ actual object ADBTools {
                     val newProcessMethod = dhizukuClass.getMethod("newProcess", Array<String>::class.java)
                     val process = newProcessMethod.invoke(null, arrayOf("sh", "-c", command))
                     if (process is Process) {
-                        val output = process.inputStream.bufferedReader().readText()
-                        val error = process.errorStream.bufferedReader().readText()
+                        val output = process.inputStream.bufferedReader().use { it.readText() }
+                        val error = process.errorStream.bufferedReader().use { it.readText() }
                         val exitCode = process.waitFor()
                         CommandResult(output, error, exitCode)
                     } else null
@@ -474,7 +474,7 @@ actual object ADBTools {
     private fun readPipeOutput(pipe: android.os.ParcelFileDescriptor): String {
         return try {
             val inputStream = android.os.ParcelFileDescriptor.AutoCloseInputStream(pipe)
-            inputStream.bufferedReader().readText()
+            inputStream.bufferedReader().use { it.readText() }
         } catch (e: Exception) {
             ""
         }
@@ -489,8 +489,8 @@ actual object ADBTools {
                 process.destroyForcibly()
                 return CommandResult("", "Command timeout after ${timeout}s", -1)
             }
-            val output = try { process.inputStream.bufferedReader().readText() } catch (e: Exception) { "" }
-            val error = try { process.errorStream.bufferedReader().readText() } catch (e: Exception) { "" }
+            val output = try { process.inputStream.bufferedReader().use { it.readText() } } catch (e: Exception) { "" }
+            val error = try { process.errorStream.bufferedReader().use { it.readText() } } catch (e: Exception) { "" }
             CommandResult(output, error, process.exitValue())
         } catch (e: Exception) {
             CommandResult("", e.message ?: "su error", -999)
@@ -508,8 +508,8 @@ actual object ADBTools {
                 process.destroyForcibly()
                 return CommandResult("", "Command timeout after ${timeout}s", -1)
             }
-            val output = try { process.inputStream.bufferedReader().readText() } catch (e: Exception) { "" }
-            val error = try { process.errorStream.bufferedReader().readText() } catch (e: Exception) { "" }
+            val output = try { process.inputStream.bufferedReader().use { it.readText() } } catch (e: Exception) { "" }
+            val error = try { process.errorStream.bufferedReader().use { it.readText() } } catch (e: Exception) { "" }
             CommandResult(output, error, process.exitValue())
         } catch (e: Exception) {
             CommandResult("", e.message ?: "Unknown error", -1)
@@ -708,7 +708,7 @@ actual object ADBTools {
                     val process = Runtime.getRuntime().exec(arrayOf("which", "su"))
                     val finished = process.waitFor(3, TimeUnit.SECONDS)
                     if (finished) {
-                        val output = process.inputStream.bufferedReader().readText()
+                        val output = process.inputStream.bufferedReader().use { it.readText() }
                         found = output.isNotEmpty() && output.contains("su")
                     }
                     process.destroy()
