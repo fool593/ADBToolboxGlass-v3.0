@@ -860,27 +860,45 @@ fi
             val keywords = listOf(
                 "root", "temp", "misaka", "exploit", "提权",
                 "temproot", "ksu", "kernelsu", "越狱", "jailbreak",
-                "cve", "patch", "boot"
+                "cve", "patch", "boot", "mi_", "mt6", "mt68",
+                "6895", "6893", "6877", "8100", "8200", "8250",
+                "9000", "9200", "9300", "9400", "9500", "dimensity",
+                "天玑", "临时", "组织"
             )
-            // 支持的文件扩展名
-            val extensions = listOf(".sh", ".zip", ".bin", ".apk", ".img", ".tar", ".gz")
+            // 支持的文件扩展名（空字符串表示无扩展名也支持）
+            val extensions = listOf(".sh", ".zip", ".bin", ".apk", ".img", ".tar", ".gz", "")
 
-            for (dirPath in searchDirs) {
-                val dir = java.io.File(dirPath)
-                if (!dir.exists() || !dir.isDirectory) continue
-                val files = dir.listFiles() ?: continue
+            // 递归搜索函数
+            fun searchDir(dir: java.io.File, depth: Int): String? {
+                if (depth > 3) return null  // 最多递归3层
+                val files = dir.listFiles() ?: return null
+                // 先检查当前目录的文件
                 for (file in files) {
                     if (!file.isFile) continue
                     val fileName = file.name.lowercase()
-                    // 检查文件名是否包含关键词
                     val hasKeyword = keywords.any { fileName.contains(it.lowercase()) }
-                    // 检查文件扩展名
-                    val hasValidExt = extensions.any { ext -> fileName.endsWith(ext) } ||
-                                      !fileName.contains(".")
+                    val hasValidExt = extensions.any { ext ->
+                        if (ext.isEmpty()) !fileName.contains(".") else fileName.endsWith(ext)
+                    }
                     if (hasKeyword && hasValidExt) {
                         return file.absolutePath
                     }
                 }
+                // 再递归搜索子目录
+                for (file in files) {
+                    if (file.isDirectory) {
+                        val result = searchDir(file, depth + 1)
+                        if (result != null) return result
+                    }
+                }
+                return null
+            }
+
+            for (dirPath in searchDirs) {
+                val dir = java.io.File(dirPath)
+                if (!dir.exists() || !dir.isDirectory) continue
+                val result = searchDir(dir, 0)
+                if (result != null) return result
             }
             null
         } catch (e: Exception) {
