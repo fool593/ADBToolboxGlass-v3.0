@@ -358,10 +358,11 @@ fi
 
             val result = exec("sh ${tempRootScript.absolutePath} 2>&1")
             val idResult = exec("id")
-            if (idResult.contains("uid=0") || result.contains("root", ignoreCase = true)) {
+            // 只看 uid=0 判断真正的 root，不用 result.contains("root") 避免匹配 "TempRoot" 误判
+            if (idResult.contains("uid=0")) {
                 RootResult(true, "Temp root success! Note: lost after reboot\n\n$result", "temproot")
             } else {
-                RootResult(false, "Temp root failed\n\n$result", "temproot")
+                RootResult(false, "Temp root failed - no root access obtained\n\n$result", "temproot")
             }
         } catch (e: Exception) {
             RootResult(false, "Temp root failed: ${e.message}", "temproot")
@@ -393,7 +394,7 @@ fi
     // 获取 GhostLock 支持的一加机型
     fun getGhostLockSupportedDevices(): List<String> = ghostLockDevices
 
-    // 检查 KernelSU 是否已安装（多维度检测：包名+命令+特征文件+内核接口）
+    // 检查 KernelSU 是否已安装（多维度检测：包名+命令+su二进制+特征文件+内核接口）
     actual fun isKernelSUInstalled(): Boolean {
         return try {
             // 1. 检查 KernelSU 应用包名（官方及各分支）
@@ -405,19 +406,24 @@ fi
                 it.packageName == "me.bmax.kernelsu" ||
                 it.packageName.contains("kernelsu", ignoreCase = true)
             }
-            // 2. 用 pm 命令检测（比 PackageManager 更可靠）
-            val pmCheck = exec("pm list packages 2>/dev/null | grep -i kernelsu")
-            val hasKSUPm = pmCheck.contains("kernelsu", ignoreCase = true)
-            // 3. 检查 ksud 命令是否可用
-            val ksudCheck = exec("ls /data/adb/ksud 2>/dev/null || which ksud 2>/dev/null || echo ''")
-            val hasKsud = ksudCheck.contains("ksud")
-            // 4. 检查内核接口 /proc/ksu_version
+            // 2. 用 pm 命令检测（比 PackageManager 更可靠，不依赖权限）
+            val pmCheck = exec("pm list packages 2>/dev/null")
+            val hasKSUPm = pmCheck.contains("kernelsu", ignoreCase = true) ||
+                           pmCheck.contains("me.weishu", ignoreCase = true)
+            // 3. 检查 KSU 的 su 二进制（KSU 安装后会有 /data/adb/ksu/bin/su）
+            val ksuSu = exec("ls /data/adb/ksu/bin/su 2>/dev/null || ls /data/adb/ksud 2>/dev/null || echo ''")
+            val hasKSUSu = ksuSu.contains("su") || ksuSu.contains("ksud")
+            // 4. 检查 su 命令是否来自 KSU（执行 su -V 看版本信息）
+            val suVersion = exec("su -V 2>/dev/null || su --version 2>/dev/null || echo ''")
+            val hasKSUSuCmd = suVersion.contains("ksu", ignoreCase = true) ||
+                              suVersion.contains("kernelsu", ignoreCase = true)
+            // 5. 检查内核接口 /proc/ksu_version
             val ksuVersion = exec("cat /proc/ksu_version 2>/dev/null || echo ''")
             val hasKSUProc = ksuVersion.isNotBlank()
-            // 5. 检查 /data/adb/ksu 目录
+            // 6. 检查 /data/adb/ksu 目录
             val ksuDir = exec("ls -d /data/adb/ksu 2>/dev/null || echo ''")
             val hasKSUDir = ksuDir.contains("/data/adb/ksu")
-            hasKSUApp || hasKSUPm || hasKsud || hasKSUProc || hasKSUDir
+            hasKSUApp || hasKSUPm || hasKSUSu || hasKSUSuCmd || hasKSUProc || hasKSUDir
         } catch (e: Exception) {
             false
         }
