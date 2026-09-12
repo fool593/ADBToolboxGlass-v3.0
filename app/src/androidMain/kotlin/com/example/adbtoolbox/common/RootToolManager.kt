@@ -505,8 +505,32 @@ fi
             riskLevel = "medium",
             requiresComputer = true,
             requiresKSU = true,
-            supportedDevices = "红米Turbo4/Turbo5/Note系列等天玑机型",
-            description = "全程在系统相册完成操作，不用进入MTK底层刷机模式。拿到临时Root后可刷入KSU。"
+            supportedDevices = "红米Turbo4/Turbo5等新款天玑机型（注：天玑8100/Note11T Pro不支持此漏洞）",
+            description = "全程在系统相册完成操作，不用进入MTK底层刷机模式。拿到临时Root后可刷入KSU。注意：此漏洞仅支持部分新款天玑机型，老款天玑8100不受影响。"
+        ),
+        RootMethodInfo(
+            id = "redmi_note11tpro_misaka_temp_root",
+            name = "红米Note11T Pro 天玑8100 临时Root (酷安@御坂114515)",
+            brand = "xiaomi",
+            chipset = "mediatek",
+            principle = "利用ADB权限调用route权限提权，SELinux切宽容模式后加载KSU LKM模块获取临时root，无需电脑、无需解BL",
+            riskLevel = "medium",
+            requiresComputer = false,
+            requiresKSU = true,
+            supportedDevices = "红米Note 11T Pro/Pro+ (天玑8100)、红米K50/K60系列、Turbo3/4、Redmi 13/14/15等",
+            description = "酷安@御坂114515 开发的天玑临时root工具。1.从酷安下载对应提权工具 2.安装KSU管理器 3.授予ADB权限 4.执行提权脚本，SELinux自动切宽容 5.加载KSU LKM模块获得临时root。重启后失效，需重新执行。支持天玑8100/9000/9200/9300/9400/9500等。"
+        ),
+        RootMethodInfo(
+            id = "redmi_note11tpro_lkb_unlock",
+            name = "红米Note11T Pro LKB单刷解BL",
+            brand = "xiaomi",
+            chipset = "mediatek",
+            principle = "利用专属定制的LKB单刷文件，在线刷工具中只勾选LKB项刷入修改版LKB镜像，绕过官方解锁等待期",
+            riskLevel = "high",
+            requiresComputer = true,
+            requiresKSU = false,
+            supportedDevices = "红米Note 11T Pro (天玑8100)、Note 12T Pro、小米CV3",
+            description = "1.下载对应机型专属LKB单刷文件 2.手机进入fastboot模式 3.用MiFlash工具只勾选LKB项刷入 4.刷入修改版LKB镜像后用配套工具完成最终解锁 5.解BL后刷入KSU/Magisk获取root。注意：解BL会清除全部数据，请先备份。"
         ),
         RootMethodInfo(
             id = "xiaomi_fastboot_cmdline",
@@ -744,6 +768,31 @@ fi
                         } else {
                             RootResult(false, "CVE-2025-21479 提权失败：$result", methodId)
                         }
+                    }
+                }
+                "redmi_note11tpro_misaka_temp_root" -> {
+                    // 红米 Note 11T Pro 天玑8100 临时Root（酷安@御坂114515）
+                    val exploitExists = exec("ls /data/local/tmp/misaka_root.sh 2>/dev/null || ls /data/local/tmp/temproot.sh 2>/dev/null || echo ''")
+                    if (exploitExists.isBlank()) {
+                        RootResult(false, "红米Note11T Pro 天玑8100 临时Root（酷安@御坂114515）\n\n操作步骤：\n1. 酷安搜索 @御坂114515 或 红米临时root，下载最新提权工具\n2. 安装 KernelSU 管理器\n3. 将提权脚本推送到 /data/local/tmp/\n4. 授予 ADB 权限（Shizuku/Dhizuku均可）\n5. 执行提权脚本，SELinux自动切宽容模式\n6. 加载 KSU LKM 模块获得临时root\n\n支持机型：Note 11T Pro/Pro+、K50/K60、Turbo3/4、Redmi 13/14/15等天玑机型\n注意：重启后root失效，需重新执行；操作有变砖风险，请谨慎。", methodId)
+                    } else {
+                        val scriptPath = exploitExists.trim().split("\n").firstOrNull() ?: "/data/local/tmp/temproot.sh"
+                        val result = exec("sh $scriptPath 2>&1")
+                        val idResult = exec("id")
+                        val selinux = exec("getenforce 2>/dev/null")
+                        if (idResult.contains("uid=0") || selinux.contains("Permissive", ignoreCase = true)) {
+                            RootResult(true, "提权成功！SELinux: $selinux\n\n$result\n\n接下来请执行 KSU late-load 加载模块", methodId)
+                        } else {
+                            RootResult(false, "提权脚本执行完成但未获得root，请检查：\n1. 脚本是否匹配当前机型/系统版本\n2. 是否已授予ADB权限\n3. 是否已安装KSU管理器\n\n输出：$result", methodId)
+                        }
+                    }
+                }
+                "redmi_note11tpro_lkb_unlock" -> {
+                    val lkbExists = exec("ls /data/local/tmp/lkb.img 2>/dev/null || echo ''")
+                    if (lkbExists.isBlank()) {
+                        RootResult(false, "红米Note11T Pro LKB单刷解BL需要电脑配合：\n\n1. 下载对应机型专属LKB单刷文件（搜索 红米Note11T Pro LKB单刷）\n2. 手机进入fastboot模式（关机后按住音量下+电源）\n3. 电脑打开MiFlash工具，只勾选LKB项\n4. 刷入修改版LKB镜像\n5. 用配套工具完成最终解锁（会清除全部数据，请先备份）\n6. 解BL后刷入KSU/Magisk获取root", methodId)
+                    } else {
+                        RootResult(false, "检测到 lkb.img，但LKB单刷需要在fastboot模式下用电脑MiFlash工具刷入，无法在手机端直接执行。", methodId)
                     }
                 }
                 "mtk_generic_old" -> {
