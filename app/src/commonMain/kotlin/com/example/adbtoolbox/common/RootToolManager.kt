@@ -94,5 +94,16 @@ data class RootMethodInfo(
     val description: String,      // 详细描述
     val downloadUrl: String = "", // 脚本/工具下载链接（网盘/GitHub）
     val scriptFileName: String = "", // 下载后的脚本文件名（用于检测和匹配）
-    val autoExecute: Boolean = false // 是否支持自动执行（下载后自动转移并执行）
-)
+    val autoExecute: Boolean = false, // 是否支持自动执行（下载后自动转移并执行）
+    // 英文字段（英文模式下显示）
+    val nameEn: String = "",
+    val principleEn: String = "",
+    val supportedDevicesEn: String = "",
+    val descriptionEn: String = ""
+) {
+    // 根据当前语言获取本地化的名称
+    fun getLocalizedName(): String = if (AppSettings.language == "en") nameEn.ifEmpty { name } else name
+    fun getLocalizedPrinciple(): String = if (AppSettings.language == "en") principleEn.ifEmpty { principle } else principle
+    fun getLocalizedSupportedDevices(): String = if (AppSettings.language == "en") supportedDevicesEn.ifEmpty { supportedDevices } else supportedDevices
+    fun getLocalizedDescription(): String = if (AppSettings.language == "en") descriptionEn.ifEmpty { description } else description
+}

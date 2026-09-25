@@ -290,20 +290,7 @@ fun QuickActionButton(
     Box(
         modifier
             .height(80f.dp)
-            .clip(RoundedRectangle(20f.dp))
-            .drawBackdrop(
-                backdrop = backdrop,
-                shape = { RoundedRectangle(20f.dp) },
-                effects = {
-                    vibrancy()
-                    blur(20f.dp.toPx())
-                    lens(12f.dp.toPx(), 24f.dp.toPx())
-                },
-                onDrawSurface = {
-                    drawRect(tint.copy(alpha = 0.15f))
-                }
-            )
-            .clickable(onClick = onClick),
+            .liquidGlassItem(backdrop = backdrop, corner = 20.dp, tint = tint, onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
         BasicText(label, style = TextStyle(contentColor, 15f.sp, androidx.compose.ui.text.font.FontWeight.Medium))

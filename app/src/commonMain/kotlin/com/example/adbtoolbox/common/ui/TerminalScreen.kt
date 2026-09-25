@@ -66,6 +66,9 @@ fun TerminalScreen(
     var input by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
+    // 快捷命令分类状态
+    var currentCmdCategory by remember { mutableStateOf(QuickCmdCategory.SYSTEM) }
+    var showQuickCommands by remember { mutableStateOf(false) }
 
     LaunchedEffect(lines.size) {
         if (lines.isNotEmpty()) listState.animateScrollToItem(lines.size - 1)
@@ -225,15 +228,102 @@ fun TerminalScreen(
             }
         }
 
-        // 快捷命令
+        // 快捷命令面板（Root/ADB/System 分类，每条命令带解释）
+        QuickCommandPanel(
+            backdrop = backdrop,
+            contentColor = contentColor,
+            currentCategory = currentCmdCategory,
+            onCategoryChange = { currentCmdCategory = it },
+            showPanel = showQuickCommands,
+            onTogglePanel = { showQuickCommands = !showQuickCommands },
+            onCommandClick = { cmd ->
+                if (cmd.command.contains("[") && cmd.command.contains("]")) {
+                    // 含占位符的命令填入输入框让用户修改
+                    input = cmd.command
+                } else {
+                    executeCommand(cmd.command)
+                }
+            }
+        )
+        Spacer(Modifier.height(16f.dp))
+    }
+}
+
+// 快捷命令面板 Composable
+@Composable
+fun QuickCommandPanel(
+    backdrop: Backdrop,
+    contentColor: Color,
+    currentCategory: QuickCmdCategory,
+    onCategoryChange: (QuickCmdCategory) -> Unit,
+    showPanel: Boolean,
+    onTogglePanel: () -> Unit,
+    onCommandClick: (QuickCommand) -> Unit
+) {
+    Column {
         Spacer(Modifier.height(8f.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8f.dp)) {
-            QuickCmdButton(backdrop, "ls", contentColor) { executeCommand("ls") }
-            QuickCmdButton(backdrop, "pwd", contentColor) { executeCommand("pwd") }
-            QuickCmdButton(backdrop, "ps", contentColor) { executeCommand("ps") }
-            QuickCmdButton(backdrop, AppStrings.get("clear_screen"), contentColor) { lines = emptyList() }
+            QuickCmdButton(backdrop, QuickCmdCategory.ROOT.title, if (currentCategory == QuickCmdCategory.ROOT) Color(0xFF0088FF) else contentColor) {
+                onCategoryChange(QuickCmdCategory.ROOT)
+            }
+            QuickCmdButton(backdrop, QuickCmdCategory.ADB.title, if (currentCategory == QuickCmdCategory.ADB) Color(0xFF0088FF) else contentColor) {
+                onCategoryChange(QuickCmdCategory.ADB)
+            }
+            QuickCmdButton(backdrop, QuickCmdCategory.SYSTEM.title, if (currentCategory == QuickCmdCategory.SYSTEM) Color(0xFF0088FF) else contentColor) {
+                onCategoryChange(QuickCmdCategory.SYSTEM)
+            }
+            QuickCmdButton(backdrop, if (showPanel) "Hide" else "Show", contentColor) {
+                onTogglePanel()
+            }
         }
-        Spacer(Modifier.height(16f.dp))
+
+        if (showPanel) {
+            Spacer(Modifier.height(8f.dp))
+            val cmdList = when (currentCategory) {
+                QuickCmdCategory.ROOT -> RootCommands
+                QuickCmdCategory.ADB -> ADBCommands
+                QuickCmdCategory.SYSTEM -> SystemCommands
+            }
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .height(200f.dp)
+                    .clip(RoundedRectangle(12f.dp))
+                    .drawBackdrop(
+                        backdrop = backdrop,
+                        shape = { RoundedRectangle(12f.dp) },
+                        effects = {
+                            blur(GlassEffectConfig.terminalBlurRadius.value.dp.toPx() * 0.5f)
+                        },
+                        onDrawSurface = {
+                            drawRect(Color.White.copy(alpha = GlassEffectConfig.terminalOpacity.value * 0.15f))
+                        }
+                    )
+            ) {
+                androidx.compose.foundation.lazy.LazyColumn(
+                    modifier = Modifier.fillMaxSize().padding(8f.dp),
+                    verticalArrangement = Arrangement.spacedBy(4f.dp)
+                ) {
+                    items(cmdList) { cmd ->
+                        Column(
+                            Modifier
+                                .fillMaxWidth()
+                                .liquidGlassItem(backdrop = backdrop, corner = 10.dp, onClick = { onCommandClick(cmd) })
+                                .padding(horizontal = 8f.dp, vertical = 4f.dp)
+                        ) {
+                            BasicText(
+                                cmd.command,
+                                style = TextStyle(Color(0xFF0088FF), 11f.sp, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                            )
+                            BasicText(
+                                cmd.description,
+                                style = TextStyle(contentColor.copy(alpha = 0.6f), 10f.sp)
+                            )
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -264,3 +354,151 @@ fun Modifier.clickableNoRipple(onClick: () -> Unit): Modifier {
     val interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
     return this.then(Modifier.clickable(interactionSource = interactionSource, indication = null, onClick = onClick))
 }
+
+
+// 快捷命令数据类
+data class QuickCommand(
+    val command: String,
+    val description: String
+)
+
+// 快捷命令分类
+enum class QuickCmdCategory(val title: String) {
+    ROOT("Root"),
+    ADB("ADB"),
+    SYSTEM("System")
+}
+
+// Root 命令列表
+val RootCommands = listOf(
+    QuickCommand("su", "切换到 root 用户"),
+    QuickCommand("id", "查看当前用户 ID"),
+    QuickCommand("getenforce", "查看 SELinux 状态"),
+    QuickCommand("setenforce 0", "设置 SELinux 为宽容模式"),
+    QuickCommand("setenforce 1", "设置 SELinux 为强制模式"),
+    QuickCommand("pm list packages", "列出所有应用包名"),
+    QuickCommand("pm clear [package]", "清除应用数据和缓存"),
+    QuickCommand("pm disable [package]", "禁用/冻结应用"),
+    QuickCommand("pm enable [package]", "启用/解冻应用"),
+    QuickCommand("pm uninstall [package]", "卸载应用"),
+    QuickCommand("reboot", "重启设备"),
+    QuickCommand("reboot recovery", "重启到恢复模式"),
+    QuickCommand("reboot bootloader", "重启到引导模式"),
+    QuickCommand("cat /proc/ksu_version", "查看 KernelSU 版本"),
+    QuickCommand("/data/adb/ksud live", "KernelSU 临时 root"),
+    QuickCommand("dd if=/dev/block/by-name/boot of=/sdcard/boot.img", "提取 boot 分区镜像"),
+    QuickCommand("chmod 755 [file]", "设置文件可执行权限"),
+    QuickCommand("dumpsys package [package]", "查看应用详细信息"),
+    QuickCommand("dumpsys battery", "查看电池信息"),
+    QuickCommand("settings put global adb_enabled 1", "启用 ADB 调试"),
+    QuickCommand("wm size 1080x2400", "设置屏幕分辨率"),
+    QuickCommand("wm density 480", "设置屏幕密度")
+)
+
+// ADB 命令列表
+val ADBCommands = listOf(
+    QuickCommand("adb devices", "列出已连接的 ADB 设备"),
+    QuickCommand("adb shell", "进入设备 shell"),
+    QuickCommand("adb install [apk]", "安装 APK 应用"),
+    QuickCommand("adb install -r [apk]", "重新安装应用，保留数据"),
+    QuickCommand("adb uninstall [package]", "卸载应用"),
+    QuickCommand("adb push [local] [remote]", "推送文件到设备"),
+    QuickCommand("adb pull [remote] [local]", "从设备拉取文件"),
+    QuickCommand("adb reboot", "重启设备"),
+    QuickCommand("adb reboot recovery", "重启到恢复模式"),
+    QuickCommand("adb reboot bootloader", "重启到引导模式"),
+    QuickCommand("adb logcat", "实时查看设备日志"),
+    QuickCommand("adb logcat -c", "清空日志缓冲区"),
+    QuickCommand("adb shell pm list packages", "列出所有应用包名"),
+    QuickCommand("adb shell pm clear [package]", "清除应用数据"),
+    QuickCommand("adb shell pm disable-user [package]", "禁用应用（用户级）"),
+    QuickCommand("adb shell pm enable [package]", "启用应用"),
+    QuickCommand("adb shell dumpsys package [package]", "查看应用详细信息"),
+    QuickCommand("adb shell dumpsys activity", "查看 Activity 管理器状态"),
+    QuickCommand("adb shell dumpsys battery", "查看电池状态"),
+    QuickCommand("adb shell settings get global [key]", "获取全局设置值"),
+    QuickCommand("adb shell settings put global [key] [value]", "设置全局设置"),
+    QuickCommand("adb shell wm size", "查看屏幕分辨率"),
+    QuickCommand("adb shell wm density", "查看屏幕密度"),
+    QuickCommand("adb shell getprop [prop]", "获取系统属性"),
+    QuickCommand("adb shell setprop [prop] [value]", "设置系统属性"),
+    QuickCommand("adb shell getprop ro.build.version.release", "查看 Android 版本"),
+    QuickCommand("adb shell getprop ro.product.model", "查看设备型号"),
+    QuickCommand("adb shell input tap [x] [y]", "模拟点击屏幕"),
+    QuickCommand("adb shell input swipe [x1] [y1] [x2] [y2]", "模拟滑动屏幕"),
+    QuickCommand("adb shell input keyevent 26", "模拟电源键"),
+    QuickCommand("adb shell screencap -p /sdcard/screenshot.png", "截取屏幕"),
+    QuickCommand("adb shell screenrecord /sdcard/video.mp4", "录制屏幕视频"),
+    QuickCommand("adb version", "查看 ADB 版本")
+)
+
+// 系统命令列表
+val SystemCommands = listOf(
+    QuickCommand("ls", "列出当前目录文件"),
+    QuickCommand("ls -la", "详细列出文件（权限/大小/时间）"),
+    QuickCommand("pwd", "显示当前目录路径"),
+    QuickCommand("cd [dir]", "切换到指定目录"),
+    QuickCommand("cd ..", "返回上一级目录"),
+    QuickCommand("cd /", "切换到根目录"),
+    QuickCommand("cat [file]", "查看文件内容"),
+    QuickCommand("echo [text]", "输出文本到屏幕"),
+    QuickCommand("echo [text] > [file]", "写入文件（覆盖）"),
+    QuickCommand("echo [text] >> [file]", "追加文本到文件"),
+    QuickCommand("mkdir [dir]", "创建新目录"),
+    QuickCommand("mkdir -p [dir]", "递归创建目录"),
+    QuickCommand("rm [file]", "删除文件"),
+    QuickCommand("rm -f [file]", "强制删除文件"),
+    QuickCommand("rm -r [dir]", "递归删除目录"),
+    QuickCommand("rm -rf [dir]", "强制递归删除目录（谨慎！）"),
+    QuickCommand("cp [source] [dest]", "复制文件"),
+    QuickCommand("cp -r [source] [dest]", "递归复制目录"),
+    QuickCommand("mv [source] [dest]", "移动或重命名文件"),
+    QuickCommand("chmod [perm] [file]", "修改文件权限"),
+    QuickCommand("chmod +x [file]", "添加可执行权限"),
+    QuickCommand("ps", "查看运行中的进程"),
+    QuickCommand("ps -A", "查看所有进程"),
+    QuickCommand("top", "实时查看系统资源占用"),
+    QuickCommand("free", "查看内存使用情况"),
+    QuickCommand("free -h", "查看内存（可读格式）"),
+    QuickCommand("df", "查看磁盘分区使用情况"),
+    QuickCommand("df -h", "查看磁盘（可读格式）"),
+    QuickCommand("du -sh [dir]", "查看目录总大小"),
+    QuickCommand("uname -a", "查看系统内核完整信息"),
+    QuickCommand("uname -r", "查看内核版本"),
+    QuickCommand("uname -m", "查看系统架构"),
+    QuickCommand("whoami", "查看当前用户名"),
+    QuickCommand("id", "查看当前用户 ID 和组"),
+    QuickCommand("date", "查看当前日期和时间"),
+    QuickCommand("uptime", "查看系统运行时间和负载"),
+    QuickCommand("clear", "清空终端屏幕"),
+    QuickCommand("exit", "退出当前 shell"),
+    QuickCommand("history", "查看命令历史记录"),
+    QuickCommand("which [cmd]", "查看命令可执行文件路径"),
+    QuickCommand("file [file]", "查看文件类型"),
+    QuickCommand("wc -l [file]", "统计文件行数"),
+    QuickCommand("grep [keyword] [file]", "在文件中搜索关键词"),
+    QuickCommand("grep -r [keyword] [dir]", "递归搜索关键词"),
+    QuickCommand("grep -i [keyword] [file]", "忽略大小写搜索"),
+    QuickCommand("find [dir] -name [file]", "按名称查找文件"),
+    QuickCommand("find [dir] -type f", "列出目录下所有文件"),
+    QuickCommand("tar -cvf [archive].tar [files]", "创建 tar 归档"),
+    QuickCommand("tar -xvf [archive].tar", "解压 tar 归档"),
+    QuickCommand("gzip [file]", "压缩文件为 .gz"),
+    QuickCommand("gunzip [file].gz", "解压 .gz 文件"),
+    QuickCommand("sleep [seconds]", "休眠指定秒数"),
+    QuickCommand("reboot", "重启设备"),
+    QuickCommand("mount", "查看所有挂载的文件系统"),
+    QuickCommand("umount [mountpoint]", "卸载指定挂载点"),
+    QuickCommand("ln -s [source] [link]", "创建符号链接"),
+    QuickCommand("touch [file]", "创建空文件或更新时间戳"),
+    QuickCommand("head -n [N] [file]", "查看文件前 N 行"),
+    QuickCommand("tail -n [N] [file]", "查看文件后 N 行"),
+    QuickCommand("tail -f [file]", "实时跟踪文件内容"),
+    QuickCommand("sort [file]", "对文件内容排序"),
+    QuickCommand("uniq [file]", "去除连续重复行"),
+    QuickCommand("kill [pid]", "按进程 ID 终止进程"),
+    QuickCommand("kill -9 [pid]", "强制终止进程"),
+    QuickCommand("killall [name]", "按名称终止所有进程"),
+    QuickCommand("env", "查看所有环境变量"),
+    QuickCommand("export [var]=[value]", "设置环境变量")
+)

@@ -166,8 +166,7 @@ fun PermissionItem(
     Row(
         Modifier
             .fillMaxWidth()
-            .clipGlass(backdrop, 14f)
-            .clickable(onClick = onToggle)
+            .liquidGlassItem(backdrop = backdrop, corner = 14.dp, onClick = onToggle)
             .padding(14f.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

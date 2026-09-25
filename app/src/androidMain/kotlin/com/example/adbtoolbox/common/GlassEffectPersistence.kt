@@ -127,11 +127,20 @@ actual object GlassEffectPersistence {
         val splashPath = AppCache.splashVideoPath.value
         editor.putString("splashVideoPath", if (splashPath != null && java.io.File(splashPath).exists()) splashPath else null)
 
+        // 应用设置（语言、深色模式）
+        editor.putString("app_language", AppSettings.language)
+        editor.putBoolean("app_dark_mode", AppSettings.isDarkMode)
+
         editor.apply()
     }
 
     actual fun loadAll() {
         ensurePrefs()
+
+        // 应用设置（语言、深色模式）
+        if (prefs.contains("app_language")) AppSettings.language = prefs.getString("app_language", "zh") ?: "zh"
+        if (prefs.contains("app_dark_mode")) AppSettings.isDarkMode = prefs.getBoolean("app_dark_mode", true)
+
         val config = GlassEffectConfig
 
         // 基础效果

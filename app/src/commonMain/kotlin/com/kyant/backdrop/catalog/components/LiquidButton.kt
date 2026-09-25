@@ -14,12 +14,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.GraphicsLayerScope
 import androidx.compose.ui.graphics.isSpecified
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastCoerceAtMost
 import androidx.compose.ui.util.lerp
 import com.kyant.backdrop.Backdrop
+import com.kyant.backdrop.BackdropEffectScope
 import com.kyant.backdrop.catalog.utils.InteractiveHighlight
 import com.kyant.backdrop.drawBackdrop
 import com.kyant.backdrop.effects.blur
@@ -50,44 +52,51 @@ fun LiquidButton(
         )
     }
 
+    val effects: BackdropEffectScope.() -> Unit = remember {
+        {
+            vibrancy()
+            blur(2f.dp.toPx())
+            lens(12f.dp.toPx(), 24f.dp.toPx())
+        }
+    }
+    val layerBlock: (GraphicsLayerScope.() -> Unit)? = remember(interactiveHighlight, isInteractive) {
+        if (isInteractive) {
+            {
+                val width = size.width
+                val height = size.height
+
+                val progress = interactiveHighlight.pressProgress
+                val scale = lerp(1f, 1f + 4f.dp.toPx() / size.height, progress)
+
+                val maxOffset = size.minDimension
+                val initialDerivative = 0.05f
+                val offset = interactiveHighlight.offset
+                translationX = maxOffset * tanh(initialDerivative * offset.x / maxOffset)
+                translationY = maxOffset * tanh(initialDerivative * offset.y / maxOffset)
+
+                val maxDragScale = 4f.dp.toPx() / size.height
+                val offsetAngle = atan2(offset.y, offset.x)
+                scaleX =
+                    scale +
+                            maxDragScale * abs(cos(offsetAngle) * offset.x / size.maxDimension) *
+                            (width / height).fastCoerceAtMost(1f)
+                scaleY =
+                    scale +
+                            maxDragScale * abs(sin(offsetAngle) * offset.y / size.maxDimension) *
+                            (height / width).fastCoerceAtMost(1f)
+            }
+        } else {
+            null
+        }
+    }
+
     Row(
         modifier
             .drawBackdrop(
                 backdrop = backdrop,
                 shape = { Capsule() },
-                effects = {
-                    vibrancy()
-                    blur(2f.dp.toPx())
-                    lens(12f.dp.toPx(), 24f.dp.toPx())
-                },
-                layerBlock = if (isInteractive) {
-                    {
-                        val width = size.width
-                        val height = size.height
-
-                        val progress = interactiveHighlight.pressProgress
-                        val scale = lerp(1f, 1f + 4f.dp.toPx() / size.height, progress)
-
-                        val maxOffset = size.minDimension
-                        val initialDerivative = 0.05f
-                        val offset = interactiveHighlight.offset
-                        translationX = maxOffset * tanh(initialDerivative * offset.x / maxOffset)
-                        translationY = maxOffset * tanh(initialDerivative * offset.y / maxOffset)
-
-                        val maxDragScale = 4f.dp.toPx() / size.height
-                        val offsetAngle = atan2(offset.y, offset.x)
-                        scaleX =
-                            scale +
-                                    maxDragScale * abs(cos(offsetAngle) * offset.x / size.maxDimension) *
-                                    (width / height).fastCoerceAtMost(1f)
-                        scaleY =
-                            scale +
-                                    maxDragScale * abs(sin(offsetAngle) * offset.y / size.maxDimension) *
-                                    (height / width).fastCoerceAtMost(1f)
-                    }
-                } else {
-                    null
-                },
+                effects = effects,
+                layerBlock = layerBlock,
                 onDrawSurface = {
                     if (tint.isSpecified) {
                         drawRect(tint, blendMode = BlendMode.Hue)

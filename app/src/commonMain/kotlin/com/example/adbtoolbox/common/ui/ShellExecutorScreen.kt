@@ -157,8 +157,7 @@ fun ShellExecutorScreen(
             Box(
                 Modifier
                     .fillMaxWidth()
-                    .clipGlassSmall(backdrop)
-                    .clickableNoRipple { command = cmd }
+                    .liquidGlassItem(backdrop = backdrop, corner = 20.dp, onClick = { command = cmd })
                     .padding(horizontal = 16f.dp, vertical = 10f.dp)
             ) {
                 BasicText(cmd, style = TextStyle(contentColor, 12f.sp, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace))

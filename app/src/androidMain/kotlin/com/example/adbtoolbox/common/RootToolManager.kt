@@ -487,38 +487,54 @@ fi
         RootMethodInfo(
             id = "vivo_mtk_ldpreload",
             name = "vivo/iQOO 天玑 LD_PRELOAD 临时Root",
+            nameEn = "vivo/iQOO MediaTek LD_PRELOAD Temp Root",
             brand = "vivo",
             chipset = "mediatek",
             principle = "利用 LD_PRELOAD 环境变量注入 preload.so，在系统开机阶段绕过权限校验获取临时Root",
+            principleEn = "Inject preload.so via LD_PRELOAD environment variable to bypass permission checks during boot and obtain temporary root",
             riskLevel = "medium",
             requiresComputer = true,
             requiresKSU = true,
             supportedDevices = "iQOO Neo10 Pro+/Neo11/Z10 Turbo Pro/Neo9 等天玑机型",
-            description = "降级指定版本→推送preload.so→锁屏重启→锁屏状态提权→加载KSU late-load。重启后失效，需重新操作。"
+            supportedDevicesEn = "iQOO Neo10 Pro+/Neo11/Z10 Turbo Pro/Neo9 and other MediaTek devices",
+            description = "降级指定版本→推送preload.so→锁屏重启→锁屏状态提权→加载KSU late-load。重启后失效，需重新操作。",
+            descriptionEn = "Downgrade to specified version → push preload.so → lock screen and reboot → elevate privileges on lock screen → load KSU late-load. Expires after reboot, needs re-execution.",
+            downloadUrl = "https://www.coolapk.com/feed/72961741",
+            scriptFileName = "preload.so"
         ),
         RootMethodInfo(
             id = "xiaomi_mtk_ldpreload",
             name = "小米/红米 天玑 LDPRELOAD 临时Root",
+            nameEn = "Xiaomi/Redmi MediaTek LDPRELOAD Temp Root",
             brand = "xiaomi",
             chipset = "mediatek",
             principle = "利用Linux内核LDPRELOAD环境变量提权漏洞，开机阶段注入动态链接库绕过权限校验",
+            principleEn = "Exploit Linux kernel LDPRELOAD environment variable privilege escalation vulnerability, inject dynamic library during boot to bypass permission checks",
             riskLevel = "medium",
             requiresComputer = true,
             requiresKSU = true,
             supportedDevices = "红米Turbo4/Turbo5等新款天玑机型（注：天玑8100/Note11T Pro不支持此漏洞）",
-            description = "全程在系统相册完成操作，不用进入MTK底层刷机模式。拿到临时Root后可刷入KSU。注意：此漏洞仅支持部分新款天玑机型，老款天玑8100不受影响。"
+            supportedDevicesEn = "Redmi Turbo4/Turbo5 and other new MediaTek devices (Note: MediaTek 8100/Note11T Pro not supported)",
+            description = "全程在系统相册完成操作，不用进入MTK底层刷机模式。拿到临时Root后可刷入KSU。注意：此漏洞仅支持部分新款天玑机型，老款天玑8100不受影响。",
+            descriptionEn = "All operations done in system gallery, no need to enter MTK low-level flash mode. Can flash KSU after obtaining temp root. Note: This exploit only supports some new MediaTek devices, older MediaTek 8100 not affected.",
+            downloadUrl = "https://www.coolapk.com/feed/73186643",
+            scriptFileName = "mi_mt6895"
         ),
         RootMethodInfo(
             id = "redmi_note11tpro_misaka_temp_root",
-            name = "红米Note11T Pro 天玑8100 临时Root (酷安@御坂114515)",
+            name = "天玑通用临时Root (酷安@御坂114515)",
+            nameEn = "MediaTek Universal Temp Root (CoolAPK @Misaka114515)",
             brand = "xiaomi",
             chipset = "mediatek",
             principle = "利用ADB权限调用route权限提权，SELinux切宽容模式后加载KSU LKM模块获取临时root，无需电脑、无需解BL",
+            principleEn = "Use ADB permission to call route privilege escalation, switch SELinux to permissive then load KSU LKM module to obtain temp root. No PC needed, no BL unlock needed",
             riskLevel = "medium",
             requiresComputer = false,
             requiresKSU = true,
-            supportedDevices = "红米Note 11T Pro/Pro+ (天玑8100)、红米K50/K60系列、Turbo3/4、Redmi 13/14/15等",
-            description = "酷安@御坂114515 开发的天玑临时root工具。1.从酷安下载对应提权工具 2.安装KSU管理器 3.授予ADB权限 4.执行提权脚本，SELinux自动切宽容 5.加载KSU LKM模块获得临时root。重启后失效，需重新执行。支持天玑8100/9000/9200/9300/9400/9500等。",
+            supportedDevices = "所有天玑漏洞机型：红米Note 11T Pro/Pro+ (天玑8100)、红米K50/K60系列、Turbo3/4、Redmi 13/14/15、天玑9000/9200/9300/9400/9500等",
+            supportedDevicesEn = "All MediaTek exploit devices: Redmi Note 11T Pro/Pro+ (MT8100), Redmi K50/K60 series, Turbo3/4, Redmi 13/14/15, MT9000/9200/9300/9400/9500, etc.",
+            description = "酷安@御坂114515 开发的天玑通用临时root工具，适用于所有天玑漏洞机型。1.从酷安下载对应提权工具 2.安装KSU管理器 3.授予ADB权限 4.执行提权脚本，SELinux自动切宽容 5.加载KSU LKM模块获得临时root。重启后失效，需重新执行。支持天玑8100/9000/9200/9300/9400/9500等。",
+            descriptionEn = "MediaTek universal temp root tool developed by CoolAPK @Misaka114515, works on all MediaTek exploit devices. 1. Download exploit tool from CoolAPK 2. Install KSU manager 3. Grant ADB permission 4. Execute exploit script, SELinux auto switches to permissive 5. Load KSU LKM module to get temp root. Expires after reboot. Supports MediaTek 8100/9000/9200/9300/9400/9500, etc.",
             downloadUrl = "https://www.coolapk.com/feed/73186643",
             scriptFileName = "mi_mt6895",
             autoExecute = true
@@ -526,110 +542,154 @@ fi
         RootMethodInfo(
             id = "redmi_note11tpro_lkb_unlock",
             name = "红米Note11T Pro LKB单刷解BL",
+            nameEn = "Redmi Note11T Pro LKB Single Flash BL Unlock",
             brand = "xiaomi",
             chipset = "mediatek",
             principle = "利用专属定制的LKB单刷文件，在线刷工具中只勾选LKB项刷入修改版LKB镜像，绕过官方解锁等待期",
+            principleEn = "Use custom LKB single flash file, only check LKB option in flash tool to flash modified LKB image, bypass official unlock waiting period",
             riskLevel = "high",
             requiresComputer = true,
             requiresKSU = false,
             supportedDevices = "红米Note 11T Pro (天玑8100)、Note 12T Pro、小米CV3",
-            description = "1.下载对应机型专属LKB单刷文件 2.手机进入fastboot模式 3.用MiFlash工具只勾选LKB项刷入 4.刷入修改版LKB镜像后用配套工具完成最终解锁 5.解BL后刷入KSU/Magisk获取root。注意：解BL会清除全部数据，请先备份。"
+            supportedDevicesEn = "Redmi Note 11T Pro (MediaTek 8100), Note 12T Pro, Xiaomi CV3",
+            description = "1.下载对应机型专属LKB单刷文件 2.手机进入fastboot模式 3.用MiFlash工具只勾选LKB项刷入 4.刷入修改版LKB镜像后用配套工具完成最终解锁 5.解BL后刷入KSU/Magisk获取root。注意：解BL会清除全部数据，请先备份。",
+            descriptionEn = "1. Download device-specific LKB single flash file 2. Enter fastboot mode 3. Use MiFlash tool with only LKB option checked 4. After flashing modified LKB image, use companion tool to complete final unlock 5. Flash KSU/Magisk after BL unlock. Note: BL unlock will wipe all data, backup first.",
+            downloadUrl = "https://www.coolapk.com/feed/71068455",
+            scriptFileName = "lkb.img"
         ),
         RootMethodInfo(
             id = "xiaomi_fastboot_cmdline",
             name = "小米 fastboot cmdline 免解BL Root",
+            nameEn = "Xiaomi fastboot cmdline No-BL-Unlock Root",
             brand = "xiaomi",
             chipset = "generic",
             principle = "利用fastboot cmdline漏洞修改启动参数使SELinux宽容，再利用小米质量服务漏洞以root运行ksud",
+            principleEn = "Exploit fastboot cmdline vulnerability to modify boot parameters making SELinux permissive, then exploit Xiaomi quality service vulnerability to run ksud as root",
             riskLevel = "high",
             requiresComputer = true,
             requiresKSU = true,
             supportedDevices = "小米K80/红米系列等支持fastboot cmdline漏洞的机型",
-            description = "获取ksud→fastboot修改cmdline→SELinux宽容→利用miui.mqsas漏洞运行ksud→late-load模式→软重启注入Zygisk。"
+            supportedDevicesEn = "Xiaomi K80/Redmi series and other devices supporting fastboot cmdline exploit",
+            description = "获取ksud→fastboot修改cmdline→SELinux宽容→利用miui.mqsas漏洞运行ksud→late-load模式→软重启注入Zygisk。",
+            descriptionEn = "Get ksud → fastboot modify cmdline → SELinux permissive → exploit miui.mqsas to run ksud → late-load mode → soft reboot inject Zygisk.",
+            downloadUrl = "https://github.com/314xxx/Temproot/releases",
+            scriptFileName = "ksud"
         ),
         RootMethodInfo(
             id = "oneplus_qualcomm_jailbreak",
             name = "一加/小米 骁龙 越狱模式临时Root",
+            nameEn = "OnePlus/Xiaomi Qualcomm Jailbreak Mode Temp Root",
             brand = "oneplus",
             chipset = "qualcomm",
             principle = "KernelSU官方越狱模式，利用fastboot漏洞临时启动修改后的boot获取root",
+            principleEn = "KernelSU official jailbreak mode, exploit fastboot vulnerability to temporarily boot modified boot image and obtain root",
             riskLevel = "low",
             requiresComputer = true,
             requiresKSU = true,
             supportedDevices = "骁龙8gen2及以上机型（一加Ace6T/小米14等）",
-            description = "下载可越狱版本KSU→进入fastboot→残芯ADB一键临时root→重启后KSU显示已root。需过深度测试。"
+            supportedDevicesEn = "Snapdragon 8 Gen2 and above (OnePlus Ace6T/Xiaomi 14, etc.)",
+            description = "下载可越狱版本KSU→进入fastboot→残芯ADB一键临时root→重启后KSU显示已root。需过深度测试。",
+            descriptionEn = "Download jailbreak-capable KSU → enter fastboot → Canxin ADB one-click temp root → KSU shows rooted after reboot. Needs to pass deep testing.",
+            downloadUrl = "https://github.com/314xxx/Temproot/releases",
+            scriptFileName = "temproot"
         ),
         RootMethodInfo(
             id = "samsung_wssyncmldm",
             name = "三星锁BL Root (wssyncmldm漏洞)",
+            nameEn = "Samsung Locked BL Root (wssyncmldm Exploit)",
             brand = "samsung",
             chipset = "generic",
             principle = "利用wssyncmldm系统服务漏洞，通过Root My Galaxy应用触发提权",
+            principleEn = "Exploit wssyncmldm system service vulnerability, trigger privilege escalation via Root My Galaxy app",
             riskLevel = "medium",
             requiresComputer = false,
             requiresKSU = true,
             supportedDevices = "部分三星锁BL机型",
-            description = "安装Root My Galaxy→点击Security Check→安装KernelSU→按提示完成。可能需要多次点击Security Check。"
+            supportedDevicesEn = "Some Samsung locked BL devices",
+            description = "安装Root My Galaxy→点击Security Check→安装KernelSU→按提示完成。可能需要多次点击Security Check。",
+            descriptionEn = "Install Root My Galaxy → click Security Check → install KernelSU → follow prompts. May need multiple Security Check clicks.",
+            downloadUrl = "https://github.com/salvogiangri/RootMyGalaxy",
+            scriptFileName = "RootMyGalaxy.apk"
         ),
         RootMethodInfo(
             id = "qualcomm_cmdline_injection",
             name = "高通骁龙 SELinux宽容模式提权 (cmdline注入)",
+            nameEn = "Qualcomm Snapdragon SELinux Permissive Escalation (cmdline Injection)",
             brand = "generic",
             chipset = "qualcomm",
             principle = "利用fastboot oem set-gpu-preemption命令注入漏洞，修改启动参数使SELinux变为宽容模式，再利用系统服务漏洞提权",
+            principleEn = "Exploit fastboot oem set-gpu-preemption command injection vulnerability, modify boot parameters to make SELinux permissive, then exploit system service vulnerability for escalation",
             riskLevel = "high",
             requiresComputer = true,
             requiresKSU = true,
             supportedDevices = "高通骁龙8 Gen2及以上全品牌机型（小米/一加/OPPO/vivo等）",
-            description = "全品牌通用方法。1.进入fastboot模式 2.执行 fastboot oem set-gpu-preemption 0 androidboot.selinux=permissive 3.重启后SELinux宽容 4.利用miui.mqsas或其他系统服务漏洞运行ksud 5.KSU late-load获取root。注意：需2026年2月前安全补丁。"
+            supportedDevicesEn = "Qualcomm Snapdragon 8 Gen2 and above all brands (Xiaomi/OnePlus/OPPO/vivo, etc.)",
+            description = "全品牌通用方法。1.进入fastboot模式 2.执行 fastboot oem set-gpu-preemption 0 androidboot.selinux=permissive 3.重启后SELinux宽容 4.利用miui.mqsas或其他系统服务漏洞运行ksud 5.KSU late-load获取root。注意：需2026年2月前安全补丁。",
+            descriptionEn = "Universal method for all brands. 1. Enter fastboot mode 2. Execute fastboot oem set-gpu-preemption 0 androidboot.selinux=permissive 3. SELinux permissive after reboot 4. Exploit miui.mqsas or other system service to run ksud 5. KSU late-load get root. Note: Needs security patch before Feb 2026."
         ),
         RootMethodInfo(
             id = "qualcomm_mobile_permissive",
             name = "手机端骁龙强制注入宽容模式 (无需电脑)",
+            nameEn = "Mobile Snapdragon Force Permissive Mode (No PC Needed)",
             brand = "generic",
             chipset = "qualcomm",
             principle = "在手机端直接通过Shizuku/Dhizuku/Root权限执行setenforce 0，强制将SELinux切换为宽容模式，然后加载KSU获取root。无需电脑，手机直接操作。",
+            principleEn = "Directly execute setenforce 0 on mobile via Shizuku/Dhizuku/Root permission, force SELinux to permissive mode, then load KSU to get root. No PC needed, mobile-only operation.",
             riskLevel = "medium",
             requiresComputer = false,
             requiresKSU = true,
             supportedDevices = "所有高通骁龙机型（需已开启Shizuku/Dhizuku或已有root权限）。Redmi K60/K50/K40等机型测试可用。",
-            description = "手机端直接执行，无需电脑。1.确保已开启Shizuku或Dhizuku权限（或已有root） 2.点击执行按钮，自动执行 setenforce 0 切换SELinux为宽容模式 3.检测SELinux状态 4.如果已安装KSU，自动执行 ksud live 加载KSU获取root 5.如果未安装KSU，提示先安装KSU管理器。注意：此方法需要Shizuku/Dhizuku或root权限才能执行setenforce。"
+            supportedDevicesEn = "All Qualcomm Snapdragon devices (needs Shizuku/Dhizuku enabled or root already). Tested on Redmi K60/K50/K40, etc.",
+            description = "手机端直接执行，无需电脑。1.确保已开启Shizuku或Dhizuku权限（或已有root） 2.点击执行按钮，自动执行 setenforce 0 切换SELinux为宽容模式 3.检测SELinux状态 4.如果已安装KSU，自动执行 ksud live 加载KSU获取root 5.如果未安装KSU，提示先安装KSU管理器。注意：此方法需要Shizuku/Dhizuku或root权限才能执行setenforce。",
+            descriptionEn = "Mobile direct execution, no PC needed. 1. Ensure Shizuku or Dhizuku permission enabled (or root already) 2. Click Execute, auto run setenforce 0 to switch SELinux to permissive 3. Check SELinux status 4. If KSU installed, auto run ksud live to load KSU and get root 5. If KSU not installed, prompt to install KSU manager first. Note: This method needs Shizuku/Dhizuku or root permission to execute setenforce."
         ),
         RootMethodInfo(
             id = "xiaomi_qc_temp_root",
             name = "小米高通QC免解BL临时Root",
+            nameEn = "Xiaomi Qualcomm QC No-BL-Unlock Temp Root",
             brand = "xiaomi",
             chipset = "qualcomm",
             principle = "小米QC免解BL工具，利用高通平台漏洞在fastboot模式下临时启动修改后的boot获取root",
+            principleEn = "Xiaomi QC no-BL-unlock tool, exploit Qualcomm platform vulnerability to temporarily boot modified boot in fastboot mode and obtain root",
             riskLevel = "medium",
             requiresComputer = true,
             requiresKSU = true,
             supportedDevices = "骁龙8 Gen1到8e5的小米/红米机型（需2月补丁之前）",
-            description = "1.下载对应机型的QC免解BL工具包 2.手机进入fastboot模式 3.电脑执行一键root脚本 4.手机自动重启 5.打开KSU管理器点击越狱。注意：老机型(8Gen1/8Gen2)降级后成功率更高。"
+            supportedDevicesEn = "Snapdragon 8 Gen1 to 8e5 Xiaomi/Redmi devices (needs patch before Feb)",
+            description = "1.下载对应机型的QC免解BL工具包 2.手机进入fastboot模式 3.电脑执行一键root脚本 4.手机自动重启 5.打开KSU管理器点击越狱。注意：老机型(8Gen1/8Gen2)降级后成功率更高。",
+            descriptionEn = "1. Download device-specific QC no-BL-unlock tool package 2. Enter fastboot mode 3. PC executes one-click root script 4. Phone auto reboots 5. Open KSU manager and click jailbreak. Note: Older devices (8Gen1/8Gen2) have higher success rate after downgrade."
         ),
         RootMethodInfo(
             id = "ghostlock_oneplus",
             name = "GhostLock 一加锁BL越狱",
+            nameEn = "GhostLock OnePlus Locked BL Jailbreak",
             brand = "oneplus",
             chipset = "qualcomm",
             principle = "利用一加Bootloader漏洞，在锁BL状态下临时启动修改后的boot获取root权限",
+            principleEn = "Exploit OnePlus Bootloader vulnerability to temporarily boot modified boot with locked BL and obtain root",
             riskLevel = "high",
             requiresComputer = true,
             requiresKSU = true,
             supportedDevices = "OnePlus Ace 6T、OnePlus 15、小米17（骁龙8 Elite/8Gen5）",
-            description = "1.下载GhostLock工具和对应机型的boot镜像 2.手机进入fastboot模式 3.电脑执行 ghostlock boot modified_boot.img 4.手机临时启动修改后的boot 5.打开KSU获取root。重启后root失效，需重新操作。"
+            supportedDevicesEn = "OnePlus Ace 6T, OnePlus 15, Xiaomi 17 (Snapdragon 8 Elite/8Gen5)",
+            description = "1.下载GhostLock工具和对应机型的boot镜像 2.手机进入fastboot模式 3.电脑执行 ghostlock boot modified_boot.img 4.手机临时启动修改后的boot 5.打开KSU获取root。重启后root失效，需重新操作。",
+            descriptionEn = "1. Download GhostLock tool and device-specific boot image 2. Enter fastboot mode 3. PC executes ghostlock boot modified_boot.img 4. Phone temporarily boots modified boot 5. Open KSU to get root. Expires after reboot, needs re-execution."
         ),
         RootMethodInfo(
             id = "temproot_hyperos",
             name = "TempRoot HyperOS一键临时Root",
+            nameEn = "TempRoot HyperOS One-Click Temp Root",
             brand = "xiaomi",
             chipset = "generic",
             principle = "HyperOS专用一键临时Root应用，内置多机型exploit，自动检测设备并执行对应提权",
+            principleEn = "HyperOS dedicated one-click temp root app, built-in multi-device exploits, auto-detect device and execute corresponding escalation",
             riskLevel = "medium",
             requiresComputer = false,
             requiresKSU = true,
             supportedDevices = "Redmi K60/K60E/K50/K50 Pro等HyperOS机型",
+            supportedDevicesEn = "Redmi K60/K60E/K50/K50 Pro and other HyperOS devices",
             description = "1.从GitHub(314xxx/Temproot)下载TempRoot APK 2.安装并打开 3.授予ADB/Shizuku权限 4.点击一键临时Root 5.自动执行exploit并加载KSU。支持机型：mondrian(K60)、rembrandt(K60E)、rubens(K50)、matisse(K50 Pro)。",
+            descriptionEn = "1. Download TempRoot APK from GitHub (314xxx/Temproot) 2. Install and open 3. Grant ADB/Shizuku permission 4. Click one-click temp root 5. Auto execute exploit and load KSU. Supported: mondrian(K60), rembrandt(K60E), rubens(K50), matisse(K50 Pro).",
             downloadUrl = "https://github.com/314xxx/Temproot/releases",
             scriptFileName = "temproot",
             autoExecute = false
@@ -637,26 +697,34 @@ fi
         RootMethodInfo(
             id = "vivo_dimensity_9400_temp_root",
             name = "vivo天玑9400免拆临时Root",
+            nameEn = "vivo MediaTek 9400 No-Disassembly Temp Root",
             brand = "vivo",
             chipset = "mediatek",
             principle = "vivo X200 Pro等天玑9400新机的免拆临时Root方案，不碰硬件不丢保修重启清零",
+            principleEn = "No-disassembly temp root solution for vivo X200 Pro and other MediaTek 9400 new devices, no hardware touch, no warranty loss, expires after reboot",
             riskLevel = "medium",
             requiresComputer = true,
             requiresKSU = true,
             supportedDevices = "vivo X200 Pro、X200、iQOO 13等天玑9400机型",
-            description = "1.下载对应机型的天玑9400临时Root工具包 2.手机开启USB调试连接电脑 3.执行提权脚本推送preload文件 4.锁屏状态下重启 5.锁屏状态执行提权命令 6.亮屏后加载KSU获取临时root。注意：操作有变砖风险，请谨慎。"
+            supportedDevicesEn = "vivo X200 Pro, X200, iQOO 13 and other MediaTek 9400 devices",
+            description = "1.下载对应机型的天玑9400临时Root工具包 2.手机开启USB调试连接电脑 3.执行提权脚本推送preload文件 4.锁屏状态下重启 5.锁屏状态执行提权命令 6.亮屏后加载KSU获取临时root。注意：操作有变砖风险，请谨慎。",
+            descriptionEn = "1. Download device-specific MediaTek 9400 temp root tool package 2. Enable USB debugging and connect to PC 3. Execute escalation script to push preload file 4. Lock screen and reboot 5. Execute escalation command on lock screen 6. Load KSU after screen on to get temp root. Note: Risk of bricking, be careful."
         ),
         RootMethodInfo(
             id = "dirtypipe_cve_2022_0847",
             name = "DirtyPipe (CVE-2022-0847) 临时Root",
+            nameEn = "DirtyPipe (CVE-2022-0847) Temp Root",
             brand = "generic",
             chipset = "generic",
             principle = "Linux内核DirtyPipe漏洞，非root用户可覆盖任意只读文件，通过覆盖su二进制获取临时root",
+            principleEn = "Linux kernel DirtyPipe vulnerability, non-root users can overwrite any read-only file, obtain temp root by overwriting su binary",
             riskLevel = "medium",
             requiresComputer = false,
             requiresKSU = false,
             supportedDevices = "Linux内核5.8~5.16.11的Android设备（2022年3月前补丁）",
+            supportedDevicesEn = "Android devices with Linux kernel 5.8~5.16.11 (patch before Mar 2022)",
             description = "1.下载DirtyPipe exploit二进制 2.推送到/data/local/tmp/ 3.chmod +x 4.执行exploit覆盖/system/bin/su 5.执行su获取root。注意：此漏洞在2022年3月安全补丁中已修复，仅老设备可用。",
+            descriptionEn = "1. Download DirtyPipe exploit binary 2. Push to /data/local/tmp/ 3. chmod +x 4. Execute exploit to overwrite /system/bin/su 5. Execute su to get root. Note: This exploit was patched in Mar 2022 security update, only old devices available.",
             downloadUrl = "https://github.com/Arinerron/0e99d69d70a778ca13a0087fa6fdfd80",
             scriptFileName = "dirtypipe",
             autoExecute = true
@@ -664,86 +732,114 @@ fi
         RootMethodInfo(
             id = "samsung_root_my_galaxy_s25",
             name = "三星Root My Galaxy S25临时Root",
+            nameEn = "Samsung Root My Galaxy S25 Temp Root",
             brand = "samsung",
             chipset = "qualcomm",
             principle = "利用三星系统服务漏洞，通过Root My Galaxy应用触发提权，不触发Knox不解锁BL",
+            principleEn = "Exploit Samsung system service vulnerability, trigger escalation via Root My Galaxy app, no Knox trigger, no BL unlock",
             riskLevel = "medium",
             requiresComputer = false,
             requiresKSU = true,
             supportedDevices = "Galaxy S25 Ultra（完全支持）、S25/S25+/S24系列（测试中）",
-            description = "1.从GitHub下载Root My Galaxy APK 2.安装并打开 3.点击Security Check按钮（可能需要多次点击） 4.按提示安装KernelSU 5.完成后获得root权限。注意：不触发Knox，不解锁BL，重启后root失效。Exynos处理器机型不支持。"
+            supportedDevicesEn = "Galaxy S25 Ultra (fully supported), S25/S25+/S24 series (testing)",
+            description = "1.从GitHub下载Root My Galaxy APK 2.安装并打开 3.点击Security Check按钮（可能需要多次点击） 4.按提示安装KernelSU 5.完成后获得root权限。注意：不触发Knox，不解锁BL，重启后root失效。Exynos处理器机型不支持。",
+            descriptionEn = "1. Download Root My Galaxy APK from GitHub 2. Install and open 3. Click Security Check button (may need multiple clicks) 4. Install KernelSU as prompted 5. Get root after completion. Note: No Knox trigger, no BL unlock, expires after reboot. Exynos devices not supported."
         ),
         RootMethodInfo(
             id = "gbl_root_canoe",
             name = "GBL Root Canoe 通用Bootloader漏洞",
+            nameEn = "GBL Root Canoe Universal Bootloader Exploit",
             brand = "generic",
             chipset = "qualcomm",
             principle = "利用GBL(Generic Bootloader Loader)漏洞，让真实ABL加载嵌入式superfastboot BDS，实现Fake Locked Bootloader状态",
+            principleEn = "Exploit GBL (Generic Bootloader Loader) vulnerability, let real ABL load embedded superfastboot BDS, achieve Fake Locked Bootloader state",
             riskLevel = "high",
             requiresComputer = true,
             requiresKSU = false,
             supportedDevices = "骁龙8 Gen5/8 Elite(Gen5)机型",
-            description = "1.下载GBL Root Canoe工具 2.手机进入fastboot模式 3.电脑执行漏洞利用脚本 4.ABL加载嵌入式superfastboot BDS 5.实现Fake Locked状态并启动修改后的boot。注意：此方法较新，支持机型有限，操作有变砖风险。"
+            supportedDevicesEn = "Snapdragon 8 Gen5/8 Elite (Gen5) devices",
+            description = "1.下载GBL Root Canoe工具 2.手机进入fastboot模式 3.电脑执行漏洞利用脚本 4.ABL加载嵌入式superfastboot BDS 5.实现Fake Locked状态并启动修改后的boot。注意：此方法较新，支持机型有限，操作有变砖风险。",
+            descriptionEn = "1. Download GBL Root Canoe tool 2. Enter fastboot mode 3. PC executes exploit script 4. ABL loads embedded superfastboot BDS 5. Achieve Fake Locked state and boot modified boot. Note: This method is new, limited device support, risk of bricking."
         ),
         RootMethodInfo(
             id = "mtk_generic_old",
             name = "MTK通用临时Root (老漏洞)",
+            nameEn = "MTK Universal Temp Root (Old Exploit)",
             brand = "generic",
             chipset = "mediatek",
             principle = "XDA大神针对MTK的提权漏洞，2020年3月安全更新后被修复",
+            principleEn = "XDA developer privilege escalation exploit for MTK, patched after Mar 2020 security update",
             riskLevel = "low",
             requiresComputer = true,
             requiresKSU = false,
             supportedDevices = "2020年3月前未打安全补丁的MTK机型",
-            description = "仅适用于老款MTK机型，新系统已修复此漏洞。"
+            supportedDevicesEn = "MTK devices without security patch before Mar 2020",
+            description = "仅适用于老款MTK机型，新系统已修复此漏洞。",
+            descriptionEn = "Only applicable to older MTK devices, new systems have patched this vulnerability."
         ),
         RootMethodInfo(
             id = "cve_2025_21479",
             name = "CVE-2025-21479 vivo Neo9 提权",
+            nameEn = "CVE-2025-21479 vivo Neo9 Escalation",
             brand = "vivo",
             chipset = "mediatek",
             principle = "利用CVE-2025-21479内核漏洞提权，推送exploit二进制执行",
+            principleEn = "Exploit CVE-2025-21479 kernel vulnerability for escalation, push exploit binary and execute",
             riskLevel = "high",
             requiresComputer = true,
             requiresKSU = false,
             supportedDevices = "vivo iQOO Neo9 (特定固件版本)",
-            description = "推送exploit_vivo_neo9/rootc/su到/data/local/tmp→设置可执行→重启获取→执行exploit提权。"
+            supportedDevicesEn = "vivo iQOO Neo9 (specific firmware version)",
+            description = "推送exploit_vivo_neo9/rootc/su到/data/local/tmp→设置可执行→重启获取→执行exploit提权。",
+            descriptionEn = "Push exploit_vivo_neo9/rootc/su to /data/local/tmp → set executable → reboot to obtain → execute exploit for escalation."
         ),
         RootMethodInfo(
             id = "ksu_late_load",
             name = "KernelSU late-load 模式",
+            nameEn = "KernelSU late-load Mode",
             brand = "generic",
             chipset = "generic",
             principle = "通过已获取的临时root权限，加载KSU的ksud并使用late-load模式注入系统",
+            principleEn = "Through obtained temp root permission, load KSU ksud and use late-load mode to inject into system",
             riskLevel = "low",
             requiresComputer = false,
             requiresKSU = true,
             supportedDevices = "所有已安装KSU且已获取临时root的设备",
-            description = "找到libksud.so路径→执行late-load --allow-shell --package-name me.weishu.kernelsu→KSU弹框授权→获得root。"
+            supportedDevicesEn = "All devices with KSU installed and temp root obtained",
+            description = "找到libksud.so路径→执行late-load --allow-shell --package-name me.weishu.kernelsu→KSU弹框授权→获得root。",
+            descriptionEn = "Find libksud.so path → execute late-load --allow-shell --package-name me.weishu.kernelsu → KSU popup authorization → get root."
         ),
         RootMethodInfo(
             id = "magisk_patch_boot",
             name = "Magisk 修补boot (需解BL)",
+            nameEn = "Magisk Patch Boot (BL Unlock Required)",
             brand = "generic",
             chipset = "generic",
             principle = "提取boot.img→Magisk修补→fastboot刷入修补后的boot",
+            principleEn = "Extract boot.img → Magisk patch → fastboot flash patched boot",
             riskLevel = "low",
             requiresComputer = true,
             requiresKSU = false,
             supportedDevices = "所有已解锁Bootloader的设备",
-            description = "标准Magisk root流程，需先解锁BL。提取boot→Magisk修补→fastboot flash boot→重启。"
+            supportedDevicesEn = "All devices with unlocked Bootloader",
+            description = "标准Magisk root流程，需先解锁BL。提取boot→Magisk修补→fastboot flash boot→重启。",
+            descriptionEn = "Standard Magisk root process, needs BL unlock first. Extract boot → Magisk patch → fastboot flash boot → reboot."
         ),
         RootMethodInfo(
             id = "ksu_patch_boot",
             name = "KernelSU 修补boot (需解BL)",
+            nameEn = "KernelSU Patch Boot (BL Unlock Required)",
             brand = "generic",
             chipset = "generic",
             principle = "提取boot.img→KernelSU修补→fastboot刷入修补后的boot",
+            principleEn = "Extract boot.img → KernelSU patch → fastboot flash patched boot",
             riskLevel = "low",
             requiresComputer = true,
             requiresKSU = true,
             supportedDevices = "所有已解锁Bootloader且内核支持KSU的设备",
-            description = "标准KernelSU root流程，需先解锁BL。提取boot→KSU修补→fastboot flash boot→重启安装KSU管理器。"
+            supportedDevicesEn = "All devices with unlocked Bootloader and kernel supporting KSU",
+            description = "标准KernelSU root流程，需先解锁BL。提取boot→KSU修补→fastboot flash boot→重启安装KSU管理器。",
+            descriptionEn = "Standard KernelSU root process, needs BL unlock first. Extract boot → KSU patch → fastboot flash boot → reboot and install KSU manager."
         )
     )
 
@@ -797,22 +893,49 @@ fi
     }
 
     // 执行指定的 root 方法
-    actual fun executeRootMethod(methodId: String): RootResult {
+        // Localization helper for root method messages
+    private fun loc(zh: String, en: String): String {
+        return if (AppSettings.language == "en") en else zh
+    }
+
+    // 环境检测：返回设备当前 Root/SELinux/SoC/KSU 状态摘要
+    private fun detectEnvReport(): String {
         return try {
-            when (methodId) {
+            val rootOut = try { exec("su -c id 2>/dev/null || /data/adb/ksud id 2>/dev/null || echo none") } catch (e: Exception) { "none" }
+            val hasRoot = rootOut.contains("uid=0")
+            val selinux = try { exec("getenforce 2>/dev/null").trim() } catch (e: Exception) { "unknown" }
+            val soc = try {
+                exec("getprop ro.soc.model 2>/dev/null; getprop ro.soc.manufacturer 2>/dev/null; getprop ro.board.platform 2>/dev/null")
+                    .lines().map { it.trim() }.filter { it.isNotBlank() }.joinToString("/")
+            } catch (e: Exception) { "unknown" }
+            val ksu = try { exec("pm list packages 2>/dev/null | grep -i me.weishu.kernelsu").isNotBlank() } catch (e: Exception) { false }
+            buildString {
+                appendLine(if (AppSettings.language == "en") "--- Environment check ---" else "--- 环境检测 ---")
+                appendLine(if (AppSettings.language == "en") "Root: ${if (hasRoot) "Yes (uid=0)" else "No"}" else "Root: ${if (hasRoot) "已获取 (uid=0)" else "未获取"}")
+                appendLine(if (AppSettings.language == "en") "SELinux: $selinux" else "SELinux: $selinux")
+                appendLine(if (AppSettings.language == "en") "SoC: $soc" else "SoC: $soc")
+                appendLine(if (AppSettings.language == "en") "KSU manager: ${if (ksu) "Installed" else "Not found"}" else "KSU管理器: ${if (ksu) "已安装" else "未安装"}")
+            }
+        } catch (e: Exception) { "" }
+    }
+
+actual fun executeRootMethod(methodId: String): RootResult {
+        return try {
+            val envInfo = detectEnvReport()
+            val result = when (methodId) {
                 "ksu_late_load" -> {
                     // KernelSU late-load 模式：找到 libksud.so 并执行 late-load
                     val findResult = exec("find /data/app -name libksud.so 2>/dev/null | grep me.weishu.kernelsu | head -n 1")
                     if (findResult.isBlank()) {
-                        RootResult(false, "未找到 KernelSU 的 libksud.so，请先安装 KernelSU 管理器", "ksu_late_load")
+                        RootResult(false, loc("未找到 KernelSU 的 libksud.so，请先安装 KernelSU 管理器", "KernelSU libksud.so not found, please install KernelSU manager first"), "ksu_late_load")
                     } else {
                         val ksudPath = findResult.trim()
                         val result = exec("$ksudPath late-load --allow-shell --package-name me.weishu.kernelsu 2>&1")
                         val idResult = exec("id")
                         if (idResult.contains("uid=0")) {
-                            RootResult(true, "KernelSU late-load 成功！已获得root权限\n\n$result", "ksu_late_load")
+                            RootResult(true, loc("KernelSU late-load 成功！已获得root权限\n\n$result", "KernelSU late-load success! Root access obtained\n\n$result"), "ksu_late_load")
                         } else {
-                            RootResult(false, "KernelSU late-load 执行完成但未获得root，请在KSU管理器中授权\n\n$result", "ksu_late_load")
+                            RootResult(false, loc("KernelSU late-load 执行完成但未获得root，请在KSU管理器中授权\n\n$result", "KernelSU late-load completed but no root access. Please grant permission in KernelSU manager.\n\n$result"), "ksu_late_load")
                         }
                     }
                 }
@@ -820,30 +943,30 @@ fi
                     // LD_PRELOAD 临时root：需要 preload.so 文件，检测是否存在
                     val preloadExists = exec("ls /data/local/tmp/preload.so 2>/dev/null || ls /data/local/tmp/libpreload.so 2>/dev/null || echo ''")
                     if (preloadExists.isBlank()) {
-                        RootResult(false, "未找到 preload.so 文件。请先从对应教程下载 preload.so 并推送到 /data/local/tmp/\n\n操作步骤：\n1. 下载对应机型的 preload.so\n2. adb push preload.so /data/local/tmp/\n3. 锁屏状态下重启\n4. 锁屏状态执行提权命令\n5. 亮屏后加载KSU", methodId)
+                        RootResult(false, loc("未找到 preload.so 文件。请先从对应教程下载 preload.so 并推送到 /data/local/tmp/\n\n操作步骤：\n1. 下载对应机型的 preload.so\n2. adb push preload.so /data/local/tmp/\n3. 锁屏状态下重启\n4. 锁屏状态执行提权命令\n5. 亮屏后加载KSU", "preload.so not found. Please download preload.so from the tutorial and push to /data/local/tmp/\n\nSteps:\n1. Download preload.so for your device\n2. adb push preload.so /data/local/tmp/\n3. Reboot with screen locked\n4. Execute exploit with screen locked\n5. Load KSU after unlocking"), methodId)
                     } else {
                         // 执行 LD_PRELOAD 提权
                         val result = exec("LD_PRELOAD=/data/local/tmp/preload.so /system/bin/sh -c 'id' 2>&1")
                         if (result.contains("uid=0")) {
-                            RootResult(true, "LD_PRELOAD 提权成功！已获得临时root\n\n$result\n\n接下来请执行 KSU late-load 加载模块", methodId)
+                            RootResult(true, loc("LD_PRELOAD 提权成功！已获得临时root\n\n$result\n\n接下来请执行 KSU late-load 加载模块", "LD_PRELOAD exploit success! Temp root obtained\n\n$result\n\nNext: run KSU late-load to load modules"), methodId)
                         } else {
-                            RootResult(false, "LD_PRELOAD 提权失败，请确认：\n1. 系统版本是否在支持范围内\n2. 是否在锁屏状态下执行\n3. preload.so 是否匹配当前机型\n\n输出：$result", methodId)
+                            RootResult(false, loc("LD_PRELOAD 提权失败，请确认：\n1. 系统版本是否在支持范围内\n2. 是否在锁屏状态下执行\n3. preload.so 是否匹配当前机型\n\n输出：$result", "LD_PRELOAD exploit failed. Please check:\n1. System version is supported\n2. Executed with screen locked\n3. preload.so matches current device\n\nOutput: $result"), methodId)
                         }
                     }
                 }
                 "oneplus_qualcomm_jailbreak" -> {
                     // 骁龙越狱模式：需要进入 fastboot，这里只提供指引
-                    RootResult(false, "骁龙越狱模式需要在 fastboot 模式下操作：\n\n1. 下载可越狱版本的 KernelSU\n2. 手机进入 fastboot 模式（关机后按住音量下+电源）\n3. 电脑执行 fastboot 启动修改后的 boot\n4. 重启后打开 KSU 管理器\n\n注意：此操作需要电脑配合，无法在手机端直接完成", methodId)
+                    RootResult(false, loc("骁龙越狱模式需要在 fastboot 模式下操作：\n\n1. 下载可越狱版本的 KernelSU\n2. 手机进入 fastboot 模式（关机后按住音量下+电源）\n3. 电脑执行 fastboot 启动修改后的 boot\n4. 重启后打开 KSU 管理器\n\n注意：此操作需要电脑配合，无法在手机端直接完成", "Snapdragon jailbreak mode requires fastboot mode:\n\n1. Download jailbreak-capable KernelSU\n2. Enter fastboot mode (power off, hold vol down + power)\n3. PC runs fastboot to boot modified boot image\n4. Open KSU manager after reboot\n\nNote: Requires PC, cannot be done directly on phone"), methodId)
                 }
                 "xiaomi_fastboot_cmdline" -> {
                     // fastboot cmdline 漏洞：需要电脑操作
-                    RootResult(false, "fastboot cmdline 免解BL Root 需要电脑操作：\n\n1. 从 KSU APK 提取 libksud.so 重命名为 ksud\n2. adb push ksud /data/local/tmp/\n3. 进入 fastboot：adb reboot bootloader\n4. fastboot oem cdmslot-info（查看槽位）\n5. fastboot reboot fastboot\n6. 修改 cmdline 使 SELinux 宽容\n7. 利用 miui.mqsas 漏洞运行 ksud\n\n注意：此操作风险较高，建议先备份数据", methodId)
+                    RootResult(false, loc("fastboot cmdline 免解BL Root 需要电脑操作：\n\n1. 从 KSU APK 提取 libksud.so 重命名为 ksud\n2. adb push ksud /data/local/tmp/\n3. 进入 fastboot：adb reboot bootloader\n4. fastboot oem cdmslot-info（查看槽位）\n5. fastboot reboot fastboot\n6. 修改 cmdline 使 SELinux 宽容\n7. 利用 miui.mqsas 漏洞运行 ksud\n\n注意：此操作风险较高，建议先备份数据", "fastboot cmdline no-BL-unlock Root requires PC:\n\n1. Extract libksud.so from KSU APK, rename to ksud\n2. adb push ksud /data/local/tmp/\n3. Enter fastboot: adb reboot bootloader\n4. fastboot oem cdmslot-info (check slot)\n5. fastboot reboot fastboot\n6. Modify cmdline to make SELinux permissive\n7. Use miui.mqsas exploit to run ksud\n\nNote: High risk, backup data first"), methodId)
                 }
                 "magisk_patch_boot" -> {
                     // Magisk 修补 boot
                     val extractResult = extractBootImage()
                     if (!extractResult.success) {
-                        RootResult(false, "提取 boot.img 失败：${extractResult.message}", methodId)
+                        RootResult(false, loc("提取 boot.img 失败：${extractResult.message}", "Failed to extract boot.img: ${extractResult.message}"), methodId)
                     } else {
                         val patchResult = patchWithMagisk(extractResult.message)
                         patchResult
@@ -853,26 +976,27 @@ fi
                     // KSU 修补 boot
                     val extractResult = extractBootImage()
                     if (!extractResult.success) {
-                        RootResult(false, "提取 boot.img 失败：${extractResult.message}", methodId)
+                        RootResult(false, loc("提取 boot.img 失败：${extractResult.message}", "Failed to extract boot.img: ${extractResult.message}"), methodId)
                     } else {
                         val patchResult = patchWithKernelSU(extractResult.message)
                         patchResult
                     }
                 }
                 "samsung_wssyncmldm" -> {
-                    RootResult(false, "三星锁BL Root 需要安装 Root My Galaxy 应用：\n\n1. 从 GitHub 下载 Root My Galaxy\n2. 安装并打开\n3. 点击 Security Check 按钮（可能需要多次点击）\n4. 按提示安装 KernelSU\n5. 完成后获得 root 权限\n\n注意：此方法仅支持部分三星机型", methodId)
+                    val samsungMsg = if (AppSettings.language == "en") "Samsung Locked BL Root requires Root My Galaxy app:\n\n1. Download Root My Galaxy from GitHub\n2. Install and open\n3. Tap Security Check button (may need multiple taps)\n4. Install KernelSU as prompted\n5. Get root permission after completion\n\nNote: This method only supports some Samsung devices" else "三星锁BL Root 需要安装 Root My Galaxy 应用：\n\n1. 从 GitHub 下载 Root My Galaxy\n2. 安装并打开\n3. 点击 Security Check 按钮（可能需要多次点击）\n4. 按提示安装 KernelSU\n5. 完成后获得 root 权限\n\n注意：此方法仅支持部分三星机型"
+                    RootResult(false, samsungMsg, methodId)
                 }
                 "cve_2025_21479" -> {
                     val exploitExists = exec("ls /data/local/tmp/exploit_vivo_neo9 2>/dev/null || echo ''")
                     if (exploitExists.isBlank()) {
-                        RootResult(false, "未找到 CVE-2025-21479 exploit 文件。\n\n请从 GitHub (reaizuguo/vivo_iqoo_neo_9_root_research_on_cve-2025-21479) 下载：\n1. exploit_vivo_neo9\n2. rootc\n3. su\n推送到 /data/local/tmp/ 并设置可执行后重试", methodId)
+                        RootResult(false, loc("未找到 CVE-2025-21479 exploit 文件。\n\n请从 GitHub (reaizuguo/vivo_iqoo_neo_9_root_research_on_cve-2025-21479) 下载：\n1. exploit_vivo_neo9\n2. rootc\n3. su\n推送到 /data/local/tmp/ 并设置可执行后重试", "CVE-2025-21479 exploit not found.\n\nDownload from GitHub (reaizuguo/vivo_iqoo_neo_9_root_research_on_cve-2025-21479):\n1. exploit_vivo_neo9\n2. rootc\n3. su\nPush to /data/local/tmp/ and set executable, then retry"), methodId)
                     } else {
                         val result = exec("/data/local/tmp/exploit_vivo_neo9 2>&1")
                         val idResult = exec("id")
                         if (idResult.contains("uid=0")) {
-                            RootResult(true, "CVE-2025-21479 提权成功！\n\n$result", methodId)
+                            RootResult(true, loc("CVE-2025-21479 提权成功！\n\n$result", "CVE-2025-21479 exploit success!\n\n$result"), methodId)
                         } else {
-                            RootResult(false, "CVE-2025-21479 提权失败：$result", methodId)
+                            RootResult(false, loc("CVE-2025-21479 提权失败：$result", "CVE-2025-21479 exploit failed: $result"), methodId)
                         }
                     }
                 }
@@ -884,7 +1008,7 @@ fi
                     val scriptPath = scriptLines.firstOrNull() ?: ""
 
                     if (scriptPath.isBlank()) {
-                        RootResult(false, "未检测到提权脚本。请从酷安 @御坂114515 下载红米临时root工具，将 .sh 脚本放到 /data/local/tmp/ 或 /sdcard/Download/ 目录后重试。\n\n支持机型：Note 11T Pro/Pro+、K50/K60、Turbo3/4、Redmi 13/14/15等天玑机型", methodId)
+                        RootResult(false, loc("未检测到提权脚本。请从酷安 @御坂114515 下载红米临时root工具，将 .sh 脚本放到 /data/local/tmp/ 或 /sdcard/Download/ 目录后重试。\n\n支持机型：Note 11T Pro/Pro+、K50/K60、Turbo3/4、Redmi 13/14/15等天玑机型", "No exploit script found. Please download Redmi temp root tool from CoolAPK @御坂114515, place .sh script in /data/local/tmp/ or /sdcard/Download/ and retry.\n\nSupported: Note 11T Pro/Pro+, K50/K60, Turbo3/4, Redmi 13/14/15 etc. MediaTek devices"), methodId)
                     } else {
                         // 第一步：设置脚本可执行
                         exec("chmod 755 $scriptPath 2>/dev/null")
@@ -921,18 +1045,18 @@ fi
                         }
 
                         if (hasRoot) {
-                            RootResult(true, "提权成功！已自动执行脚本并加载 KSU LKM 模块。\n\n$output", methodId)
+                            RootResult(true, loc("提权成功！已自动执行脚本并加载 KSU LKM 模块。\n\n$output", "Exploit success! Script executed and KSU LKM module loaded.\n\n$output"), methodId)
                         } else {
-                            RootResult(false, "脚本已执行但未获得 root。可能原因：\n1. 脚本不匹配当前机型/系统版本\n2. 需要在终端中输入密码（请在终端执行时输入）\n3. ADB 权限不足\n\n$output", methodId)
+                            RootResult(false, loc("脚本已执行但未获得 root。可能原因：\n1. 脚本不匹配当前机型/系统版本\n2. 需要在终端中输入密码（请在终端执行时输入）\n3. ADB 权限不足\n\n$output", "Script executed but no root access. Possible reasons:\n1. Script does not match current device/system version\n2. Password required (enter in terminal when executing)\n3. Insufficient ADB permission\n\n$output"), methodId)
                         }
                     }
                 }
                 "redmi_note11tpro_lkb_unlock" -> {
                     val lkbExists = exec("ls /data/local/tmp/lkb.img 2>/dev/null || echo ''")
                     if (lkbExists.isBlank()) {
-                        RootResult(false, "红米Note11T Pro LKB单刷解BL需要电脑配合：\n\n1. 下载对应机型专属LKB单刷文件（搜索 红米Note11T Pro LKB单刷）\n2. 手机进入fastboot模式（关机后按住音量下+电源）\n3. 电脑打开MiFlash工具，只勾选LKB项\n4. 刷入修改版LKB镜像\n5. 用配套工具完成最终解锁（会清除全部数据，请先备份）\n6. 解BL后刷入KSU/Magisk获取root", methodId)
+                        RootResult(false, loc("红米Note11T Pro LKB单刷解BL需要电脑配合：\n\n1. 下载对应机型专属LKB单刷文件（搜索 红米Note11T Pro LKB单刷）\n2. 手机进入fastboot模式（关机后按住音量下+电源）\n3. 电脑打开MiFlash工具，只勾选LKB项\n4. 刷入修改版LKB镜像\n5. 用配套工具完成最终解锁（会清除全部数据，请先备份）\n6. 解BL后刷入KSU/Magisk获取root", "Redmi Note11T Pro LKB single-flash unlock requires PC:\n\n1. Download device-specific LKB single-flash file (search Redmi Note11T Pro LKB)\n2. Enter fastboot mode (power off, hold vol down + power)\n3. Open MiFlash on PC, check only LKB option\n4. Flash modified LKB image\n5. Use companion tool to complete unlock (will wipe all data, backup first)\n6. Flash KSU/Magisk after BL unlock to get root"), methodId)
                     } else {
-                        RootResult(false, "检测到 lkb.img，但LKB单刷需要在fastboot模式下用电脑MiFlash工具刷入，无法在手机端直接执行。", methodId)
+                        RootResult(false, loc("检测到 lkb.img，但LKB单刷需要在fastboot模式下用电脑MiFlash工具刷入，无法在手机端直接执行。", "lkb.img detected, but LKB single-flash requires fastboot mode and PC MiFlash tool, cannot be executed directly on phone."), methodId)
                     }
                 }
                 "qualcomm_mobile_permissive" -> {
@@ -941,7 +1065,7 @@ fi
                     val hasDhizuku = try { ADBTools.isDhizukuActive() } catch (e: Exception) { false }
                     val hasRoot = isRooted()
                     if (!hasShizuku && !hasDhizuku && !hasRoot) {
-                        RootResult(false, "✗ 无法执行！\n\n此方法需要 Shizuku、Dhizuku 或 Root 权限才能执行 setenforce 命令。\n\n请先开启以下任一权限：\n1. Shizuku（通过ADB或无线调试激活）\n2. Dhizuku（设备所有者权限）\n3. Root权限\n\n开启权限后重新点击执行按钮。", methodId)
+                        RootResult(false, loc("✗ 无法执行！\n\n此方法需要 Shizuku、Dhizuku 或 Root 权限才能执行 setenforce 命令。\n\n请先开启以下任一权限：\n1. Shizuku（通过ADB或无线调试激活）\n2. Dhizuku（设备所有者权限）\n3. Root权限\n\n开启权限后重新点击执行按钮。", "✗ Cannot execute!\n\nThis method requires Shizuku, Dhizuku or Root permission to run setenforce command.\n\nPlease enable one of the following:\n1. Shizuku (activate via ADB or wireless debugging)\n2. Dhizuku (device owner permission)\n3. Root permission\n\nRetry after enabling permission."), methodId)
                     } else {
                         // 执行 setenforce 0
                         val setenforceResult = ADBTools.execCommand("setenforce 0")
@@ -955,43 +1079,43 @@ fi
                                 val ksudResult = ADBTools.execCommand("/data/adb/ksud live 2>&1 || ksud live 2>&1")
                                 val idResult = ADBTools.execCommand("id")
                                 if (idResult.output.contains("uid=0")) {
-                                    RootResult(true, "✓ 执行成功！\n\n1. setenforce 0 执行成功\n2. SELinux 已切换为宽容模式\n3. KSU 已加载\n4. 已获得 root 权限 (uid=0)\n\n当前状态：\nSELinux: Permissive\nID: ${idResult.output.trim()}", methodId)
+                                    RootResult(true, loc("✓ 执行成功！\n\n1. setenforce 0 执行成功\n2. SELinux 已切换为宽容模式\n3. KSU 已加载\n4. 已获得 root 权限 (uid=0)\n\n当前状态：\nSELinux: Permissive\nID: ${idResult.output.trim()}", "✓ Success!\n\n1. setenforce 0 executed\n2. SELinux switched to permissive mode\n3. KSU loaded\n4. Root access obtained (uid=0)\n\nCurrent status:\nSELinux: Permissive\nID: ${idResult.output.trim()}"), methodId)
                                 } else {
-                                    RootResult(true, "✓ SELinux 已切换为宽容模式！\n\n1. setenforce 0 执行成功\n2. SELinux: Permissive\n3. KSU 加载命令已执行\n\n请打开 KernelSU 管理器确认 root 状态。\n如果未获得 root，请手动在终端执行：/data/adb/ksud live", methodId)
+                                    RootResult(true, loc("✓ SELinux 已切换为宽容模式！\n\n1. setenforce 0 执行成功\n2. SELinux: Permissive\n3. KSU 加载命令已执行\n\n请打开 KernelSU 管理器确认 root 状态。\n如果未获得 root，请手动在终端执行：/data/adb/ksud live", "✓ SELinux switched to permissive mode!\n\n1. setenforce 0 executed\n2. SELinux: Permissive\n3. KSU load command executed\n\nPlease open KernelSU manager to confirm root status.\nIf no root, manually run in terminal: /data/adb/ksud live"), methodId)
                                 }
                             } else {
-                                RootResult(true, "✓ SELinux 已切换为宽容模式！\n\n1. setenforce 0 执行成功\n2. SELinux 当前状态: Permissive\n\n但未检测到 KernelSU 安装。\n请先安装 KernelSU 管理器，然后重新执行此方法加载 KSU 获取 root。", methodId)
+                                RootResult(true, loc("✓ SELinux 已切换为宽容模式！\n\n1. setenforce 0 执行成功\n2. SELinux 当前状态: Permissive\n\n但未检测到 KernelSU 安装。\n请先安装 KernelSU 管理器，然后重新执行此方法加载 KSU 获取 root。", "✓ SELinux switched to permissive mode!\n\n1. setenforce 0 executed\n2. SELinux current status: Permissive\n\nBut KernelSU not detected.\nPlease install KernelSU manager first, then retry this method to load KSU and get root."), methodId)
                             }
                         } else {
-                            RootResult(false, "✗ setenforce 执行失败！\n\n尝试执行 setenforce 0，但 SELinux 仍为 Enforcing。\n\n可能原因：\n1. Shizuku/Dhizuku 权限不足\n2. 系统限制修改 SELinux\n3. 需要 root 权限才能执行\n\n当前 SELinux 状态: ${getenforceResult.output.trim()}\nsetenforce 输出: ${setenforceResult.output.trim()} ${setenforceResult.error.trim()}", methodId)
+                            RootResult(false, loc("✗ setenforce 执行失败！\n\n尝试执行 setenforce 0，但 SELinux 仍为 Enforcing。\n\n可能原因：\n1. Shizuku/Dhizuku 权限不足\n2. 系统限制修改 SELinux\n3. 需要 root 权限才能执行\n\n当前 SELinux 状态: ${getenforceResult.output.trim()}\nsetenforce 输出: ${setenforceResult.output.trim()} ${setenforceResult.error.trim()}", "✗ setenforce failed!\n\nTried setenforce 0, but SELinux is still Enforcing.\n\nPossible reasons:\n1. Insufficient Shizuku/Dhizuku permission\n2. System restricts SELinux modification\n3. Root permission required\n\nCurrent SELinux status: ${getenforceResult.output.trim()}\nsetenforce output: ${setenforceResult.output.trim()} ${setenforceResult.error.trim()}"), methodId)
                         }
                     }
                 }
                 "qualcomm_cmdline_injection" -> {
                     // 高通骁龙 SELinux 宽容模式提权（cmdline注入）
-                    RootResult(false, "高通骁龙 SELinux宽容模式提权（cmdline注入）\n\n操作步骤（需电脑配合）：\n1. 手机进入fastboot模式（关机后按住音量下+电源）\n2. 电脑执行：fastboot oem set-gpu-preemption 0 androidboot.selinux=permissive\n3. 手机自动重启，SELinux变为宽容模式\n4. 利用系统服务漏洞运行ksud（如小米miui.mqsas）\n5. 执行 KSU late-load 获取root\n\n注意：需2026年2月前安全补丁；操作有变砖风险。", methodId)
+                    RootResult(false, loc("高通骁龙 SELinux宽容模式提权（cmdline注入）\n\n操作步骤（需电脑配合）：\n1. 手机进入fastboot模式（关机后按住音量下+电源）\n2. 电脑执行：fastboot oem set-gpu-preemption 0 androidboot.selinux=permissive\n3. 手机自动重启，SELinux变为宽容模式\n4. 利用系统服务漏洞运行ksud（如小米miui.mqsas）\n5. 执行 KSU late-load 获取root\n\n注意：需2026年2月前安全补丁；操作有变砖风险。", "Qualcomm Snapdragon SELinux permissive exploit (cmdline injection)\n\nSteps (PC required):\n1. Enter fastboot mode (power off, hold vol down + power)\n2. PC runs: fastboot oem set-gpu-preemption 0 androidboot.selinux=permissive\n3. Phone auto-reboots, SELinux becomes permissive\n4. Use system service exploit to run ksud (e.g. Xiaomi miui.mqsas)\n5. Run KSU late-load to get root\n\nNote: Requires security patch before Feb 2026; brick risk."), methodId)
                 }
                 "xiaomi_qc_temp_root" -> {
                     // 小米高通QC免解BL临时Root
-                    RootResult(false, "小米高通QC免解BL临时Root\n\n操作步骤（需电脑配合）：\n1. 酷安搜索 @莫离然然 下载对应机型的QC免解BL工具包\n2. 手机降级到2月补丁之前的版本（如已在旧版本可跳过）\n3. 手机进入fastboot模式\n4. 电脑执行一键root脚本（run.bat或flash_all.sh）\n5. 手机自动重启\n6. 打开KernelSU管理器点击越狱\n\n支持：骁龙8 Gen1到8e5的小米/红米机型。注意：老机型(8Gen1/8Gen2)成功率更高。", methodId)
+                    RootResult(false, loc("小米高通QC免解BL临时Root\n\n操作步骤（需电脑配合）：\n1. 酷安搜索 @莫离然然 下载对应机型的QC免解BL工具包\n2. 手机降级到2月补丁之前的版本（如已在旧版本可跳过）\n3. 手机进入fastboot模式\n4. 电脑执行一键root脚本（run.bat或flash_all.sh）\n5. 手机自动重启\n6. 打开KernelSU管理器点击越狱\n\n支持：骁龙8 Gen1到8e5的小米/红米机型。注意：老机型(8Gen1/8Gen2)成功率更高。", "Xiaomi Qualcomm QC no-BL-unlock Temp Root\n\nSteps (PC required):\n1. Search CoolAPK @莫离然然 for device-specific QC no-unlock tool package\n2. Downgrade to pre-Feb patch version (skip if already on old version)\n3. Enter fastboot mode\n4. PC runs one-click root script (run.bat or flash_all.sh)\n5. Phone auto-reboots\n6. Open KernelSU manager and tap jailbreak\n\nSupported: Snapdragon 8 Gen1 to 8e5 Xiaomi/Redmi. Note: Older devices (8Gen1/8Gen2) have higher success rate."), methodId)
                 }
                 "ghostlock_oneplus" -> {
                     // GhostLock 一加锁BL越狱
-                    RootResult(false, "GhostLock 一加锁BL越狱\n\n操作步骤（需电脑配合）：\n1. 从GitHub(joinchang/ghostlock-oneplus)下载GhostLock工具\n2. 下载对应机型的修改版boot镜像\n3. 手机进入fastboot模式\n4. 电脑执行：ghostlock boot modified_boot.img\n5. 手机临时启动修改后的boot（不刷入，重启后恢复）\n6. 打开KernelSU获取root\n\n支持：OnePlus Ace 6T、OnePlus 15、小米17（骁龙8 Elite/8Gen5）。注意：重启后root失效，需重新操作。", methodId)
+                    RootResult(false, loc("GhostLock 一加锁BL越狱\n\n操作步骤（需电脑配合）：\n1. 从GitHub(joinchang/ghostlock-oneplus)下载GhostLock工具\n2. 下载对应机型的修改版boot镜像\n3. 手机进入fastboot模式\n4. 电脑执行：ghostlock boot modified_boot.img\n5. 手机临时启动修改后的boot（不刷入，重启后恢复）\n6. 打开KernelSU获取root\n\n支持：OnePlus Ace 6T、OnePlus 15、小米17（骁龙8 Elite/8Gen5）。注意：重启后root失效，需重新操作。", "GhostLock OnePlus locked BL jailbreak\n\nSteps (PC required):\n1. Download GhostLock from GitHub (joinchang/ghostlock-oneplus)\n2. Download modified boot image for your device\n3. Enter fastboot mode\n4. PC runs: ghostlock boot modified_boot.img\n5. Phone temporarily boots modified boot (not flashed, restored on reboot)\n6. Open KernelSU to get root\n\nSupported: OnePlus Ace 6T, OnePlus 15, Xiaomi 17 (Snapdragon 8 Elite/8Gen5). Note: Root lost on reboot, need to redo."), methodId)
                 }
                 "temproot_hyperos" -> {
                     // TempRoot HyperOS一键临时Root
                     val apkExists = exec("pm list packages 2>/dev/null | grep -i temproot")
                     if (apkExists.isNotBlank()) {
                         // 已安装TempRoot，尝试启动
-                        RootResult(false, "检测到已安装TempRoot应用。请手动打开TempRoot应用，点击一键临时Root按钮执行。\n\n应用包名：${apkExists.trim()}", methodId)
+                        RootResult(false, loc("检测到已安装TempRoot应用。请手动打开TempRoot应用，点击一键临时Root按钮执行。\n\n应用包名：${apkExists.trim()}", "TempRoot app detected. Please manually open TempRoot app and tap one-click temp root button.\n\nPackage name: ${apkExists.trim()}"), methodId)
                     } else {
-                        RootResult(false, "TempRoot HyperOS一键临时Root\n\n操作步骤：\n1. 从GitHub(314xxx/Temproot)下载TempRoot APK\n2. 安装并打开TempRoot应用\n3. 授予ADB/Shizuku权限\n4. 点击一键临时Root按钮\n5. 自动执行exploit并加载KSU\n\n支持机型：Redmi K60(mondrian)、K60E(rembrandt)、K50(rubens)、K50 Pro(matisse)。", methodId)
+                        RootResult(false, loc("TempRoot HyperOS一键临时Root\n\n操作步骤：\n1. 从GitHub(314xxx/Temproot)下载TempRoot APK\n2. 安装并打开TempRoot应用\n3. 授予ADB/Shizuku权限\n4. 点击一键临时Root按钮\n5. 自动执行exploit并加载KSU\n\n支持机型：Redmi K60(mondrian)、K60E(rembrandt)、K50(rubens)、K50 Pro(matisse)。", "TempRoot HyperOS one-click temp root\n\nSteps:\n1. Download TempRoot APK from GitHub (314xxx/Temproot)\n2. Install and open TempRoot app\n3. Grant ADB/Shizuku permission\n4. Tap one-click temp root button\n5. Auto-execute exploit and load KSU\n\nSupported: Redmi K60(mondrian), K60E(rembrandt), K50(rubens), K50 Pro(matisse)."), methodId)
                     }
                 }
                 "vivo_dimensity_9400_temp_root" -> {
                     // vivo天玑9400免拆临时Root
-                    RootResult(false, "vivo天玑9400免拆临时Root\n\n操作步骤（需电脑配合）：\n1. 下载对应机型的天玑9400临时Root工具包（酷安搜索）\n2. 手机开启USB调试，连接电脑\n3. 执行提权脚本推送preload文件到手机\n4. 锁屏状态下重启手机（关键：不要解锁屏幕）\n5. 锁屏状态下执行提权命令\n6. 出现success后再亮屏解锁\n7. 加载KSU获取临时root\n\n支持：vivo X200 Pro、X200、iQOO 13等天玑9400机型。注意：操作有变砖风险。", methodId)
+                    RootResult(false, loc("vivo天玑9400免拆临时Root\n\n操作步骤（需电脑配合）：\n1. 下载对应机型的天玑9400临时Root工具包（酷安搜索）\n2. 手机开启USB调试，连接电脑\n3. 执行提权脚本推送preload文件到手机\n4. 锁屏状态下重启手机（关键：不要解锁屏幕）\n5. 锁屏状态下执行提权命令\n6. 出现success后再亮屏解锁\n7. 加载KSU获取临时root\n\n支持：vivo X200 Pro、X200、iQOO 13等天玑9400机型。注意：操作有变砖风险。", "vivo Dimensity 9400 no-teardown temp root\n\nSteps (PC required):\n1. Download Dimensity 9400 temp root package for your device (search CoolAPK)\n2. Enable USB debugging, connect to PC\n3. Run exploit script to push preload files to phone\n4. Reboot with screen locked (critical: do not unlock)\n5. Execute exploit command with screen locked\n6. Unlock screen after success appears\n7. Load KSU to get temp root\n\nSupported: vivo X200 Pro, X200, iQOO 13 etc. Dimensity 9400 devices. Note: Brick risk."), methodId)
                 }
                 "dirtypipe_cve_2022_0847" -> {
                     // DirtyPipe 漏洞提权
@@ -1001,9 +1125,9 @@ fi
                         val result = exec("chmod 755 $exploitPath && $exploitPath 2>&1")
                         val idResult = exec("id")
                         if (idResult.contains("uid=0")) {
-                            RootResult(true, "DirtyPipe提权成功！\n\n$result\n\n$idResult", methodId)
+                            RootResult(true, loc("DirtyPipe提权成功！\n\n$result\n\n$idResult", "DirtyPipe exploit success!\n\n$result\n\n$idResult"), methodId)
                         } else {
-                            RootResult(false, "DirtyPipe执行完成但未获得root。可能原因：\n1. 内核版本不在5.8~5.16.11范围内\n2. 安全补丁已修复此漏洞\n3. exploit不匹配当前设备\n\n输出：$result\n$idResult", methodId)
+                            RootResult(false, loc("DirtyPipe执行完成但未获得root。可能原因：\n1. 内核版本不在5.8~5.16.11范围内\n2. 安全补丁已修复此漏洞\n3. exploit不匹配当前设备\n\n输出：$result\n$idResult", "DirtyPipe completed but no root. Possible reasons:\n1. Kernel version not in 5.8~5.16.11 range\n2. Security patch already fixed this vulnerability\n3. Exploit does not match current device\n\nOutput: $result\n$idResult"), methodId)
                         }
                     } else {
                         RootResult(false, "DirtyPipe (CVE-2022-0847) 临时Root\n\n操作步骤：\n1. 下载DirtyPipe exploit二进制（适配你的设备架构）\n2. 推送到 /data/local/tmp/dirtypipe\n3. 点击此方法自动执行\n\n注意：此漏洞在2022年3月安全补丁中已修复，仅内核5.8~5.16.11的老设备可用。", methodId)
@@ -1013,24 +1137,25 @@ fi
                     // 三星Root My Galaxy S25
                     val apkExists = exec("pm list packages 2>/dev/null | grep -i -E 'rootmygalaxy|root_my_galaxy'")
                     if (apkExists.isNotBlank()) {
-                        RootResult(false, "检测到已安装Root My Galaxy应用。请手动打开应用，点击Security Check按钮（可能需要多次点击），按提示完成root。", methodId)
+                        RootResult(false, loc("检测到已安装Root My Galaxy应用。请手动打开应用，点击Security Check按钮（可能需要多次点击），按提示完成root。", "Root My Galaxy app detected. Please manually open the app, tap Security Check button (may need multiple taps), and follow prompts to complete root."), methodId)
                     } else {
-                        RootResult(false, "三星Root My Galaxy S25临时Root\n\n操作步骤：\n1. 从GitHub下载Root My Galaxy APK\n2. 安装并打开\n3. 点击Security Check按钮（可能需要多次点击才能生效）\n4. 按提示安装KernelSU\n5. 完成后获得root权限\n\n支持：Galaxy S25 Ultra（完全支持）、S25/S25+/S24系列（测试中）。注意：不触发Knox，不解锁BL，重启后root失效。Exynos机型不支持。", methodId)
+                        RootResult(false, loc("三星Root My Galaxy S25临时Root\n\n操作步骤：\n1. 从GitHub下载Root My Galaxy APK\n2. 安装并打开\n3. 点击Security Check按钮（可能需要多次点击才能生效）\n4. 按提示安装KernelSU\n5. 完成后获得root权限\n\n支持：Galaxy S25 Ultra（完全支持）、S25/S25+/S24系列（测试中）。注意：不触发Knox，不解锁BL，重启后root失效。Exynos机型不支持。", "Samsung Root My Galaxy S25 temp root\n\nSteps:\n1. Download Root My Galaxy APK from GitHub\n2. Install and open\n3. Tap Security Check button (may need multiple taps to work)\n4. Install KernelSU as prompted\n5. Get root permission after completion\n\nSupported: Galaxy S25 Ultra (fully supported), S25/S25+/S24 series (testing). Note: No Knox trigger, no BL unlock, root lost on reboot. Exynos devices not supported."), methodId)
                     }
                 }
                 "gbl_root_canoe" -> {
                     // GBL Root Canoe
-                    RootResult(false, "GBL Root Canoe 通用Bootloader漏洞\n\n操作步骤（需电脑配合）：\n1. 从GitHub(stnt04/gbl_root_canoe)下载工具\n2. 手机进入fastboot模式\n3. 电脑执行漏洞利用脚本\n4. ABL加载嵌入式superfastboot BDS\n5. 实现Fake Locked状态\n6. 启动修改后的boot获取root\n\n支持：骁龙8 Gen5/8 Elite(Gen5)机型。注意：此方法较新，支持机型有限，操作有变砖风险，请谨慎。", methodId)
+                    RootResult(false, loc("GBL Root Canoe 通用Bootloader漏洞\n\n操作步骤（需电脑配合）：\n1. 从GitHub(stnt04/gbl_root_canoe)下载工具\n2. 手机进入fastboot模式\n3. 电脑执行漏洞利用脚本\n4. ABL加载嵌入式superfastboot BDS\n5. 实现Fake Locked状态\n6. 启动修改后的boot获取root\n\n支持：骁龙8 Gen5/8 Elite(Gen5)机型。注意：此方法较新，支持机型有限，操作有变砖风险，请谨慎。", "GBL Root Canoe universal Bootloader exploit\n\nSteps (PC required):\n1. Download tool from GitHub (stnt04/gbl_root_canoe)\n2. Enter fastboot mode\n3. PC runs exploit script\n4. ABL loads embedded superfastboot BDS\n5. Achieve Fake Locked state\n6. Boot modified boot image to get root\n\nSupported: Snapdragon 8 Gen5/8 Elite(Gen5) devices. Note: New method, limited device support, brick risk, be careful."), methodId)
                 }
                 "mtk_generic_old" -> {
-                    RootResult(false, "MTK通用老漏洞已在2020年3月安全更新中修复，当前系统大概率不受影响。\n\n如果您的设备是2020年前的老款MTK机型且未更新安全补丁，可以尝试从XDA下载对应exploit。", methodId)
+                    RootResult(false, loc("MTK通用老漏洞已在2020年3月安全更新中修复，当前系统大概率不受影响。\n\n如果您的设备是2020年前的老款MTK机型且未更新安全补丁，可以尝试从XDA下载对应exploit。", "MTK universal old exploit was patched in March 2020 security update, current system likely not affected.\n\nIf your device is a pre-2020 old MTK device without security updates, you can try downloading corresponding exploit from XDA."), methodId)
                 }
                 else -> {
-                    RootResult(false, "未知的 root 方法：$methodId", methodId)
+                    RootResult(false, loc("未知的 root 方法：$methodId", "Unknown root method: $methodId"), methodId)
                 }
             }
+            result.copy(message = if (envInfo.isNotBlank()) "$envInfo\n\n${result.message}" else result.message)
         } catch (e: Exception) {
-            RootResult(false, "执行 root 方法失败：${e.message}", methodId)
+            RootResult(false, loc("执行 root 方法失败：${e.message}", "Failed to execute root method: ${e.message}"), methodId)
         }
     }
 
@@ -1461,7 +1586,7 @@ fi
                     appendLine("echo ''")
                     appendLine("echo '# 4. SELinux变为宽容模式后加载KSU'")
                 }
-                "oneplus_snapdragon_jailbreak" -> {
+                "oneplus_qualcomm_jailbreak", "oneplus_snapdragon_jailbreak" -> {
                     appendLine("echo '=== 一加骁龙越狱模式 ==='")
                     appendLine("echo ''")
                     appendLine("echo '# 1. 手机进入fastboot模式'")
@@ -1518,7 +1643,25 @@ fi
                     appendLine("fastboot flash boot magisk_patched.img")
                     appendLine("fastboot reboot")
                 }
-                "redmi_note11tpro_lkb" -> {
+                "ksu_patch_boot" -> {
+                    appendLine("echo '=== KernelSU修补boot ==='")
+                    appendLine("echo ''")
+                    appendLine("echo '# 1. 提取boot.img（需要root或fastboot）'")
+                    appendLine("adb shell dd if=/dev/block/by-name/boot of=/sdcard/boot.img")
+                    appendLine("adb pull /sdcard/boot.img")
+                    appendLine("echo ''")
+                    appendLine("echo '# 2. 用KernelSU修补boot.img'")
+                    appendLine("echo '#   打开KernelSU管理器 → 安装 → 选择并修补一个文件 → 选择boot.img'")
+                    appendLine("echo ''")
+                    appendLine("echo '# 3. 把修补后的boot推回手机'")
+                    appendLine("adb push ksu_patched.img /sdcard/")
+                    appendLine("echo ''")
+                    appendLine("echo '# 4. 刷入修补后的boot（需要解锁BL）'")
+                    appendLine("adb reboot bootloader")
+                    appendLine("fastboot flash boot ksu_patched.img")
+                    appendLine("fastboot reboot")
+                }
+                "redmi_note11tpro_lkb_unlock", "redmi_note11tpro_lkb" -> {
                     appendLine("echo '=== 红米Note11T Pro LKB单刷解BL ==='")
                     appendLine("echo ''")
                     appendLine("echo '# 1. 下载LKB单刷工具（酷安搜索）'")
@@ -1531,21 +1674,7 @@ fi
                     appendLine("echo '# 4. 解锁BL后刷入Magisk/KSU获取永久root'")
                     appendLine("echo '# 注意：解锁BL会清除所有数据，请先备份'")
                 }
-                "qualcomm_selinux_permissive" -> {
-                    appendLine("echo '=== 高通骁龙SELinux宽容模式提权 ==='")
-                    appendLine("echo ''")
-                    appendLine("echo '# 1. 手机进入fastboot模式'")
-                    appendLine("adb reboot bootloader")
-                    appendLine("echo ''")
-                    appendLine("echo '# 2. 执行cmdline注入'")
-                    appendLine("fastboot oem set-gpu-preemption 0 androidboot.selinux=permissive")
-                    appendLine("echo ''")
-                    appendLine("echo '# 3. 重启手机'")
-                    appendLine("fastboot reboot")
-                    appendLine("echo ''")
-                    appendLine("echo '# 4. SELinux宽容后利用系统服务漏洞运行ksud'")
-                    appendLine("adb shell /data/adb/ksud live")
-                }
+
                 "xiaomi_qc_temp_root_2" -> {
                     appendLine("echo '=== 小米高通QC免解BL临时Root ==='")
                     appendLine("echo ''")

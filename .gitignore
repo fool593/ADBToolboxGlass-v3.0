@@ -32,6 +32,15 @@ desktop.ini
 # Logs
 *.log
 build_log*.txt
+build_v*.txt
+
+# Workspace temp scripts & media
+fix_*.py
+bump_version.py
+batch_*.py
+user_demo*.mp4
+frame_*.png
+test_*.png
 
 # Temporary
 tmp/

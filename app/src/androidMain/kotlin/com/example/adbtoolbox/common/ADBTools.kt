@@ -267,14 +267,35 @@ actual object ADBTools {
     }
 
     actual fun execCommand(command: String, timeout: Int): CommandResult {
+        // 判断命令执行结果是否为权限不足（需要继续尝试更高权限）
+        fun isPermissionDenied(result: CommandResult): Boolean {
+            if (result.exitCode == 0) return false
+            val output = (result.output + result.error).lowercase()
+            return output.contains("permission denied") ||
+                   output.contains("securityexception") ||
+                   output.contains("not allowed") ||
+                   output.contains("operation not allowed") ||
+                   output.contains("requires") && output.contains("root") ||
+                   output.contains("uid ") && output.contains("not")
+        }
+
         // 优先用 Shizuku 执行
         if (isShizukuAvailable()) {
             val result = execWithShizuku(command, timeout)
-            if (result.exitCode != -999) return result
-            // Shizuku 执行失败时，尝试 Dhizuku（需用户开启使用 Dhizuku 权限）
+            if (result.exitCode != -999) {
+                // Shizuku 执行成功（exitCode=0）直接返回
+                if (result.exitCode == 0) return result
+                // Shizuku 执行失败但不是权限不足，也直接返回
+                if (!isPermissionDenied(result)) return result
+                // 权限不足，继续尝试更高权限（su），不返回
+            }
+            // Shizuku 所有执行方式都失败，尝试 Dhizuku
             if (AppCache.useDhizuku.value) {
                 val dhizukuResult = execWithDhizuku(command, timeout)
-                if (dhizukuResult != null) return dhizukuResult
+                if (dhizukuResult != null) {
+                    if (dhizukuResult.exitCode == 0) return dhizukuResult
+                    if (!isPermissionDenied(dhizukuResult)) return dhizukuResult
+                }
             }
         }
         // 直接尝试用 su 执行（不调用 isRooted 避免无限递归）
@@ -618,28 +639,53 @@ actual object ADBTools {
 
     actual fun freezeApp(packageName: String): Boolean {
         return try {
+            // 尝试多种禁用方式
             var result = execCommand("pm disable-user --user 0 $packageName")
-            if (result.exitCode != 0) result = execCommand("pm disable $packageName")
-            // 通过 PackageManager 实际检查应用是否真的被禁用了，比 exitCode 更可靠
+            var success = result.exitCode == 0 || result.output.contains("Success", true)
+            if (!success) {
+                result = execCommand("pm disable $packageName")
+                success = result.exitCode == 0 || result.output.contains("Success", true)
+            }
+            if (!success) {
+                result = execCommand("cmd package suspend $packageName")
+                success = result.exitCode == 0 || result.output.contains("Success", true)
+            }
+            // 通过 PackageManager 实际检查应用是否真的被禁用了
             try {
                 val appInfo = appContext.packageManager.getApplicationInfo(packageName, 0)
-                !appInfo.enabled
+                if (!appInfo.enabled) return true
+                // 检查是否被挂起
+                val suspended = try {
+                    val method = appContext.packageManager.javaClass.getMethod("isPackageSuspended", String::class.java)
+                    method.invoke(appContext.packageManager, packageName) as? Boolean ?: false
+                } catch (e: Exception) { false }
+                if (suspended) return true
+                success
             } catch (e: Exception) {
-                result.exitCode == 0
+                success
             }
         } catch (e: Exception) { false }
     }
 
     actual fun unfreezeApp(packageName: String): Boolean {
         return try {
+            // 尝试多种启用方式
             var result = execCommand("pm enable $packageName")
-            if (result.exitCode != 0) result = execCommand("pm enable --user 0 $packageName")
+            var success = result.exitCode == 0 || result.output.contains("Success", true)
+            if (!success) {
+                result = execCommand("pm enable --user 0 $packageName")
+                success = result.exitCode == 0 || result.output.contains("Success", true)
+            }
+            if (!success) {
+                result = execCommand("cmd package unsuspend $packageName")
+                success = result.exitCode == 0 || result.output.contains("Success", true)
+            }
             // 通过 PackageManager 实际检查应用是否真的被启用了
             try {
                 val appInfo = appContext.packageManager.getApplicationInfo(packageName, 0)
                 appInfo.enabled
             } catch (e: Exception) {
-                result.exitCode == 0
+                success
             }
         } catch (e: Exception) { false }
     }
@@ -650,48 +696,60 @@ actual object ADBTools {
 
     actual fun clearCache(packageName: String): Boolean {
         return try {
-            // 方式1：pm clear（清除所有数据，包括缓存，需要 root/system）
+            var anySuccess = false
+
+            // 方式1：pm clear（清除所有数据，包括缓存）
             var result = execCommand("pm clear $packageName")
             val pmClearSuccess = result.exitCode == 0 || result.output.contains("Success", true)
             if (pmClearSuccess) return true
 
-            // 方式2：只删除缓存目录（需要 root）
+            // 方式2：只删除缓存目录
             val cacheDirs = listOf(
                 "/data/data/$packageName/cache",
                 "/data/user/0/$packageName/cache",
-                "/sdcard/Android/data/$packageName/cache"
+                "/sdcard/Android/data/$packageName/cache",
+                "/sdcard/Android/data/$packageName/code_cache"
             )
             for (dir in cacheDirs) {
-                val rmResult = execCommand("rm -rf $dir/* 2>/dev/null; echo done")
-                if (rmResult.exitCode == 0) {
-                    // 至少尝试了删除，继续检查其他方式
+                val rmResult = execCommand("rm -rf $dir/* 2>/dev/null && echo CLEANED || echo FAILED")
+                if (rmResult.output.contains("CLEANED", true)) {
+                    anySuccess = true
                 }
             }
 
-            // 方式3：pm trim-caches（释放缓存，不需要 root，但需要 ADB 权限）
+            // 方式3：pm trim-caches（释放缓存，需要 ADB 权限）
             result = execCommand("pm trim-caches 999999999")
             val trimSuccess = result.exitCode == 0 || result.output.contains("Success", true)
-            if (trimSuccess) return true
+            if (trimSuccess) anySuccess = true
 
-            // 方式4：检查是否有 root 权限，如果没有则返回明确错误
-            val hasRoot = try {
-                val idResult = execCommand("id")
-                idResult.output.contains("uid=0")
-            } catch (e: Exception) { false }
-
-            if (!hasRoot && !isShizukuAvailable()) {
-                // 没有 root 也没有 Shizuku，清缓存可能失败
-                return false
+            // 方式4：通过 run-as 删除缓存（只对 debuggable 应用有效）
+            result = execCommand("run-as $packageName rm -rf cache/* 2>/dev/null && echo CLEANED || echo FAILED")
+            if (result.output.contains("CLEANED", true)) {
+                anySuccess = true
             }
 
-            // 最后再试一次 pm clear
-            result = execCommand("pm clear $packageName")
-            result.exitCode == 0 || result.output.contains("Success", true)
+            // 方式5：cmd package compile -m verify -f（触发编译，可能清理部分缓存）
+            result = execCommand("cmd package compile -m verify -f $packageName 2>/dev/null && echo DONE || echo FAILED")
+            if (result.output.contains("DONE", true)) {
+                anySuccess = true
+            }
+
+            // 至少有一种方式成功就算清缓存成功
+            anySuccess
         } catch (e: Exception) { false }
     }
 
     actual fun forceStop(packageName: String): Boolean {
-        return try { execCommand("am force-stop $packageName").exitCode == 0 } catch (e: Exception) { false }
+        return try {
+            val result = execCommand("am force-stop $packageName")
+            // am force-stop 成功时通常无输出，exitCode 可能为 0 或非 0
+            // 只有输出中明确包含 Error 才算失败
+            val hasError = result.output.contains("Error", true) ||
+                           result.error.contains("Error", true) ||
+                           result.output.contains("Exception", true) ||
+                           result.error.contains("Exception", true)
+            !hasError
+        } catch (e: Exception) { false }
     }
 
     actual fun clearAllCache(): Boolean {

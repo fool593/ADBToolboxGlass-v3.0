@@ -116,17 +116,7 @@ fun AppListItem(
     Row(
         Modifier
             .fillMaxWidth()
-            .clip(RoundedRectangle(16f.dp))
-            .drawBackdrop(
-                backdrop = backdrop,
-                shape = { RoundedRectangle(16f.dp) },
-                effects = {
-                    vibrancy()
-                    blur(20f.dp.toPx())
-                    lens(8f.dp.toPx(), 16f.dp.toPx())
-                }
-            )
-            .clickable(onClick = onClick)
+            .liquidGlassItem(backdrop = backdrop, corner = 16.dp, onClick = onClick)
             .padding(14f.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

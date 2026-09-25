@@ -260,17 +260,7 @@ fun PluginListItem(
     Column(
         Modifier
             .fillMaxWidth()
-            .clip(RoundedRectangle(20f.dp))
-            .drawBackdrop(
-                backdrop = backdrop,
-                shape = { RoundedRectangle(20f.dp) },
-                effects = {
-                    vibrancy()
-                    blur(20f.dp.toPx())
-                    lens(8f.dp.toPx(), 16f.dp.toPx())
-                }
-            )
-            .clickable(onClick = onClick)
+            .liquidGlassItem(backdrop = backdrop, corner = 20.dp, onClick = onClick)
             .padding(16f.dp)
     ) {
         // 顶部行：大小标签 + 名称 + 开关

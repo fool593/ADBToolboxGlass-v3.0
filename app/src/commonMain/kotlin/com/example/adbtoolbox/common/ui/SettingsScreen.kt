@@ -36,6 +36,7 @@ import com.example.adbtoolbox.common.ADBTools
 import com.example.adbtoolbox.common.AppCache
 import com.example.adbtoolbox.common.AppSettings
 import com.example.adbtoolbox.common.AppStrings
+import com.example.adbtoolbox.common.GlassEffectPersistence
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.catalog.components.LiquidButton
 import com.kyant.backdrop.catalog.components.LiquidSlider
@@ -256,7 +257,7 @@ fun SettingsScreen(
                     langs.forEach { (code, name) ->
                         val selected = AppSettings.language == code
                         LiquidButton(
-                            onClick = { AppSettings.language = code },
+                            onClick = { AppSettings.language = code; try { GlassEffectPersistence.saveAll() } catch (_: Exception) {} },
                             backdrop = backdrop,
                             modifier = Modifier.height(36f.dp),
                             tint = if (selected) Color(0xFF0088FF) else Color.Unspecified
