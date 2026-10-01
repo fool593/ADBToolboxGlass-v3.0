@@ -58,15 +58,22 @@ fun PluginsScreen(
     var refreshTrigger by remember { mutableStateOf(0) }
     var runningPluginId by remember { mutableStateOf<String?>(null) }
     var runResult by remember { mutableStateOf<Pair<String, String>?>(null) } // pluginId to result
+    var errorMessage by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
+    // AppCache 里的安装结果不会自动清空；这里记录"本次会话已展示过"的那条，
+    // 否则历史上成功的安装提示会永久挂在页面顶部（取消选择文件后也一直显示）。
+    var shownInstallResult by remember { mutableStateOf<String?>(null) }
 
     fun loadPlugins() {
         isLoading = true
         scope.launch {
             try {
                 plugins = withContext(Dispatchers.Default) { PluginManager.getInstalledPlugins() }
+                errorMessage = null
             } catch (e: Exception) {
+                // 原来把异常整个吞掉，界面只会显示"暂无插件"，用户无从判断是空目录还是出错
                 plugins = emptyList()
+                errorMessage = "${AppStrings.get("operation_failed")}: ${e.message ?: e.javaClass.simpleName}"
             }
             isLoading = false
         }
@@ -86,27 +93,41 @@ fun PluginsScreen(
     }
 
     fun toggleEnable(plugin: PluginData) {
+        errorMessage = null
         scope.launch {
-            try {
-                if (plugin.isEnabled) {
-                    withContext(Dispatchers.Default) { PluginManager.disablePlugin(plugin.id) }
-                } else {
-                    withContext(Dispatchers.Default) { PluginManager.enablePlugin(plugin.id) }
+            val ok = try {
+                withContext(Dispatchers.Default) {
+                    if (plugin.isEnabled) PluginManager.disablePlugin(plugin.id)
+                    else PluginManager.enablePlugin(plugin.id)
                 }
+            } catch (e: Exception) {
+                false
+            }
+            if (ok) {
                 refreshTrigger++
-            } catch (_: Exception) {}
+            } else {
+                // 以前 catch(_: Exception) {} + 无视返回值 => 开关点了完全没反应
+                errorMessage = "${AppStrings.get("plugin_toggle_failed")} ${plugin.name}"
+            }
         }
     }
 
     fun runPlugin(plugin: PluginData) {
         if (runningPluginId != null) return // 防止重复点击
+        errorMessage = null
         scope.launch {
             runningPluginId = plugin.id
             runResult = null
             try {
                 val result = withContext(Dispatchers.Default) { PluginManager.runAction(plugin.id) }
+                // 未安装 action.sh 等"逻辑失败"是从返回值里回来的，不是异常，以前只在插件卡片里显示，
+                // 这里补一条统一提示，界面其他位置也能看到。
+                if (result.contains("Error", ignoreCase = true) || result.contains("failed", ignoreCase = true)) {
+                    errorMessage = "${plugin.name}: ${result.lineSequence().first().trim()}"
+                }
                 runResult = Pair(plugin.id, result)
             } catch (e: Exception) {
+                errorMessage = "${AppStrings.get("operation_failed")}: ${e.message ?: e.javaClass.simpleName}"
                 runResult = Pair(plugin.id, "Error: ${e.message}")
             }
             runningPluginId = null
@@ -114,11 +135,19 @@ fun PluginsScreen(
     }
 
     fun deletePlugin(plugin: PluginData) {
+        errorMessage = null
         scope.launch {
-            try {
+            val ok = try {
                 withContext(Dispatchers.Default) { PluginManager.uninstallPlugin(plugin.id) }
+            } catch (e: Exception) {
+                false
+            }
+            if (ok) {
                 refreshTrigger++
-            } catch (_: Exception) {}
+            } else {
+                // 以前完全静默：删除失败时列表不会变，用户以为按钮坏了
+                errorMessage = "${AppStrings.get("plugin_delete_failed")} ${plugin.name}"
+            }
         }
     }
 
@@ -138,7 +167,8 @@ fun PluginsScreen(
                 LiquidButton(
                     onClick = {
                         AppCache.pickPluginFileTrigger.value++
-                        refreshTrigger++
+                        // 重新选择文件时清掉上一次的错误提示，让状态可预期
+                        errorMessage = null
                     },
                     backdrop = backdrop,
                     modifier = Modifier.height(36f.dp),
@@ -168,14 +198,41 @@ fun PluginsScreen(
             }
 
             installResult?.let { result ->
+                if (result != shownInstallResult) {
+                    GlassCard(backdrop = backdrop, pageType = "plugins") {
+                        Column(Modifier.padding(16f.dp).fillMaxWidth()) {
+                            BasicText(
+                                result,
+                                style = TextStyle(
+                                    if (result.contains("success", ignoreCase = true) || result.contains("成功")) Color(0xFF34C759) else Color(0xFFFF3B30),
+                                    12f.sp
+                                )
+                            )
+                            Spacer(Modifier.height(8f.dp))
+                            LiquidButton(
+                                onClick = { shownInstallResult = result },
+                                backdrop = backdrop,
+                                modifier = Modifier.height(32f.dp),
+                                tint = Color(0xFF8E8E93)
+                            ) {
+                                BasicText(
+                                    AppStrings.get("clear"),
+                                    Modifier.padding(horizontal = 12f.dp),
+                                    style = TextStyle(Color.White, 12f.sp)
+                                )
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(8f.dp))
+                }
+            }
+
+            errorMessage?.let { message ->
                 GlassCard(backdrop = backdrop, pageType = "plugins") {
                     Box(Modifier.padding(16f.dp).fillMaxWidth()) {
                         BasicText(
-                            result,
-                            style = TextStyle(
-                                if (result.contains("success", ignoreCase = true) || result.contains("成功")) Color(0xFF34C759) else Color(0xFFFF3B30),
-                                12f.sp
-                            )
+                            message,
+                            style = TextStyle(Color(0xFFFF3B30), 12f.sp)
                         )
                     }
                 }
@@ -236,7 +293,7 @@ fun PluginsScreen(
                 )
                 .clickable {
                     AppCache.pickPluginFileTrigger.value++
-                    refreshTrigger++
+                    errorMessage = null
                 },
             contentAlignment = Alignment.Center
         ) {

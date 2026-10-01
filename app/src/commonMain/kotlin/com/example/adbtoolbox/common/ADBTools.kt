@@ -53,6 +53,53 @@ expect object ADBTools {
     fun getCpuModel(): String // 返回处理器型号，如 "Dimensity 9200" / "Snapdragon 8 Gen 2"
     fun getCpuVendor(): String // 返回 "mediatek" / "qualcomm" / "other"
     fun flashTempRootModule(zipPath: String): CommandResult // 刷入临时 Root 提权包
+
+    // ==================== 性能加速 / 手机体检 基础设施 ====================
+
+    /** 读取 `getprop <key>`，失败返回空串。用于品牌/机型/屏幕特征识别。 */
+    fun getProp(key: String): String
+
+    /** 批量读取 getprop：一次 shell 调用解析全部，避免逐条 exec 造成卡顿。 */
+    fun getProps(keys: List<String>): Map<String, String>
+
+    /**
+     * 当前屏幕真实刷新率（Hz）。优先取 Display.Mode.refreshRate（API 23+），
+     * 回退 Display.refreshRate，再回退 `dumpsys display` 解析。取不到返回 0。
+     */
+    fun getCurrentRefreshRate(): Float
+
+    /** 设备屏幕支持的最高刷新率（Hz），取不到返回 0。 */
+    fun getMaxRefreshRate(): Float
+
+    /** 设备屏幕支持的全部刷新率，升序去重。 */
+    fun getSupportedRefreshRates(): List<Float>
+
+    /** 读取系统设置原始值（namespace: system/secure/global）。 */
+    fun getSystemSetting(namespace: String, key: String): String
+
+    /** 写入系统设置，返回是否成功。 */
+    fun putSystemSetting(namespace: String, key: String, value: String): Boolean
+
+    /**
+     * 把峰值/最低刷新率设置为目标值，解除厂商对 60Hz 的锁定。
+     * [both] 为 true 时同时设置 peak_refresh_rate 与 min_refresh_rate（强制固定高刷）。
+     */
+    fun setRefreshRate(target: Float, both: Boolean = false): CommandResult
+
+    /** 一键恢复刷新率为系统自适应（删除 peak/min/user_refresh_rate 设置）。 */
+    fun resetRefreshRateToAuto(): CommandResult
+
+    /**
+     * 强制结束全部后台进程（保留前台与本应用），等效厂商"一键清理"。
+     * 返回被结束的包名列表。
+     */
+    fun killBackgroundProcesses(): List<String>
+
+    /** 综合修复刷新率锁 60Hz。返回 (是否成功, 人类可读说明)。 */
+    fun fixRefreshRateLock(): Pair<Boolean, String>
+
+    /** 直接执行 shell（Shizuku/Root/普通三级回退），供性能加速与体检逐条执行使用。 */
+    fun execPerfCommand(command: String, timeout: Int = 20): CommandResult
 }
 
 data class CommandResult(

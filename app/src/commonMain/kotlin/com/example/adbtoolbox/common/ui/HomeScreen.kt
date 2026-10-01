@@ -22,12 +22,20 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.GraphicsLayerScope
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.addOutline
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.adbtoolbox.common.ADBDestination
@@ -37,11 +45,16 @@ import com.example.adbtoolbox.common.AppStrings
 import com.example.adbtoolbox.common.DeviceInfoData
 import com.example.adbtoolbox.common.GlassEffectConfig
 import com.kyant.backdrop.Backdrop
+import com.kyant.backdrop.BackdropEffectScope
 import com.kyant.backdrop.catalog.components.LiquidButton
+import com.kyant.backdrop.catalog.utils.InteractiveHighlight
 import com.kyant.backdrop.drawBackdrop
 import com.kyant.backdrop.effects.blur
 import com.kyant.backdrop.effects.lens
 import com.kyant.backdrop.effects.vibrancy
+import com.kyant.backdrop.highlight.Highlight
+import com.kyant.backdrop.highlight.HighlightStyle
+import com.kyant.backdrop.shadow.Shadow
 import com.kyant.shapes.RoundedRectangle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -233,32 +246,134 @@ fun GlassCard(
     val cornerDp = 24f.dp * corner * intensity
     val glassColor = config.glassColor.value
 
+    // 长按边缘发光 / 折射：这四项配置之前在卡片上是空壳（从不读取），现在真正生效
+    val glowIntensity = config.longPressGlowIntensity.value
+    val glowSize = config.longPressGlowSize.value
+    val glowRefraction = config.longPressRefraction.value
+    val glowColor = config.longPressGlowColor.value
+    val chromatic = config.chromaticAberration.value > 0f
+
+    val animationScope = rememberCoroutineScope()
+    val cardShape = remember(cornerDp) { RoundedRectangle(cornerDp) }
+    val rimPath = remember { Path() }
+    val highlight = remember(animationScope, cardShape) {
+        InteractiveHighlight(
+            animationScope = animationScope,
+            shape = cardShape,
+            drawAboveContent = true,
+            // 传 lambda：绘制阶段求值 ⇒ 设置页改颜色/强度立刻生效，无需重建实例
+            glowColor = { GlassEffectConfig.longPressGlowColor.value },
+            glowIntensity = { 0.6f + 0.4f * GlassEffectConfig.longPressGlowIntensity.value },
+            edgeBoost = 0.8f
+        )
+    }
+
+    // 以下 lambda 都在绘制阶段执行并读最新状态；remember 缓存是为了避免每次重组重建 RenderEffect / Lens 造成掉帧
+    val effects: BackdropEffectScope.() -> Unit = remember(
+        blurRadius, enableVibrancy, intensity, refHeight, refAmount, chromatic, glowRefraction, highlight
+    ) {
+        {
+            val minDim = size.minDimension
+            // 全局渲染强度映射为 0.5~1.5 倍：即使拉到 200% 也不会翻倍压垮渲染，同时保证低强度也有可见效果
+            val eff = 0.5f + intensity * 0.5f
+            if (enableVibrancy) vibrancy()
+            blur((blurRadius.dp.toPx() * eff).coerceAtMost(40f.dp.toPx()))
+            // 长按：按 longPressRefraction 加强边缘折射（仍有 clamp，防止渲染崩溃、内容消失）
+            val boost = 1f + 0.65f * highlight.longPressProgress * glowRefraction
+            lens(
+                // 折射量 clamp 到卡片尺寸的安全比例且保证最小可见效果，防止渲染崩溃、内容消失
+                refractionHeight = (refHeight * minDim * 1.0f * eff * boost).coerceIn(minDim * 0.05f, minDim * 0.25f),
+                refractionAmount = (refAmount * minDim * 1.5f * eff * boost).coerceIn(minDim * 0.08f, minDim * 0.35f),
+                depthEffect = true,
+                chromaticAberration = chromatic
+            )
+        }
+    }
+    val cardHighlight: () -> Highlight? = remember(highlight, glowIntensity, glowSize, glowColor) {
+        {
+            val lp = highlight.longPressProgress
+            if (lp <= 0.01f) {
+                Highlight.Default
+            } else {
+                // 长按：默认描边换成配置的发光色，变粗并加模糊 ⇒ 边缘发光
+                Highlight(
+                    width = (0.6f + 1.5f * glowSize).dp,
+                    blurRadius = (0.6f + 5f * glowSize).dp,
+                    alpha = (0.4f + 0.6f * lp * glowIntensity).coerceIn(0f, 1f),
+                    style = HighlightStyle.Plain(color = glowColor.copy(alpha = 1f))
+                )
+            }
+        }
+    }
+    val cardShadow: () -> Shadow? = remember(highlight, glowIntensity, glowSize, glowColor) {
+        {
+            val lp = highlight.longPressProgress
+            // 静止时不画外阴影：卡片原先外面有 clip，阴影本来就被裁掉不可见，白白每帧算一张大图层的模糊
+            if (lp <= 0.01f) {
+                null
+            } else {
+                // 四周外发光光晕，半径由 longPressGlowSize 决定（按住期间半径固定，避免每帧重建大图层）
+                Shadow(
+                    radius = (10f + 22f * glowSize).dp,
+                    offset = DpOffset.Zero,
+                    color = glowColor,
+                    alpha = (0.55f * lp * glowIntensity).coerceIn(0f, 1f)
+                )
+            }
+        }
+    }
+    val layerBlock: GraphicsLayerScope.() -> Unit = remember(highlight) {
+        {
+            // graphicsLayer 的 block 在绘制阶段执行，读到的按压缩放一定是最新值；卡片只做轻微缩放，不做拖动位移
+            if (size.width > 0f && size.height > 0f) {
+                val progress = highlight.pressProgress
+                scaleX = 1f + 0.012f * progress
+                scaleY = 1f + 0.012f * progress
+            }
+        }
+    }
+    val onDrawSurface: DrawScope.() -> Unit = remember(glassColor, opacity, intensity) {
+        {
+            if (glassColor != Color.Transparent) {
+                drawRect(glassColor.copy(alpha = glassColor.alpha * opacity * intensity))
+            }
+        }
+    }
+
     Box(
         modifier
             .fillMaxWidth()
-            .clip(RoundedRectangle(cornerDp))
+            // 注意：这里不再用 .clip()。drawBackdrop 自身会按形状裁剪内容，而外层 clip 会把长按外发光一起裁掉
+            // （原来的默认外阴影因此完全不可见，却仍在每帧计算）
+            .then(highlight.gestureModifier)
+            .drawWithContent {
+                // 边缘高光描边画在最上层：按压时轻微出现，长按按配置发光（用形状 outline 描边，圆角精确贴合）
+                drawContent()
+                val press = highlight.pressProgress
+                val lp = highlight.longPressProgress
+                val alpha = (0.12f * press + 0.88f * lp * glowIntensity).coerceIn(0f, 1f)
+                if (alpha > 0.01f && size.width > 0f && size.height > 0f) {
+                    rimPath.reset()
+                    rimPath.addOutline(cardShape.createOutline(size, layoutDirection, this))
+                    val strokeWidth =
+                        (0.8f.dp.toPx() + 1.8f.dp.toPx() * glowSize * (0.35f + 0.65f * lp))
+                            .coerceAtMost(size.minDimension * 0.2f)
+                    drawPath(
+                        rimPath,
+                        color = glowColor.copy(alpha = alpha * 0.85f),
+                        style = Stroke(width = strokeWidth)
+                    )
+                }
+            }
+            .then(highlight.modifier)
             .drawBackdrop(
                 backdrop = backdrop,
-                shape = { RoundedRectangle(cornerDp) },
-                effects = {
-                    val minDim = size.minDimension
-                    // 全局渲染强度映射为 0.5~1.5 倍：即使拉到 200% 也不会翻倍压垮渲染，同时保证低强度也有可见效果
-                    val eff = 0.5f + intensity * 0.5f
-                    if (enableVibrancy) vibrancy()
-                    blur((blurRadius.dp.toPx() * eff).coerceAtMost(40f.dp.toPx()))
-                    lens(
-                        // 折射量 clamp 到卡片尺寸的安全比例且保证最小可见效果，防止渲染崩溃、内容消失
-                        refractionHeight = (refHeight * minDim * 1.0f * eff).coerceIn(minDim * 0.05f, minDim * 0.25f),
-                        refractionAmount = (refAmount * minDim * 1.5f * eff).coerceIn(minDim * 0.08f, minDim * 0.35f),
-                        depthEffect = true,
-                        chromaticAberration = config.chromaticAberration.value > 0f
-                    )
-                },
-                onDrawSurface = {
-                    if (glassColor != Color.Transparent) {
-                        drawRect(glassColor.copy(alpha = glassColor.alpha * opacity * intensity))
-                    }
-                }
+                shape = { cardShape },
+                effects = effects,
+                highlight = cardHighlight,
+                shadow = cardShadow,
+                layerBlock = layerBlock,
+                onDrawSurface = onDrawSurface
             )
     ) {
         content()

@@ -16,5 +16,9 @@ enum class ADBDestination {
     PluginDetail,
     GlassPlayground,
     RootTool,
-    TempRoot
+    TempRoot,
+    /** v2.8 品牌自适应一键性能加速 */
+    PerformanceBoost,
+    /** v2.8 手机体检（指令可用性检查员） */
+    PhoneInspector
 }

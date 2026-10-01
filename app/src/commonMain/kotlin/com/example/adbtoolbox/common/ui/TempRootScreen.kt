@@ -39,16 +39,24 @@ fun TempRootScreen(backdrop: Backdrop) {
     var isFlashing by remember { mutableStateOf(false) }
     var flashResult by remember { mutableStateOf("") }
     var selectedFile by remember { mutableStateOf<String?>(null) }
+    var permissionWarning by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        cpuModel = ADBTools.getCpuModel()
-        cpuVendor = ADBTools.getCpuVendor()
+        // 读取 /proc/cpuinfo 属于磁盘 I/O，放后台线程，避免阻塞首帧
+        cpuModel = withContext(Dispatchers.Default) { ADBTools.getCpuModel() }
+        cpuVendor = withContext(Dispatchers.Default) { ADBTools.getCpuVendor() }
+        // 进入页面时同步已选择的文件（选择结果保存在 AppCache 中）
+        selectedFile = AppCache.selectedTempRootPath.value
+        permissionWarning = withContext(Dispatchers.Default) {
+            !(ADBTools.isShizukuAvailable() || ADBTools.isRooted())
+        }
     }
 
-    LaunchedEffect(AppCache.pickTempRootFileTrigger.value) {
-        if (AppCache.pickTempRootFileTrigger.value > 0) {
-            selectedFile = AppCache.selectedTempRootPath.value
-        }
+    // 观察"已选择文件"本身而不是选择触发器：
+    // MainActivity 在拉起选择器后会立刻把触发器重置为 0，若监听触发器，
+    // 用户选完文件后页面永远读不到结果（表现为点了没反应、执行提权入口不出现）。
+    LaunchedEffect(AppCache.selectedTempRootPath.value) {
+        AppCache.selectedTempRootPath.value?.let { selectedFile = it }
     }
 
     Column(
@@ -90,6 +98,12 @@ fun TempRootScreen(backdrop: Backdrop) {
                 ) {
                     BasicText("选择提权包 (ZIP)", style = TextStyle(Color.White, 14.sp))
                 }
+                if (permissionWarning) {
+                    BasicText(
+                        "提示：提权包需要以 shell/Root 身份执行脚本，当前未检测到 Shizuku(ADB) 或 Root 权限，执行大概率会失败。",
+                        style = TextStyle(Color(0xFFFF9500), 12.sp)
+                    )
+                }
             }
         }
 
@@ -104,18 +118,32 @@ fun TempRootScreen(backdrop: Backdrop) {
                     )
                     LiquidButton(
                         onClick = {
-                            isFlashing = true
-                            flashResult = ""
-                            scope.launch {
-                                val result = withContext(Dispatchers.Default) {
-                                    ADBTools.flashTempRootModule(selectedFile!!)
-                                }
-                                flashResult = if (result.exitCode == 0) {
-                                    "提权成功！\n${result.output}"
+                            // 提权过程不可重入，避免并发刷入同一份提权包
+                            if (!isFlashing) {
+                                val zipPath = selectedFile
+                                if (zipPath == null) {
+                                    flashResult = "提权失败：未选择提权包"
                                 } else {
-                                    "提权失败：${result.error}\n${result.output}"
+                                    isFlashing = true
+                                    flashResult = ""
+                                    scope.launch {
+                                        val result = try {
+                                            withContext(Dispatchers.Default) { ADBTools.flashTempRootModule(zipPath) }
+                                        } catch (e: Exception) {
+                                            null
+                                        }
+                                        if (result == null) {
+                                            flashResult = "提权失败：执行异常，请确认 Shizuku/Root 权限后重试"
+                                        } else {
+                                            flashResult = if (result.exitCode == 0) {
+                                                "提权成功！\n${result.output}"
+                                            } else {
+                                                "提权失败：${result.error}\n${result.output}"
+                                            }
+                                        }
+                                        isFlashing = false
+                                    }
                                 }
-                                isFlashing = false
                             }
                         },
                         backdrop = backdrop,

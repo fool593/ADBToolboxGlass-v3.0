@@ -1,6 +1,5 @@
 package com.example.adbtoolbox.common.ui
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -38,9 +37,8 @@ import com.kyant.backdrop.catalog.components.LiquidButton
 import com.kyant.backdrop.catalog.components.LiquidToggle
 import com.kyant.backdrop.drawBackdrop
 import com.kyant.backdrop.effects.blur
-import com.kyant.backdrop.effects.lens
-import com.kyant.backdrop.effects.vibrancy
 import com.kyant.shapes.RoundedRectangle
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -50,25 +48,45 @@ fun AppsScreen(
     contentColor: Color,
     onAppClick: (String) -> Unit
 ) {
-    var apps by remember { mutableStateOf<List<AppInfoData>>(emptyList()) }
     var showSystemApps by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(true) }
+    var loadFailed by remember { mutableStateOf(false) }
+    var reloadTick by remember { mutableStateOf(0) }
 
-    LaunchedEffect(showSystemApps) {
-        // 优先从预加载缓存读取，秒开
-        if (AppCache.appsLoaded.value) {
-            val allApps = AppCache.installedApps.value
-            apps = if (showSystemApps) allApps else allApps.filter { !it.isSystem }
+    // 直接观察全局缓存：在 AppDetailScreen 里做完操作后会写回缓存，本页立刻显示最新状态，
+    // 不会出现“点了冻结/卸载后回到列表还是旧状态”的问题。
+    val cachedApps = AppCache.installedApps.value
+    val apps = remember(cachedApps, showSystemApps) {
+        if (showSystemApps) cachedApps else cachedApps.filter { !it.isSystem }
+    }
+
+    LaunchedEffect(reloadTick, showSystemApps) {
+        // 缓存有效（非空）直接用；Preloader 失败时会把空列表也标记为 appsLoaded=true，
+        // 这里不信任空缓存，否则界面会永远空白且不再重试。
+        if (AppCache.installedApps.value.isNotEmpty()) {
             isLoading = false
-        } else {
-            isLoading = true
-            // 耗时操作移到后台线程，避免主线程阻塞
-            val allApps = withContext(Dispatchers.Default) { ADBTools.getInstalledApps() }
-            AppCache.installedApps.value = allApps
-            AppCache.appsLoaded.value = true
-            apps = if (showSystemApps) allApps else allApps.filter { !it.isSystem }
-            isLoading = false
+            loadFailed = false
+            return@LaunchedEffect
         }
+        isLoading = true
+        loadFailed = false
+        // 耗时操作移到后台线程，避免主线程阻塞
+        val loaded = try {
+            withContext(Dispatchers.Default) { ADBTools.getInstalledApps() }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            null
+        }
+        if (loaded.isNullOrEmpty()) {
+            // 关键修复：加载失败/为空时不要把 appsLoaded 置位，否则缓存永远为空且永不重试
+            AppCache.appsLoaded.value = false
+            loadFailed = true
+        } else {
+            AppCache.installedApps.value = loaded
+            AppCache.appsLoaded.value = true
+        }
+        isLoading = false
     }
 
     Column(Modifier.fillMaxSize().padding(horizontal = 16f.dp)) {
@@ -92,6 +110,27 @@ fun AppsScreen(
         if (isLoading) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 BasicText(AppStrings.get("loading"), style = TextStyle(contentColor.copy(alpha = 0.5f), 16f.sp))
+            }
+        } else if (apps.isEmpty()) {
+            // 明确的失败/空态提示 + 可点击重试，不再是一片空白
+            Column(
+                Modifier.fillMaxWidth().padding(top = 60f.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                if (loadFailed) {
+                    BasicText(AppStrings.get("operation_failed"), style = TextStyle(Color(0xFFFF3B30), 14f.sp))
+                    Spacer(Modifier.height(6f.dp))
+                }
+                BasicText("${AppStrings.get("app_manager")} (0)", style = TextStyle(contentColor.copy(alpha = 0.5f), 13f.sp))
+                Spacer(Modifier.height(12f.dp))
+                LiquidButton(
+                    onClick = { reloadTick++ },
+                    backdrop = backdrop,
+                    modifier = Modifier.height(38f.dp),
+                    tint = Color(0xFF0088FF)
+                ) {
+                    BasicText(AppStrings.get("redetect"), Modifier.padding(horizontal = 14f.dp), style = TextStyle(Color.White, 12f.sp))
+                }
             }
         } else {
             LazyColumn(
@@ -132,6 +171,8 @@ fun AppListItem(
                 ),
             contentAlignment = Alignment.Center
         ) {
+            // 说明：AppInfoData.iconBase64 由 ADBTools 提供，当前实现永远返回 null（见 ADBTools.kt 第 617 行），
+            // 因此这里保留首字母占位图标（真实图标展示需先修复 ADBTools 的数据源）。
             BasicText(
                 app.appName.take(1),
                 style = TextStyle(Color.White, 18f.sp, androidx.compose.ui.text.font.FontWeight.Bold)

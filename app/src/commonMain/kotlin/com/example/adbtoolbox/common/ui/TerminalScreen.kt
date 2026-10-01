@@ -69,29 +69,76 @@ fun TerminalScreen(
     // 快捷命令分类状态
     var currentCmdCategory by remember { mutableStateOf(QuickCmdCategory.SYSTEM) }
     var showQuickCommands by remember { mutableStateOf(false) }
+    // 本地命令历史（供 history 命令使用）
+    var commandHistory by remember { mutableStateOf(listOf<String>()) }
 
     LaunchedEffect(lines.size) {
         if (lines.isNotEmpty()) listState.animateScrollToItem(lines.size - 1)
     }
 
-    fun executeCommand(cmd: String) {
-        if (cmd.isBlank()) return
-        lines = lines + TerminalLine("$ $cmd", LineType.INPUT)
-        input = ""
-        scope.launch {
-            val result = withContext(Dispatchers.Default) {
-                ADBTools.execCommand(cmd)
-            }
-            if (result.output.isNotBlank()) {
-                lines = lines + TerminalLine(result.output.trim(), LineType.OUTPUT)
-            }
-            if (result.error.isNotBlank()) {
-                lines = lines + TerminalLine(result.error.trim(), LineType.ERROR)
-            }
-            if (result.exitCode != 0 && result.output.isBlank() && result.error.isBlank()) {
-                lines = lines + TerminalLine("${AppStrings.get("success")}: ${result.exitCode}", LineType.ERROR)
+    /**
+     * 真正执行一条命令并等待结果。
+     * 用挂起函数而不是「launch 后立刻返回」，是为了让多行初始命令按顺序执行、按顺序输出。
+     */
+    suspend fun runCommand(cmd: String) {
+        val result = try {
+            withContext(Dispatchers.Default) { ADBTools.execCommand(cmd) }
+        } catch (e: Exception) {
+            CommandResult("", "${AppStrings.get("operation_failed")}: ${e.javaClass.simpleName}: ${e.message}", -1)
+        }
+        lines = lines + buildList {
+            if (result.output.isNotBlank()) add(TerminalLine(result.output.trim(), LineType.OUTPUT))
+            if (result.error.isNotBlank()) add(TerminalLine(result.error.trim(), LineType.ERROR))
+            if (result.exitCode != 0) {
+                add(TerminalLine("${AppStrings.get("exit_code_bracket")}${result.exitCode}]", LineType.ERROR))
             }
         }
+    }
+
+    /**
+     * 拦截几条「本地内置命令」。
+     * clear / history / exit 原本会被丢给设备 shell 执行 —— 在一次性 shell 进程里它们
+     * 既清不掉终端显示、也留不下历史、更不会退出本 App，等于点了完全没用。
+     */
+    suspend fun runLocalCommand(cmd: String): Boolean {
+        when (cmd.trim()) {
+            "clear", "cls" -> lines = lines + TerminalLine(AppStrings.get("clear_screen"), LineType.INFO)
+            "history" -> lines = lines + if (commandHistory.isEmpty()) {
+                listOf(TerminalLine("(no history)", LineType.INFO))
+            } else {
+                commandHistory.mapIndexed { index, item ->
+                    TerminalLine("${index + 1}  $item", LineType.OUTPUT)
+                }
+            }
+            "exit" -> lines = lines + TerminalLine("Use the back button to leave the terminal.", LineType.INFO)
+            else -> return false
+        }
+        return true
+    }
+
+    suspend fun executeCommand(cmd: String) {
+        val trimmed = cmd.trim()
+        if (trimmed.isEmpty()) return
+        // 已在设备端 shell 里执行，用户却按 PC 习惯敲 adb 前缀时自动剥掉，避免 "adb: not found"
+        val shellCommand = Regex("^adb\\s+shell\\s+", RegexOption.IGNORE_CASE).replace(trimmed, "")
+        lines = lines + TerminalLine("$ $shellCommand", LineType.INPUT)
+        input = ""
+        if (runLocalCommand(shellCommand)) {
+            return
+        }
+        commandHistory = commandHistory + shellCommand
+        if (Regex("^adb\\s+", RegexOption.IGNORE_CASE).containsMatchIn(shellCommand) ||
+            shellCommand == "adb" || shellCommand.startsWith("adb ")
+        ) {
+            // adb push/pull/install 需要连接电脑，本 App 无法直接执行，明确告知而不是静默失败
+            lines = lines + TerminalLine(
+                "adb: 本 App 已在设备端 shell 内执行命令，无需 adb 前缀。\n" +
+                    "若需推拉文件/安装 APK，请使用「ADB面板」，或先把命令写进设备路径再执行。",
+                LineType.INFO
+            )
+            return
+        }
+        runCommand(shellCommand)
     }
 
     // 读取并执行初始命令（由其他页面跳转时设置）
@@ -100,11 +147,10 @@ fun TerminalScreen(
         if (!initialCmd.isNullOrBlank()) {
             // 清除初始命令，避免重复执行
             AppCache.terminalInitialCommand.value = null
-            // 逐行执行初始命令
+            // 逐行顺序执行初始命令（原来每条命令各自 launch，150ms 的 delay 并不能保证输出顺序）
             initialCmd.split("\n").forEach { line ->
                 if (line.isNotBlank()) {
                     executeCommand(line)
-                    // 短暂延迟，避免命令执行过快
                     kotlinx.coroutines.delay(150)
                 }
             }
@@ -219,7 +265,7 @@ fun TerminalScreen(
             }
             Spacer(Modifier.width(8f.dp))
             LiquidButton(
-                onClick = { executeCommand(input) },
+                onClick = { scope.launch { executeCommand(input) } },
                 backdrop = backdrop,
                 modifier = Modifier.height(48f.dp),
                 tint = Color(0xFF0088FF)
@@ -241,7 +287,7 @@ fun TerminalScreen(
                     // 含占位符的命令填入输入框让用户修改
                     input = cmd.command
                 } else {
-                    executeCommand(cmd.command)
+                    scope.launch { executeCommand(cmd.command) }
                 }
             }
         )

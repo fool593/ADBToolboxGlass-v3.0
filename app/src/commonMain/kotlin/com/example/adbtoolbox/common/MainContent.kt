@@ -187,6 +187,20 @@ fun MainContent() {
                         ADBDestination.TempRoot -> com.example.adbtoolbox.common.ui.TempRootScreen(
                             backdrop = backdrop,
                         )
+                        // v2.8 品牌自适应一键性能加速
+                        ADBDestination.PerformanceBoost -> com.example.adbtoolbox.common.ui.PerformanceBoostScreen(
+                            backdrop = backdrop,
+                            contentColor = contentColor,
+                            onBack = { currentDestination = ADBDestination.Home },
+                            onOpenInspector = { currentDestination = ADBDestination.PhoneInspector }
+                        )
+                        // v2.8 手机体检（指令可用性检查员）
+                        ADBDestination.PhoneInspector -> com.example.adbtoolbox.common.ui.PhoneInspectorScreen(
+                            backdrop = backdrop,
+                            contentColor = contentColor,
+                            onBack = { currentDestination = ADBDestination.Home },
+                            onOpenBoost = { currentDestination = ADBDestination.PerformanceBoost }
+                        )
                     }
                 }
 

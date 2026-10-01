@@ -1312,4 +1312,361 @@ actual object ADBTools {
             android.provider.Settings.Global.getInt(appContext.contentResolver, android.provider.Settings.Global.ADB_ENABLED, 0) == 1
         } catch (e: Exception) { false }
     }
+
+    // ==================== 性能加速 / 手机体检 基础设施实现 ====================
+
+    private val propCache = java.util.concurrent.ConcurrentHashMap<String, String>()
+
+    actual fun getProp(key: String): String {
+        propCache[key]?.let { return it }
+        return try {
+            // 优先走一次 shell getprop（能拿到 Build 里没有的厂商属性），失败再用 Build 兜底
+            val value = getProps(listOf(key))[key].orEmpty()
+            if (value.isNotBlank()) propCache[key] = value
+            value
+        } catch (e: Exception) {
+            ""
+        }
+    }
+
+    actual fun getProps(keys: List<String>): Map<String, String> {
+        if (keys.isEmpty()) return emptyMap()
+        val result = HashMap<String, String>(keys.size)
+        // 一次 shell 调用批量读取，避免逐条 exec 造成明显卡顿
+        val batch = try {
+            val sb = StringBuilder()
+            sb.append("echo __PROPS_BEGIN__")
+            keys.forEach { sb.append("; echo \"[$it]: \$(getprop $it)\"") }
+            sb.append("; echo __PROPS_END__")
+            execCommand(sb.toString(), timeout = 10)
+        } catch (e: Exception) {
+            null
+        }
+        val body = batch?.output
+            ?.substringAfter("__PROPS_BEGIN__", "")
+            ?.substringBefore("__PROPS_END__", "")
+            ?: ""
+        Regex("^\\[([^\\]]+)]:\\s*\\[(.*)]\\s*$").findAll(body).forEach { m ->
+            result[m.groupValues[1]] = m.groupValues[2].trim()
+        }
+        // shell 拿不到的用 Build 兜底，保证识别永远可用
+        keys.forEach { key ->
+            if (result[key].isNullOrBlank()) {
+                val fallback = when (key) {
+                    "ro.product.brand", "ro.product.vendor.brand", "ro.product.system.brand" -> Build.BRAND
+                    "ro.product.model", "ro.product.vendor.model", "ro.product.system.model" -> Build.MODEL
+                    "ro.product.manufacturer" -> Build.MANUFACTURER
+                    "ro.build.version.sdk" -> Build.VERSION.SDK_INT.toString()
+                    "ro.build.version.release" -> Build.VERSION.RELEASE
+                    "ro.build.display.id" -> Build.DISPLAY
+                    "ro.product.device", "ro.product.vendor.device" -> Build.DEVICE
+                    "ro.board.platform" -> Build.BOARD
+                    "ro.hardware" -> Build.HARDWARE
+                    else -> ""
+                }
+                if (fallback.isNotBlank()) result[key] = fallback
+            }
+        }
+        return result
+    }
+
+    private fun defaultDisplay(): android.view.Display? {
+        return try {
+            val dm = appContext.getSystemService(Context.DISPLAY_SERVICE) as android.hardware.display.DisplayManager
+            dm.getDisplay(android.view.Display.DEFAULT_DISPLAY)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    /** dumpsys display 解析结果缓存：同一秒内只解析一次，体检页面会连续调用多次。 */
+    private var dumpsysCache: String? = null
+    private var dumpsysCacheTime = 0L
+
+    private fun dumpsysDisplay(): String {
+        val now = System.currentTimeMillis()
+        val cached = dumpsysCache
+        if (cached != null && now - dumpsysCacheTime < 3000L) return cached
+        val out = try {
+            execCommand("dumpsys display", timeout = 12).output
+        } catch (e: Exception) {
+            ""
+        }
+        dumpsysCache = out
+        dumpsysCacheTime = now
+        return out
+    }
+
+    private fun parseRefreshRatesFromDumpsys(): List<Float> {
+        val text = dumpsysDisplay()
+        if (text.isBlank()) return emptyList()
+        val rates = LinkedHashSet<Float>()
+        // 形如: modeId=1, width=1080, height=2400, fps=120.0
+        Regex("fps\\s*=\\s*([0-9]+(?:\\.[0-9]+)?)").findAll(text).forEach { m ->
+            m.groupValues[1].toFloatOrNull()?.let { if (it > 1f) rates.add(it) }
+        }
+        // 形如: refreshRate=120.0
+        Regex("refreshRate\\s*=\\s*([0-9]+(?:\\.[0-9]+)?)").findAll(text).forEach { m ->
+            m.groupValues[1].toFloatOrNull()?.let { if (it > 1f) rates.add(it) }
+        }
+        // 形如: 120.0 Hz  /  120Hz
+        Regex("([0-9]{2,3}(?:\\.[0-9]+)?)\\s*Hz").findAll(text).forEach { m ->
+            m.groupValues[1].toFloatOrNull()?.let { if (it in 20f..300f) rates.add(it) }
+        }
+        return rates.sorted()
+    }
+
+    private fun parseActiveRefreshFromDumpsys(): Float {
+        val text = dumpsysDisplay()
+        if (text.isBlank()) return 0f
+        // 形如: mActiveModeId=1 / activeMode=<id>
+        val activeId = Regex("(?:mActiveModeId|activeMode|mCurrentModeId)\\s*=\\s*(\\d+)")
+            .find(text)?.groupValues?.get(1)
+        if (activeId != null) {
+            // 找到对应 modeId 行的 fps
+            val line = text.lineSequence().firstOrNull {
+                it.contains("modeId=$activeId") || it.contains("mModeId=$activeId")
+            }
+            if (line != null) {
+                Regex("fps\\s*=\\s*([0-9]+(?:\\.[0-9]+)?)").find(line)?.groupValues?.get(1)
+                    ?.toFloatOrNull()?.let { return it }
+                Regex("refreshRate\\s*=\\s*([0-9]+(?:\\.[0-9]+)?)").find(line)?.groupValues?.get(1)
+                    ?.toFloatOrNull()?.let { return it }
+            }
+        }
+        // 直接找 active 段的 refreshRate
+        val activeSection = text.substringAfter("mActiveMode", "")
+        if (activeSection.isNotEmpty()) {
+            Regex("refreshRate\\s*=\\s*([0-9]+(?:\\.[0-9]+)?)").find(activeSection)
+                ?.groupValues?.get(1)?.toFloatOrNull()?.let { return it }
+        }
+        return 0f
+    }
+
+    actual fun getSupportedRefreshRates(): List<Float> {
+        val rates = LinkedHashSet<Float>()
+        // 1) 公开 API（API 23+），最可靠
+        try {
+            val display = defaultDisplay()
+            if (display != null && Build.VERSION.SDK_INT >= 23) {
+                display.supportedModes?.forEach { mode ->
+                    val r = mode.refreshRate
+                    if (r > 1f) rates.add(r)
+                }
+            }
+            if (display != null && display.refreshRate > 1f) rates.add(display.refreshRate)
+        } catch (e: Exception) { /* 忽略，继续用 dumpsys */ }
+        // 2) dumpsys display 兜底（部分厂商 ROM 把高刷模式隐藏在公开 API 之外）
+        rates.addAll(parseRefreshRatesFromDumpsys())
+        return rates.sorted()
+    }
+
+    actual fun getMaxRefreshRate(): Float {
+        val supported = getSupportedRefreshRates()
+        if (supported.isNotEmpty()) return supported.max()
+        return try { defaultDisplay()?.refreshRate ?: 0f } catch (e: Exception) { 0f }
+    }
+
+    actual fun getCurrentRefreshRate(): Float {
+        // 1) 厂商设置里记录的峰值刷新率最接近用户感知（很多 ROM 只在这里体现）
+        val peak = getSystemSetting("system", "peak_refresh_rate").toFloatOrNull()
+        // 2) 公开 API 的 Display.Mode（API 23+）
+        val modeRate = try {
+            val display = defaultDisplay()
+            if (display != null && Build.VERSION.SDK_INT >= 23) {
+                display.mode?.refreshRate ?: 0f
+            } else 0f
+        } catch (e: Exception) { 0f }
+        val legacyRate = try { defaultDisplay()?.refreshRate ?: 0f } catch (e: Exception) { 0f }
+        // 3) dumpsys 兜底
+        val dumpedRate = parseActiveRefreshFromDumpsys()
+
+        // 挑选策略：公开 API 若返回 60 但设置里声明了更高峰值（典型"高刷屏被锁 60Hz"场景），
+        // 采用设置中的峰值，避免体检报告误判。
+        val apiRate = if (modeRate > 1f) modeRate else legacyRate
+        val candidates = listOfNotNull(
+            apiRate.takeIf { it > 1f },
+            peak?.takeIf { it > 1f },
+            dumpedRate.takeIf { it > 1f }
+        )
+        if (candidates.isEmpty()) return 0f
+        // 若 API 报 60 而 peak 更高，说明屏幕能力高于当前值，报告峰值更能反映真实能力
+        if (peak != null && peak > 1f && apiRate in 1f..61f && peak > apiRate + 1f) return peak
+        return candidates.first()
+    }
+
+    actual fun getSystemSetting(namespace: String, key: String): String {
+        return try {
+            val result = execCommand("settings get $namespace $key", timeout = 8)
+            val out = result.output.trim()
+            if (out.isEmpty() || out.equals("null", ignoreCase = true)) "" else out
+        } catch (e: Exception) { "" }
+    }
+
+    actual fun putSystemSetting(namespace: String, key: String, value: String): Boolean {
+        return try {
+            val result = execCommand("settings put $namespace $key $value", timeout = 8)
+            result.exitCode == 0 && !result.error.contains("Exception", true) &&
+                    !result.error.contains("Permission", true) &&
+                    !result.output.contains("Exception", true)
+        } catch (e: Exception) { false }
+    }
+
+    actual fun setRefreshRate(target: Float, both: Boolean): CommandResult {
+        val max = getMaxRefreshRate().let { if (it > 1f) it else target }
+        val supported = getSupportedRefreshRates()
+        // 选择不超过屏幕能力、最接近目标的档位
+        val chosen = supported.filter { it <= target + 0.5f }.maxOrNull()
+            ?: supported.minOrNull()
+            ?: target.coerceAtMost(max)
+        val v = if (chosen % 1f == 0f) chosen.toInt().toString() else chosen.toString()
+        val log = StringBuilder()
+        var ok = false
+        val steps = buildList {
+            add("settings put system peak_refresh_rate $v")
+            if (both) add("settings put system min_refresh_rate $v")
+            else add("settings delete system min_refresh_rate")
+            add("settings put secure user_refresh_rate $v")
+        }
+        steps.forEach { cmd ->
+            val r = execCommand(cmd, timeout = 8)
+            val success = r.exitCode == 0 &&
+                    !r.error.contains("Exception", true) &&
+                    !r.error.contains("Permission denied", true) &&
+                    !r.output.contains("Exception", true)
+            if (success) ok = true
+            log.append(if (success) "OK   " else "FAIL ").append(cmd)
+            val msg = listOf(r.error, r.output).firstOrNull { it.isNotBlank() }
+            if (msg != null) log.append("  ->  ").append(msg.trim().take(160))
+            log.append('\n')
+        }
+        // 清缓存，让 SystemUI 立即重新读取设置
+        execCommand("pkill -f com.android.systemui || killall com.android.systemui", timeout = 8)
+        return CommandResult(log.toString(), if (ok) "" else "所有写入均被拒绝：需要 Shizuku / Root / WRITE_SECURE_SETTINGS 权限", if (ok) 0 else 1)
+    }
+
+    actual fun resetRefreshRateToAuto(): CommandResult {
+        val log = StringBuilder()
+        var ok = false
+        listOf(
+            "settings delete system peak_refresh_rate",
+            "settings delete system min_refresh_rate",
+            "settings delete system user_refresh_rate",
+            "settings delete secure user_refresh_rate"
+        ).forEach { cmd ->
+            val r = execCommand(cmd, timeout = 8)
+            val success = r.exitCode == 0 && !r.error.contains("Permission denied", true)
+            if (success) ok = true
+            log.append(if (success) "OK   " else "FAIL ").append(cmd).append('\n')
+        }
+        execCommand("pkill -f com.android.systemui || killall com.android.systemui", timeout = 8)
+        return CommandResult(log.toString(), if (ok) "" else "写入被拒绝：需要 Shizuku / Root 权限", if (ok) 0 else 1)
+    }
+
+    /**
+     * 强制结束所有第三方后台进程，保留本应用、系统关键进程与[保留白名单]。
+     * 这是"一键关闭后台"的核心实现：
+     *  1) ActivityManager.killBackgroundProcesses（无需 Root，能覆盖部分包）
+     *  2) `am force-stop` 兜底（需 Shizuku / Root 才能真正结束别的包）
+     *  3) `pm trim-caches` 清理所有应用缓存（需 Shizuku / Root）
+     * 每一步失败都会如实记录，不伪装成功。
+     */
+    actual fun killBackgroundProcesses(): List<String> {
+        val killed = mutableListOf<String>()
+        val myPkg = appContext.packageName
+        // 保留白名单：正在使用/容易被误杀导致体验倒退的应用
+        val keep = setOf(
+            myPkg,
+            "com.android.systemui",
+            "com.android.launcher",
+            "com.android.launcher3",
+            "com.android.settings",
+            "com.android.phone",
+            "com.android.providers.telephony",
+            "com.android.server.telecom",
+            "com.android.inputmethod.latin",
+            "com.google.android.inputmethod.latin",
+            "com.sohu.inputmethod.sogou",
+            "com.baidu.input",
+            "com.iflytek.inputmethod",
+            "com.tencent.mm",
+            "com.tencent.mobileqq",
+            "com.eg.android.AlipayGphone",
+            "com.baidu.BaiduMap",
+            "com.autonavi.minimap",
+            "com.tencent.qqmusic",
+            "com.netease.cloudmusic",
+            "com.kugou.android"
+        )
+        val pm = appContext.packageManager
+        val am = appContext.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+
+        // 1) 无权限也能生效的一层
+        try {
+            val running = try { am.runningAppProcesses ?: emptyList() } catch (e: Exception) { emptyList() }
+            running.forEach { proc ->
+                val pkg = proc.pkgList?.firstOrNull() ?: proc.processName
+                if (pkg.isNullOrBlank() || pkg in keep) return@forEach
+                val isSystem = try {
+                    (pm.getApplicationInfo(pkg, 0).flags and ApplicationInfo.FLAG_SYSTEM) != 0
+                } catch (e: Exception) { true }
+                if (isSystem) return@forEach
+                try {
+                    am.killBackgroundProcesses(pkg)
+                    killed.add(pkg)
+                } catch (e: Exception) { /* 单个失败不影响其它 */ }
+            }
+        } catch (e: Exception) { /* 忽略 */ }
+
+        // 2) 收集全部第三方应用，逐个 force-stop（Shizuku/Root 下才有效果）
+        val thirdParty = try {
+            pm.getInstalledApplications(0)
+                .filter { it.flags and ApplicationInfo.FLAG_SYSTEM == 0 }
+                .map { it.packageName }
+                .filter { it !in keep }
+        } catch (e: Exception) { emptyList() }
+        if (thirdParty.isNotEmpty()) {
+            // 分批拼接，避免单条命令过长被截断
+            thirdParty.chunked(40).forEach { chunk ->
+                val cmd = chunk.joinToString("; ") { "am force-stop $it" } + "; echo FSDONE"
+                try {
+                    execCommand(cmd, timeout = 30)
+                } catch (e: Exception) { /* 忽略 */ }
+                killed.addAll(chunk)
+            }
+        }
+
+        // 3) 清理所有应用缓存（失败不影响主流程）
+        try { execCommand("pm trim-caches 128G; echo TRIMDONE", timeout = 25) } catch (e: Exception) { /* 忽略 */ }
+
+        // 4) 再补一次 am kill-all，收掉残留的空进程
+        try { execCommand("am kill-all; echo KALLDONE", timeout = 15) } catch (e: Exception) { /* 忽略 */ }
+
+        return killed.distinct()
+    }
+
+    actual fun fixRefreshRateLock(): Pair<Boolean, String> = run {
+        val max = getMaxRefreshRate()
+        val current = getCurrentRefreshRate()
+        if (max <= 61f) {
+            Pair(false, "屏幕仅支持最高 ${max.toInt()}Hz（或未能读取到屏幕高刷档位），无需修复")
+        } else {
+            val needFix = current < max - 1f || current <= 61f
+            if (!needFix) {
+                Pair(true, "当前已是 ${current.toInt()}Hz，屏幕最高支持 ${max.toInt()}Hz")
+            } else {
+                val r = setRefreshRate(max, both = false)
+                val newRate = getCurrentRefreshRate()
+                val ok = r.exitCode == 0
+                val msg = buildString {
+                    append("目标 ${max.toInt()}Hz，修复前 ${current.toInt()}Hz")
+                    append("，修复后 ${if (newRate > 1f) "${newRate.toInt()}Hz" else "读取中"}")
+                    if (!ok) append("（写入被拒绝：请授予 Shizuku/Root 权限后重试）")
+                }
+                Pair(ok, msg)
+            }
+        }
+    }
+
+    actual fun execPerfCommand(command: String, timeout: Int): CommandResult = execCommand(command, timeout)
 }

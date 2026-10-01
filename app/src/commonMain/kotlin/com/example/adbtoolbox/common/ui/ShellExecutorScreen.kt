@@ -17,6 +17,7 @@ import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -31,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.adbtoolbox.common.ADBTools
 import com.example.adbtoolbox.common.AppStrings
+import com.example.adbtoolbox.common.CommandResult
 import com.example.adbtoolbox.common.GlassEffectConfig
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.catalog.components.LiquidButton
@@ -53,7 +55,15 @@ fun ShellExecutorScreen(
     var output by remember { mutableStateOf(AppStrings.get("waiting_cmd")) }
     var useRoot by remember { mutableStateOf(false) }
     var isExecuting by remember { mutableStateOf(false) }
+    // Root 权限可用性：打开页面时检测一次，供"使用 Root 执行"开关做前置判断
+    var rootAvailable by remember { mutableStateOf<Boolean?>(null) }
+    var rootChecked by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+
+    LaunchedEffect(Unit) {
+        rootAvailable = withContext(Dispatchers.Default) { ADBTools.isRooted() }
+        rootChecked = true
+    }
 
     fun execute() {
         if (command.isBlank() || isExecuting) return
@@ -61,7 +71,12 @@ fun ShellExecutorScreen(
         output = AppStrings.get("executing")
         val cmd = if (useRoot) "su -c '$command'" else command
         scope.launch {
-            val result = withContext(Dispatchers.Default) { ADBTools.execCommand(cmd) }
+            val result = try {
+                withContext(Dispatchers.Default) { ADBTools.execCommand(cmd) }
+            } catch (e: Exception) {
+                // 以前异常会直接抛出，界面永远停在"执行中"，用户看不到任何原因
+                CommandResult("", "${e.javaClass.simpleName}: ${e.message}", -1)
+            }
             output = buildString {
                 appendLine("$ $command")
                 appendLine()
@@ -73,6 +88,10 @@ fun ShellExecutorScreen(
                 }
                 appendLine()
                 appendLine("${AppStrings.get("exit_code_bracket")}${result.exitCode}]")
+                if (useRoot && !result.output.contains("uid=0") && result.error.isNotBlank()) {
+                    appendLine()
+                    appendLine("[!] ${AppStrings.get("need_root_or_shizuku")}")
+                }
             }
             isExecuting = false
         }
@@ -94,10 +113,28 @@ fun ShellExecutorScreen(
             Spacer(Modifier.width(12f.dp))
             LiquidToggle(
                 selected = { useRoot },
-                onSelect = { useRoot = it },
+                onSelect = { wantRoot ->
+                    // Root 不可用时直接给出可操作提示，而不是执行后必然失败
+                    if (wantRoot && rootChecked && rootAvailable == false) {
+                        useRoot = false
+                        output = "${AppStrings.get("root_not_obtained")}\n${AppStrings.get("need_root_or_shizuku")}"
+                    } else {
+                        useRoot = wantRoot
+                    }
+                },
                 backdrop = backdrop,
                 modifier = Modifier.size(51f.dp, 31f.dp)
             )
+            Spacer(Modifier.width(8f.dp))
+            if (rootChecked) {
+                BasicText(
+                    if (rootAvailable == true) AppStrings.get("rooted") else AppStrings.get("root_not_obtained"),
+                    style = TextStyle(
+                        if (rootAvailable == true) Color(0xFF34C759) else contentColor.copy(alpha = 0.5f),
+                        11f.sp
+                    )
+                )
+            }
         }
 
         Spacer(Modifier.height(12f.dp))
@@ -137,7 +174,7 @@ fun ShellExecutorScreen(
                 BasicText(if (isExecuting) AppStrings.get("executing") else AppStrings.get("execute_btn"), Modifier.padding(horizontal = 8f.dp), style = TextStyle(Color.White, 14f.sp))
             }
             LiquidButton(
-                onClick = { command = ""; output = "" },
+                onClick = { command = ""; output = AppStrings.get("waiting_cmd") },
                 backdrop = backdrop,
                 modifier = Modifier.height(48f.dp),
                 tint = Color(0xFFFF9500)
