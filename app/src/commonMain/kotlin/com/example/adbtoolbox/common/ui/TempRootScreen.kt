@@ -94,9 +94,11 @@ fun TempRootScreen(backdrop: Backdrop) {
         GlassCard(backdrop = backdrop, pageType = "plugins") {
             Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 BasicText(AppStrings.get("temp_root_package"), style = TextStyle(Color.White, 18.sp, FontWeight.Medium))
-                if (selectedFile != null) {
+                // 取到局部 val 再判空：委托属性（by remember）无法智能转换，用局部变量即可彻底去掉 !!
+                val currentFile = selectedFile
+                if (currentFile != null) {
                     BasicText(
-                        String.format(AppStrings.get("temp_root_selected"), selectedFile!!.substringAfterLast('/')),
+                        String.format(AppStrings.get("temp_root_selected"), currentFile.substringAfterLast('/')),
                         style = TextStyle(Color(0xFF34C759), 14.sp)
                     )
                 } else {
