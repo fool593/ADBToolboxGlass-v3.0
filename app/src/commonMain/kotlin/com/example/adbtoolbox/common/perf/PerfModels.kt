@@ -40,7 +40,25 @@ data class PerfItem(
     /** true 表示这是"关掉某个东西"的项（如关闭动画），用于体检给出建议 */
     val isDisableAction: Boolean = false,
     /** 同一次一键加速内部的执行顺序，小的先执行 */
-    val order: Int = 100
+    val order: Int = 100,
+    // ---------------------------------------------------------------- 适用条件
+    // 以下字段全部带默认值，属"只增不改"：旧的 BrandDatabase / HuaweiPerf 构造调用不受影响。
+    /** 允许执行的最低 SDK；0 表示不限制。低于该值的机型上该项会被判定为"接口不存在"。 */
+    val minSdk: Int = 0,
+    /** 允许执行的最高 SDK；0 表示不限制。 */
+    val maxSdk: Int = 0,
+    /** 仅该 SoC 厂商适用（qualcomm / mediatek / samsung / google / hisilicon / unisoc），null 表示不限。 */
+    val socVendor: String? = null,
+    /** 仅该品牌 id 适用（见 [BrandDatabase] 常量），null 表示不限。 */
+    val brandOnly: String? = null,
+    /**
+     * true 表示"这条命令是否在本机所有 ROM 上都存在"无法确定：
+     * 命令仍然真实下发并回读状态，但默认不勾选、风险等级由调用方上调，
+     * 汇报与界面需明确标注为"待验证"。绝不用它冒充已验证可用的接口。
+     */
+    val uncertain: Boolean = false,
+    /** 单条命令的执行超时（毫秒），0 表示由执行层按 id 推断。 */
+    val timeoutMs: Int = 0
 )
 
 /** 性能加速分类。id 必须与 [PerfItem.category] 对应。 */

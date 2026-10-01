@@ -12,6 +12,11 @@
     <uses-permission android:name="android.permission.INTERACT_ACROSS_USERS_FULL" />
     <uses-permission android:name="android.permission.VIBRATE" />
 
+    <!-- 插件 / Root 模块自带的 WebUI：页面通常要访问本机守护进程（http://127.0.0.1:端口）。
+         Android 对回环 socket 同样要求 INTERNET 权限，缺了它 WebUI 会直接白屏。
+         应用已开启 usesCleartextTraffic，本地 http 可以正常连。 -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <!-- Dhizuku 权限声明：让应用出现在 Dhizuku 的应用管理里 -->
     <uses-permission android:name="com.rosan.dhizuku.permission.API" />
 

@@ -184,14 +184,56 @@ object PerfRunner {
         )
     }
 
-    /** 不同指令耗时差异很大（TRIM / VACUUM / force-stop 批量都很慢），超时按项给。 */
-    private fun commandTimeout(item: PerfItem): Int = when {
-        item.id.contains("vacuum") -> 120
-        item.id.contains("fstrim") -> 90
-        item.id.contains("kill_bg") || item.id.contains("kill_background") -> 45
-        item.id.contains("trim_caches") -> 40
-        else -> 20
+    /**
+     * 不同指令耗时差异很大（TRIM / VACUUM / force-stop 批量都很慢），超时按项给。
+     * [PerfItem.timeoutMs] 显式声明时优先（[UniversalTuning] 的长耗时项都声明了）。
+     */
+    private fun commandTimeout(item: PerfItem): Int {
+        if (item.timeoutMs > 0) return (item.timeoutMs / 1000).coerceAtLeast(5)
+        return when {
+            item.id.contains("vacuum") -> 120
+            item.id.contains("fstrim") -> 90
+            item.id.contains("kill_bg") || item.id.contains("kill_background") -> 45
+            item.id.contains("trim_caches") -> 40
+            item.id.contains("dexopt") || item.id.contains("compile") -> 600
+            item.id.contains("kill_background_all") -> 45
+            else -> 20
+        }
     }
+
+    // ------------------------------------------------------------ 机型适用性识别
+
+    /**
+     * 自动识别机型后的**适用性结论**（不伪造结论，拿不到的信息一律标 unknown）。
+     *
+     * 判断依据全部来自 [loadDeviceInfo] 真实读到的字段：
+     * - 品牌：识别到具体品牌 → 该品牌专属项可用；识别不出（generic）→ 只有通用项可用；
+     * - SoC 厂商：qualcomm / mediatek / samsung / google / hisilicon / unisoc 归一化后，
+     *   只有对应厂商限定的项才标记可用；厂商读不到 → 全部厂商限定项标记"无法确认"；
+     * - SDK：低于 [PerfItem.minSdk] → 接口不存在；高于 [PerfItem.maxSdk] → 已移除；
+     * - 权限：需要 root 而无 root → 不可用；需要 Shizuku 而 shizuku/root/Dhizuku 全无 → 不可用。
+     *
+     * @param includeBrandSpecific 是否把品牌专属项一起纳入结论（默认 true）。
+     */
+    fun applicability(
+        info: PerfDeviceInfo,
+        includeBrandSpecific: Boolean = true
+    ): List<UniversalTuning.ApplicabilityNote> =
+        UniversalTuning.applicability(info, BrandDatabase.itemsFor(info.brandId, includeBrandSpecific))
+
+    /** 当前设备上"确实可用"的项（权限 + SDK + 品牌 + SoC 全部满足）。 */
+    fun applicableItems(info: PerfDeviceInfo, includeBrandSpecific: Boolean = true): List<PerfItem> =
+        UniversalTuning.applicableItems(info, BrandDatabase.itemsFor(info.brandId, includeBrandSpecific))
+
+    /**
+     * 当前设备上"因为缺少提权而暂时不可用"的项及其原因。
+     * 用于界面明确列出"哪些项需要提权、现在为什么跑不了"。
+     */
+    fun blockedByPermission(info: PerfDeviceInfo): List<Pair<PerfItem, UniversalTuning.ApplicabilityNote>> =
+        UniversalTuning.blockedByPermission(info)
+
+    /** 一行机型识别与适用性摘要（内容全部来自真实读数）。 */
+    fun applicabilitySummary(info: PerfDeviceInfo): String = UniversalTuning.summary(info)
 
     // ------------------------------------------------------------ 体检
 
@@ -296,7 +338,11 @@ object PerfRunner {
 
         // ---- 4. 性能相关设置（逐条真实验证） ----
         onProgress(4, totalPhases, AppStrings.get("inspect_group_perf"))
-        val perfItems = BrandDatabase.genericItems.filter { it.verifyCommand != null || it.requiresPermission != "none" }
+        // 覆盖全部通用项：有 verifyCommand 的做真实验证；没有验证命令的只做权限/适用性判定，
+        // 不执行任何写操作，避免体检本身改动系统。品牌专属项在下个分组单独处理。
+        val perfItems = BrandDatabase.universalItems
+        val applicability = UniversalTuning.applicability(info, perfItems)
+            .associateBy { it.itemId ?: it.scope }
         val perfResults = ArrayList<InspectResult>()
         perfItems.forEach { item ->
             val needsRoot = item.requiresPermission == "root"
@@ -306,9 +352,26 @@ object PerfRunner {
                 needsShizuku -> info.hasShizuku || info.hasRoot || info.isDhizukuActive
                 else -> true
             }
+            val note = applicability[item.id]
             val verify = item.verifyCommand
-            if (verify != null && permitted) {
-                val r = try { ADBTools.execPerfCommand(verify, timeout = 10) } catch (e: Exception) {
+            // 适用性优先：SDK 太旧 / SoC 不符 / 品牌不符 → 明确判"本机不适用"，不假装可用。
+            val notApplicable = note != null && (
+                    note.state == UniversalTuning.STATE_SDK_OLDER ||
+                            note.state == UniversalTuning.STATE_SDK_NEWER ||
+                            note.state == UniversalTuning.STATE_SOC_MISMATCH ||
+                            note.state == UniversalTuning.STATE_BRAND_ONLY
+                    )
+            if (notApplicable && note != null) {
+                perfResults += InspectResult(
+                    item.id, "inspect_group_perf", "SKIP",
+                    "${AppStrings.get(note.reasonKey)} · ${note.detail}",
+                    fixCommand = null,
+                    perfItemId = item.id
+                )
+            } else if (verify != null && permitted) {
+                // 体检要逐条跑全部通用项（含 UniversalTuning 的 20 条）的探测命令，
+                // 单条超时必须短，否则整轮体检会拖到几分钟。
+                val r = try { ADBTools.execPerfCommand(verify, timeout = 6) } catch (e: Exception) {
                     com.example.adbtoolbox.common.CommandResult("", e.message ?: "error", -1)
                 }
                 val text = (r.output + r.error).trim()
@@ -325,7 +388,13 @@ object PerfRunner {
                 perfResults += InspectResult(
                     item.id, "inspect_group_perf",
                     if (permitted) "OK" else "FAIL",
-                    if (permitted) AppStrings.get("available") else AppStrings.get("no_permission_hint"),
+                    when {
+                        !permitted -> AppStrings.get("no_permission_hint")
+                        note != null && note.state == UniversalTuning.STATE_UNKNOWN ->
+                            AppStrings.get("unknown") + " · " + note.detail
+                        item.uncertain -> AppStrings.get("available") + " · " + AppStrings.get("unknown")
+                        else -> AppStrings.get("available")
+                    },
                     fixCommand = if (permitted) null else item.command,
                     perfItemId = item.id
                 )

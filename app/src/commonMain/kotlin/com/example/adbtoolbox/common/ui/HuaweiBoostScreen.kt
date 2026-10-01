@@ -496,6 +496,7 @@ fun HuaweiBoostScreen(
                             total = groupMethods.size,
                             expanded = expandedGroups[group.id] == true,
                             contentColor = contentColor,
+                            backdrop = backdrop,
                             onToggle = { expandedGroups[group.id] = expandedGroups[group.id] != true }
                         )
                         if (expandedGroups[group.id] == true) {

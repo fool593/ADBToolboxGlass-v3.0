@@ -1,7 +1,5 @@
 package com.example.adbtoolbox.common.ui
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,6 +25,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.compose.ui.Alignment
@@ -58,7 +57,8 @@ fun SettingsScreen(
 ) {
     var brightness by remember { mutableFloatStateOf(128f) }
     var screenTimeout by remember { mutableIntStateOf(30) }
-    var shizukuAvailable by remember { mutableStateOf(false) }
+    // Shizuku 状态显示在下面的"Shizuku 服务"卡片里，直接读全局三态
+    // （MainContent 统一检测 + 回到前台/授权回调后刷新），本页不再自己查一次。
     var dhizukuInstalled by remember { mutableStateOf(false) }
     var dhizukuActive by remember { mutableStateOf(false) }
     var dhizukuMessage by remember { mutableStateOf("") }
@@ -68,7 +68,6 @@ fun SettingsScreen(
     LaunchedEffect(Unit) {
         brightness = ADBTools.getBrightness().toFloat()
         screenTimeout = ADBTools.getScreenTimeout()
-        shizukuAvailable = ADBTools.isShizukuAvailable()
         dhizukuInstalled = ADBTools.isDhizukuInstalled()
         dhizukuActive = ADBTools.isDhizukuActive()
     }
@@ -248,15 +247,18 @@ fun SettingsScreen(
                         Modifier
                             .fillMaxWidth()
                             .height(62f.dp)
-                            .clip(RoundedCornerShape(14f.dp))
-                            .background(
-                                if (selected) palette.accent.copy(alpha = 0.18f)
-                                else contentColor.copy(alpha = 0.06f)
+                            // 原先是静态底色 + 无反馈点击：改成液态玻璃可点项，尺寸/内边距不变，
+                            // 选中/未选中底色浓度按 liquidGlassItem 的 alpha * 0.45f 换算保留
+                            .liquidGlassItem(
+                                backdrop = backdrop,
+                                corner = 14.dp,
+                                tint = if (selected) palette.accent.copy(alpha = (0.18f / 0.45f).coerceAtMost(1f))
+                                else contentColor.copy(alpha = (0.06f / 0.45f).coerceAtMost(1f)),
+                                onClick = {
+                                    AppSettings.themeChosenByUser = true
+                                    AppTheme.apply(palette.id)
+                                }
                             )
-                            .clickable {
-                                AppSettings.themeChosenByUser = true
-                                AppTheme.apply(palette.id)
-                            }
                             .padding(horizontal = 12f.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -342,12 +344,28 @@ fun SettingsScreen(
                 BasicText(AppStrings.get("shizuku_service"), style = TextStyle(contentColor, 18f.sp, androidx.compose.ui.text.font.FontWeight.Medium))
                 Spacer(Modifier.height(8f.dp))
                 BasicText(
-                    if (shizukuAvailable) AppStrings.get("shizuku_connected") else AppStrings.get("shizuku_disconnected"),
-                    style = TextStyle(if (shizukuAvailable) Color(0xFF34C759) else Color(0xFFFF9500), 14f.sp)
+                    // 三态如实显示：服务在跑但没授权时提示去授权，而不是笼统说"未连接"
+                    when (AppCache.shizukuState.value) {
+                        "granted" -> AppStrings.get("shizuku_connected")
+                        "no_permission" -> AppStrings.get("shizuku_no_permission")
+                        else -> AppStrings.get("shizuku_disconnected")
+                    },
+                    style = TextStyle(
+                        if (AppCache.shizukuState.value == "granted") Color(0xFF34C759) else Color(0xFFFF9500),
+                        14f.sp
+                    )
                 )
                 Spacer(Modifier.height(12f.dp))
                 LiquidButton(
-                    onClick = { ADBTools.requestShizukuPermission() },
+                    onClick = {
+                        ADBTools.requestShizukuPermission()
+                        // 授权结果主要由 MainActivity 的 Shizuku 回调触发刷新；
+                        // 这里再兜底延迟查一次，覆盖"回调没触发、用户只是在系统页里授权"的情况
+                        dhizukuScope.launch {
+                            delay(1200)
+                            AppCache.requestShizukuRefresh()
+                        }
+                    },
                     backdrop = backdrop,
                     modifier = Modifier.height(44f.dp),
                     tint = Color(0xFF0088FF)

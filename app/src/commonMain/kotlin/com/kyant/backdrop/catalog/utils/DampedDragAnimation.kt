@@ -54,6 +54,15 @@ class DampedDragAnimation(
 
     private val velocityTracker = VelocityTracker()
 
+    /**
+     * 本次手势是否真正拖动过（累计位移超过 touch slop）。
+     *
+     * 供手势接线区分「单击」与「拖动」：抬手时仍为 false 就说明只是单击。
+     * 只在手势回调里读写，不参与重组，所以用普通字段而不是 Compose 状态。
+     */
+    var hasDragged: Boolean = false
+        private set
+
     val value: Float get() = valueAnimation.value
     val progress: Float get() = (value - valueRange.start) / (valueRange.endInclusive - valueRange.start)
     val targetValue: Float get() = valueAnimation.targetValue
@@ -63,8 +72,14 @@ class DampedDragAnimation(
     val velocity: Float get() = velocityAnimation.value
 
     val modifier: Modifier = Modifier.pointerInput(Unit) {
+        // inspectDragGestures 只要位置有任何变化（哪怕 1px 抖动）就会回调 onDrag，
+        // 所以「算不算拖动」必须自己按 touch slop 判定，不能把任何 onDrag 都当成拖动。
+        val touchSlop = viewConfiguration.touchSlop
+        var accumulatedDrag = Offset.Zero
         inspectDragGestures(
             onDragStart = { down ->
+                hasDragged = false
+                accumulatedDrag = Offset.Zero
                 onDragStarted(down.position)
                 press()
             },
@@ -77,6 +92,10 @@ class DampedDragAnimation(
                 release()
             }
         ) { change, dragAmount ->
+            if (!hasDragged) {
+                accumulatedDrag += dragAmount
+                hasDragged = accumulatedDrag.getDistance() > touchSlop
+            }
             onDrag(size, dragAmount)
         }
     }

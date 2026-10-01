@@ -2,8 +2,6 @@ package com.kyant.backdrop.catalog.components
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.EaseOut
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.core.spring
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -53,6 +51,7 @@ import com.kyant.backdrop.highlight.Highlight
 import com.kyant.backdrop.shadow.InnerShadow
 import com.kyant.backdrop.shadow.Shadow
 import com.example.adbtoolbox.common.GlassEffectConfig
+import com.example.adbtoolbox.common.theme.AppMotion
 import com.kyant.shapes.Capsule
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -124,7 +123,7 @@ fun LiquidBottomTabs(
                     animationScope.launch {
                         offsetAnimation.animateTo(
                             0f,
-                            spring(1f, 300f, 0.5f)
+                            AppMotion.releaseSpring
                         )
                     }
                 },
@@ -154,14 +153,14 @@ fun LiquidBottomTabs(
                 }
         }
 
-        // 长按导航栏胶囊边缘发光检测：按住 350ms 触发
+        // 长按导航栏胶囊边缘发光检测：按住 AppMotion.longPressDelayMs 触发
         var longPressActive by remember { mutableStateOf(false) }
         val longPressAnim = remember { Animatable(0f) }
         LaunchedEffect(dampedDragAnimation) {
             snapshotFlow { dampedDragAnimation.pressProgress }
                 .collectLatest { progress ->
                     if (progress > 0.5f) {
-                        delay(350)
+                        delay(AppMotion.longPressDelayMs)
                         longPressActive = true
                     } else {
                         longPressActive = false
@@ -169,8 +168,8 @@ fun LiquidBottomTabs(
                 }
         }
         LaunchedEffect(longPressActive) {
-            if (longPressActive) longPressAnim.animateTo(1f, tween(220))
-            else longPressAnim.animateTo(0f, tween(320))
+            if (longPressActive) longPressAnim.animateTo(1f, AppMotion.longPressIn)
+            else longPressAnim.animateTo(0f, AppMotion.longPressOut)
         }
 
         val interactiveHighlight = remember(animationScope) {

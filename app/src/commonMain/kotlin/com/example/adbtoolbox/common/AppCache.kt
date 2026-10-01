@@ -61,9 +61,30 @@ object AppCache {
     // Dhizuku 使用开关（默认开启，激活后自动使用 Dhizuku 权限执行命令）
     val useDhizuku = mutableStateOf(true)
 
+    // ---------------- Shizuku 连接状态（全局唯一数据源） ----------------
+    // 以前每个页面各自在 LaunchedEffect(Unit) 里查一次 isShizukuAvailable()，只查一次：
+    // 如果进页面时 Shizuku 还没起、或者用户在别处才授权成功，界面就永远显示"未连接"，
+    // 只能杀进程重进才恢复。现在统一放这里，谁都可以请求刷新，所有页面同步。
+    val shizukuAvailable = mutableStateOf(false)
+    /** Shizuku 三态：granted / no_permission / not_running / unknown（还没查过） */
+    val shizukuState = mutableStateOf("unknown")
+    /** 是否已经真正查询过一次（用于区分"未连接"和"还没查"） */
+    val shizukuChecked = mutableStateOf(false)
+    /** 刷新请求计数：任何地方 +1 即可请求重新检测 Shizuku（由 MainContent 统一执行） */
+    val shizukuRefreshTick = mutableStateOf(0)
+
+    fun requestShizukuRefresh() {
+        shizukuRefreshTick.value++
+    }
+
     // 临时 Root 提权包文件选择
     val selectedTempRootPath = mutableStateOf<String?>(null)
     val pickTempRootFileTrigger = mutableStateOf(0)
+
+    // Root 模块（Magisk / KernelSU）安装包选择：触发器由 RootModuleScreen 的"安装"按钮置位，
+    // MainActivity 拉起文件选择器后把路径写进 selectedRootModulePath
+    val selectedRootModulePath = mutableStateOf<String?>(null)
+    val pickRootModuleFileTrigger = mutableStateOf(0)
 
     fun getPermissions(packageName: String): List<PermissionInfoData>? {
         return permissionCache[packageName]

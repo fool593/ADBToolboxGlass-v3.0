@@ -34,6 +34,13 @@ import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.tanh
 
+/**
+ * 液态玻璃按钮。
+ *
+ * 动效约定：按下/抬起的缩放与高光全部由 [InteractiveHighlight] 的 pressProgress 驱动，
+ * 其时序已统一到全局动效规范 AppMotion（common/theme/AppMotion.kt）。
+ * 本文件不写任何 tween/spring 字面量，避免同一颗按钮出现两套时序；如需调整手感请改 AppMotion。
+ */
 @Composable
 fun LiquidButton(
     onClick: () -> Unit,

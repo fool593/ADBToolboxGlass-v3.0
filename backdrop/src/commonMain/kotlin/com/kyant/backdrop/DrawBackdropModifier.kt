@@ -39,7 +39,17 @@ import com.kyant.backdrop.shadow.Shadow
 import com.kyant.backdrop.shadow.ShadowElement
 
 private val DefaultHighlight = { Highlight.Default }
-private val DefaultShadow = { Shadow.Default }
+
+/**
+ * 默认**不画投影**。
+ *
+ * 原来这里返回 [Shadow.Default]（纯黑 10% + 24dp 模糊 + 向下偏 4dp）。这个默认值让所有没显式传
+ * `shadow` 的调用点都自动获得一圈黑色投影——在浅色壁纸上，玻璃边缘看起来就是一条"暗边/黑边"，
+ * 而且糊在卡片下面。用户要的是**亮边**，所以默认改为不画；确实想要投影的地方显式传 shadow 即可
+ * （LiquidToggle / LiquidSlider / LiquidBottomTabs / GlassCard 等都是显式传的，不受影响）。
+ */
+private val DefaultShadow: (() -> Shadow?) = { null }
+
 private val DefaultOnDrawBackdrop: DrawScope.(DrawScope.() -> Unit) -> Unit = { it() }
 
 fun Modifier.drawPlainBackdrop(

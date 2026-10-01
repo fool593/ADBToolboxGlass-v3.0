@@ -2,6 +2,14 @@ package com.example.adbtoolbox.common
 
 expect object ADBTools {
     fun isShizukuAvailable(): Boolean
+
+    /**
+     * Shizuku 三态，用于界面如实显示当前状态（避免"服务已启动但没授权"被显示成"未连接"）：
+     * - `granted`      ：服务在跑且已授权给本应用，可以真正执行命令
+     * - `no_permission`：服务在跑，但本应用还没拿到授权（界面应提示去授权，而不是说未连接）
+     * - `not_running`  ：服务没起来 / 未安装 / 调用异常
+     */
+    fun getShizukuState(): String
     fun requestShizukuPermission()
     fun getShizukuDiagnostics(): String
     fun execCommand(command: String, timeout: Int = 15): CommandResult

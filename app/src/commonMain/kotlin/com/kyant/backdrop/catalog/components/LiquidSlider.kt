@@ -1,7 +1,6 @@
 package com.kyant.backdrop.catalog.components
 
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -48,6 +47,7 @@ import com.kyant.backdrop.effects.blur
 import com.kyant.backdrop.effects.lens
 import com.kyant.backdrop.highlight.Highlight
 import com.example.adbtoolbox.common.GlassEffectConfig
+import com.example.adbtoolbox.common.theme.AppMotion
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import com.kyant.backdrop.shadow.InnerShadow
@@ -118,14 +118,14 @@ fun LiquidSlider(
                 }
         }
 
-        // 长按边缘发光检测：按住 350ms 触发
+        // 长按边缘发光检测：按住 AppMotion.longPressDelayMs 触发
         var longPressActive by remember { mutableStateOf(false) }
         val longPressAnim = remember { Animatable(0f) }
         LaunchedEffect(dampedDragAnimation) {
             snapshotFlow { dampedDragAnimation.pressProgress }
                 .collectLatest { progress ->
                     if (progress > 0.5f) {
-                        delay(350)
+                        delay(AppMotion.longPressDelayMs)
                         longPressActive = true
                     } else {
                         longPressActive = false
@@ -133,8 +133,8 @@ fun LiquidSlider(
                 }
         }
         LaunchedEffect(longPressActive) {
-            if (longPressActive) longPressAnim.animateTo(1f, tween(220))
-            else longPressAnim.animateTo(0f, tween(320))
+            if (longPressActive) longPressAnim.animateTo(1f, AppMotion.longPressIn)
+            else longPressAnim.animateTo(0f, AppMotion.longPressOut)
         }
 
         Box(Modifier.layerBackdrop(trackBackdrop)) {

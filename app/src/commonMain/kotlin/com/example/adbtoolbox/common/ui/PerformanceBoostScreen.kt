@@ -215,6 +215,40 @@ fun PerformanceBoostScreen(
                                 "${if (info.maxRefreshRate > 1f) info.maxRefreshRate.toInt() else 0} Hz",
                         contentColor
                     )
+
+                    // ---- 自动识别机型：适用性判断（真实读数，不是猜的）----
+                    Spacer(Modifier.height(8.dp))
+                    BasicText(
+                        AppStrings.get("apply_applicability"),
+                        style = TextStyle(contentColor, 13f.sp, FontWeight.Medium)
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    BasicText(
+                        PerfRunner.applicabilitySummary(info),
+                        style = TextStyle(contentColor.copy(alpha = 0.65f), 11f.sp)
+                    )
+                    // 因缺少提权而跑不了的项如实列出来，避免用户点了没反应却不知道为什么
+                    val blocked = remember(info) { PerfRunner.blockedByPermission(info) }
+                    if (blocked.isNotEmpty()) {
+                        Spacer(Modifier.height(6.dp))
+                        BasicText(
+                            "${AppStrings.get("apply_blocked")}：${blocked.size}",
+                            style = TextStyle(Color(0xFFFF9500), 11f.sp)
+                        )
+                        blocked.take(4).forEach { (blockedItem, note) ->
+                            BasicText(
+                                "· ${AppStrings.get(blockedItem.nameKey)}（${note.detail}）",
+                                style = TextStyle(contentColor.copy(alpha = 0.55f), 10f.sp)
+                            )
+                        }
+                        if (blocked.size > 4) {
+                            BasicText(
+                                "· …",
+                                style = TextStyle(contentColor.copy(alpha = 0.55f), 10f.sp)
+                            )
+                        }
+                    }
+
                     Spacer(Modifier.height(8.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         PerfBadge(

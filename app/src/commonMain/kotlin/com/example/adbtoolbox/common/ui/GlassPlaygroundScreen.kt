@@ -371,19 +371,14 @@ fun GlassPlaygroundScreen(
                         Box(
                             modifier = Modifier
                                 .size(36f.dp)
-                                .clip(RoundedRectangle(18f.dp))
-                                .clickable {
-                                    GlassEffectConfig.setColor(color)
-                                }
-                                .drawBackdrop(
+                                // 原先是静态玻璃色块（无按压反馈）：换成液态玻璃可点项，保留原模糊/折射强度与圆角
+                                .liquidGlassItem(
                                     backdrop = backdrop,
-                                    shape = { RoundedRectangle(18f.dp) },
-                                    effects = {
-                                        vibrancy()
-                                        blur(4f.dp.toPx())
-                                        lens(2f.dp.toPx(), 4f.dp.toPx())
-                                    },
-                                    highlight = { Highlight.Plain }
+                                    corner = 18f.dp,
+                                    blurPx = 4f,
+                                    lensIn = 2f,
+                                    lensOut = 4f,
+                                    onClick = { GlassEffectConfig.setColor(color) }
                                 ),
                             contentAlignment = Alignment.Center
                         ) {

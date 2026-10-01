@@ -849,6 +849,16 @@ object BrandDatabase {
         )
     )
 
+    /**
+     * 通用指令集 = 早期 AOSP 基础项 + [UniversalTuning] 的全机型深度项。
+     *
+     * 这里做的是"合并"而不是复制：两个列表的 id 互不重叠（[UniversalTuning] 全部
+     * 以 `bg_` / `cpu_` / `mem_` / `power_` / `storage_` / `render_` / `net_` / `display_`
+     * 开头），合并后按 id 去重，保证同一台设备不会出现重复条目。
+     */
+    val universalItems: List<PerfItem> =
+        (genericItems + UniversalTuning.items).distinctBy { it.id }
+
     /** 品牌专属项集合（generic 品牌返回空）。 */
     fun brandSpecificItems(brandId: String): List<PerfItem> = when (brandId) {
         BRAND_XIAOMI -> xiaomiItems
@@ -870,7 +880,7 @@ object BrandDatabase {
      * [includeBrandSpecific] 为 false 时只返回通用项（用于规避品牌指令误判）。
      */
     fun itemsFor(brandId: String, includeBrandSpecific: Boolean = true): List<PerfItem> {
-        val list = genericItems.toMutableList()
+        val list = universalItems.toMutableList()
         if (includeBrandSpecific) list.addAll(brandSpecificItems(brandId))
         return list.sortedBy { it.order }
     }

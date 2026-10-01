@@ -1,7 +1,6 @@
 package com.example.adbtoolbox.common.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -267,6 +266,7 @@ fun PhoneInspectorScreen(
                                 detail = res.detail,
                                 fixResult = fixResults[res.id],
                                 contentColor = contentColor,
+                                backdrop = backdrop,
                                 onFix = res.fixCommand?.let { cmd ->
                                     {
                                         if (cmd == "__FIX_REFRESH__") {
@@ -388,6 +388,7 @@ private fun InspectResultRow(
     detail: String,
     fixResult: String?,
     contentColor: Color,
+    backdrop: Backdrop,
     onFix: (() -> Unit)?
 ) {
     val (statusText, color) = when (status) {
@@ -429,9 +430,14 @@ private fun InspectResultRow(
             Spacer(Modifier.height(8.dp))
             Box(
                 Modifier
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(AppTheme.accent.copy(alpha = 0.9f))
-                    .clickable(onClick = onFix)
+                    // 原先是静态强调色块 + 无反馈点击：改成液态玻璃可点项，尺寸/内边距不变
+                    // （liquidGlassItem 按 tint.alpha * 0.45f 着色，tint 上限 1f，故等效填充约 0.45）
+                    .liquidGlassItem(
+                        backdrop = backdrop,
+                        corner = 10.dp,
+                        tint = AppTheme.accent.copy(alpha = (0.9f / 0.45f).coerceAtMost(1f)),
+                        onClick = onFix
+                    )
                     .padding(horizontal = 14.dp, vertical = 7.dp)
             ) {
                 BasicText(

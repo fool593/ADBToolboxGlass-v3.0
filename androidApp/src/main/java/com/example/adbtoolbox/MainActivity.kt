@@ -24,6 +24,18 @@ class MainActivity : ComponentActivity() {
             } else {
                 Toast.makeText(this, "ADB permission denied", Toast.LENGTH_LONG).show()
             }
+            // 授权结果出来后立刻刷新全局 Shizuku 状态，首页/设置页马上就能显示"已连接"
+            com.example.adbtoolbox.common.AppCache.requestShizukuRefresh()
+        } catch (e: Exception) {
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // 用户很可能刚切到 Shizuku 里启动服务或授权，再切回本应用 —— 回到前台必须重查一次，
+        // 否则界面会一直停在"未连接"（这正是用户反馈的"连上了却不显示"）
+        try {
+            com.example.adbtoolbox.common.AppCache.requestShizukuRefresh()
         } catch (e: Exception) {
         }
     }
@@ -194,6 +206,42 @@ class MainActivity : ComponentActivity() {
                 if (tempRootTrigger > 0) {
                     AppCache.pickTempRootFileTrigger.value = 0
                     tempRootPicker.launch("application/zip")
+                }
+            }
+
+            // Root 模块（Magisk / KernelSU）安装包选择器：与临时 Root 同一套路，
+            // 先把选中的 zip 复制到应用私有目录，再由 RootModuleManager 安装
+            val rootModulePicker = rememberLauncherForActivityResult(
+                contract = ActivityResultContracts.GetContent()
+            ) { uri: Uri? ->
+                uri?.let { selectedUri ->
+                    try {
+                        val moduleDir = java.io.File(filesDir, "root_module")
+                        if (!moduleDir.exists()) moduleDir.mkdirs()
+                        // 每次选择都会复制成一个新文件（路径改变才能重新触发安装），
+                        // 所以这里先清掉上一次的缓存 zip，避免堆在私有目录里越积越多
+                        moduleDir.listFiles()?.forEach { it.delete() }
+                        val cacheFile = java.io.File(moduleDir, "module_${System.currentTimeMillis()}.zip")
+                        contentResolver.openInputStream(selectedUri)?.use { input ->
+                            cacheFile.outputStream().use { output ->
+                                input.copyTo(output)
+                            }
+                        }
+                        if (cacheFile.exists() && cacheFile.length() > 0) {
+                            AppCache.selectedRootModulePath.value = cacheFile.absolutePath
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+            }
+
+            // 观察 Root 模块选择触发器
+            val rootModuleTrigger by androidx.compose.runtime.rememberUpdatedState(AppCache.pickRootModuleFileTrigger.value)
+            LaunchedEffect(rootModuleTrigger) {
+                if (rootModuleTrigger > 0) {
+                    AppCache.pickRootModuleFileTrigger.value = 0
+                    rootModulePicker.launch("application/zip")
                 }
             }
 

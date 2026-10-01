@@ -22,5 +22,7 @@ enum class ADBDestination {
     /** v2.8 手机体检（指令可用性检查员） */
     PhoneInspector,
     /** v2.8 华为深度优化（HarmonyOS / EMUI 专属） */
-    HuaweiBoost
+    HuaweiBoost,
+    /** v2.8 已安装 Root 模块管理（Magisk / KernelSU：列表、启停、卸载、执行 action.sh） */
+    RootModules
 }

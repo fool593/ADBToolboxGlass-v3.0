@@ -1,7 +1,6 @@
 package com.example.adbtoolbox.common.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -125,17 +124,19 @@ fun RootToolScreen(
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .liquidGlassItem(backdrop = backdrop, corner = 16.dp, tint = Color(0xFFAF52DE))
+                                    // 整行都是「展开/收起详情」的点按区：onClick 交给 liquidGlassItem，按压有光斑/缩放/边缘高光
+                                    .liquidGlassItem(
+                                        backdrop = backdrop,
+                                        corner = 16.dp,
+                                        tint = Color(0xFFAF52DE),
+                                        onClick = { expandedMethodId = if (isExpanded) null else method.id }
+                                    )
                                     .padding(vertical = 10.dp, horizontal = 8.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 // 左边：方法名称和简介（点击展开详情）
                                 Column(
-                                    Modifier
-                                        .weight(1f)
-                                        .clickable {
-                                            expandedMethodId = if (isExpanded) null else method.id
-                                        }
+                                    Modifier.weight(1f)
                                 ) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         BasicText(
@@ -355,18 +356,15 @@ fun RootToolScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
-                                .then(
-                                    if (isSelected) Modifier
-                                        .drawBackdrop(
-                                            backdrop = backdrop,
-                                            shape = { RoundedRectangle(12.dp) },
-                                            effects = { blur(8.dp.toPx()) },
-                                            onDrawSurface = { drawRect(Color(0xFFAF52DE).copy(alpha = 0.3f)) }
-                                        )
-                                    else Modifier
+                                // 原来是「选中态才会有的一层静态色块 + 无反馈点击」：改成液态玻璃可点项，
+                                // 选中态沿用原来的紫色蒙层（liquidGlassItem 按 tint.alpha * 0.45f 着色）
+                                .liquidGlassItem(
+                                    backdrop = backdrop,
+                                    corner = 12.dp,
+                                    tint = if (isSelected) Color(0xFFAF52DE).copy(alpha = (0.3f / 0.45f).coerceAtMost(1f))
+                                    else Color.Unspecified,
+                                    onClick = { selectedMethod = method }
                                 )
-                                .clickable { selectedMethod = method }
                                 .padding(12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {

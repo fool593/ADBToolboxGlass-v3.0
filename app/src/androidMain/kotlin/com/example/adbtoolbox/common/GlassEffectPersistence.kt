@@ -145,22 +145,33 @@ actual object GlassEffectPersistence {
         if (prefs.contains("app_language")) AppSettings.language = prefs.getString("app_language", "zh") ?: "zh"
         if (prefs.contains("app_dark_mode")) AppSettings.isDarkMode = prefs.getBoolean("app_dark_mode", true)
 
-        // 主题：先恢复用户的选择；如果用户从未选过主题、也没有任何已保存的玻璃配色
-        // （即全新安装），且当前处于国庆档期（10 月 1 日—7 日），首次启动自动套用国庆主题。
-        // 老版本升级上来的用户（已有 glassColor 等配置）不会被改动配色。
+        // 主题：先把已选主题的参数写进 GlassEffectConfig，再让下面逐项从 prefs 恢复。
+        // 顺序很关键：
+        //   - 用户手动调过的项，prefs 里有值 → 恢复时覆盖主题值 → 用户的手动调整优先；
+        //   - 用户没调过的项，prefs 里没有对应值 → 保留主题值。
+        // 修复的真实问题：原来只恢复 themeId，指望"prefs 里存的正好是主题那套值"。
+        // 一旦两者不一致（旧版本升级上来的配置、上一次保存的时机不对等），重启后就会
+        // 出现"主题明明选中了、界面却没变"，必须回设置页重新点一次主题才生效。
         val savedTheme = prefs.getString("app_theme", null)
         AppSettings.themeChosenByUser = prefs.getBoolean("app_theme_chosen", false)
+        var autoAppliedTheme = false
         if (savedTheme != null) {
             AppSettings.themeId = savedTheme
+            runCatching {
+                com.example.adbtoolbox.common.theme.AppTheme.apply(savedTheme, persist = false)
+            }
         } else if (!AppSettings.themeChosenByUser && !prefs.contains("glassColor")) {
+            // 全新安装 + 国庆档期（10 月 1 日—7 日）：自动套用国庆主题
             val cal = java.util.Calendar.getInstance()
             val month = cal.get(java.util.Calendar.MONTH) + 1
             val day = cal.get(java.util.Calendar.DAY_OF_MONTH)
             if (com.example.adbtoolbox.common.theme.AppTheme.isNationalDaySeason(month, day)) {
-                // persist=false：此刻 prefs 尚未写入，直接落盘会被下面的读取逻辑覆盖，统一在最后 saveAll()
-                com.example.adbtoolbox.common.theme.AppTheme.apply(
-                    com.example.adbtoolbox.common.theme.AppTheme.NATIONAL_DAY, persist = false
-                )
+                runCatching {
+                    com.example.adbtoolbox.common.theme.AppTheme.apply(
+                        com.example.adbtoolbox.common.theme.AppTheme.NATIONAL_DAY, persist = false
+                    )
+                }
+                autoAppliedTheme = true
             }
         }
 
@@ -285,6 +296,12 @@ actual object GlassEffectPersistence {
             } else {
                 AppCache.splashVideoPath.value = null
             }
+        }
+
+        // 自动套用的主题这次就落盘，避免"只有本次会话有效"：
+        // 落盘后下次启动走 savedTheme 分支，主题依然稳定生效。
+        if (autoAppliedTheme) {
+            runCatching { saveAll() }
         }
     }
 

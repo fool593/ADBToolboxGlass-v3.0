@@ -2,7 +2,6 @@ package com.example.adbtoolbox.common.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -78,18 +77,24 @@ internal fun hwFormat(template: String, vararg args: Any?): String {
 
 /** 勾选框。 */
 @Composable
-fun HwCheckBox(checked: Boolean, onToggle: () -> Unit) {
+fun HwCheckBox(checked: Boolean, onToggle: () -> Unit, backdrop: Backdrop) {
     Box(
         Modifier
             .size(20.dp)
-            .clip(RoundedCornerShape(5.dp))
-            .background(if (checked) HwTheme.accent else Color.White.copy(alpha = 0.14f))
+            // 原先是静态底色 + 无反馈点击：改成液态玻璃可点项，保留原选中色/未选中底色
+            // （liquidGlassItem 按 tint.alpha * 0.45f 着色，这里除以 0.45f 还原原来浓度）
+            .liquidGlassItem(
+                backdrop = backdrop,
+                corner = 5.dp,
+                tint = if (checked) HwTheme.accent
+                else Color.White.copy(alpha = (0.14f / 0.45f).coerceAtMost(1f)),
+                onClick = onToggle
+            )
             .border(
                 1.dp,
                 if (checked) HwTheme.accent else Color.White.copy(alpha = 0.24f),
                 RoundedCornerShape(5.dp)
-            )
-            .clickable(onClick = onToggle),
+            ),
         contentAlignment = Alignment.Center
     ) {
         if (checked) BasicText("✓", style = TextStyle(HwTheme.onAccent, 12.sp, FontWeight.Bold))
@@ -184,12 +189,14 @@ fun HwGroupHeader(
     total: Int,
     expanded: Boolean,
     contentColor: Color,
+    backdrop: Backdrop,
     onToggle: () -> Unit
 ) {
     Row(
         Modifier
             .fillMaxWidth()
-            .clickable(onClick = onToggle),
+            // 原先是纯文字点击区：改成液态玻璃可点项，行高与内边距不变
+            .liquidGlassItem(backdrop = backdrop, corner = 10.dp, onClick = onToggle),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
@@ -245,7 +252,7 @@ fun HwMethodCard(
             .padding(10.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            HwCheckBox(checked = selected, onToggle = onToggle)
+            HwCheckBox(checked = selected, onToggle = onToggle, backdrop = backdrop)
             Spacer(Modifier.width(8.dp))
             Column(Modifier.weight(1f)) {
                 BasicText(

@@ -34,6 +34,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.addOutline
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
@@ -67,7 +68,7 @@ fun HomeScreen(
     onNavigate: (ADBDestination) -> Unit
 ) {
     var deviceInfo by remember { mutableStateOf<DeviceInfoData?>(null) }
-    var shizukuAvailable by remember { mutableStateOf(false) }
+    // Shizuku 状态来自全局单例（MainContent 统一检测），不再本页只查一次
 
     LaunchedEffect(Unit) {
         // 优先从预加载缓存读取，秒开
@@ -82,11 +83,6 @@ fun HomeScreen(
             } catch (e: Exception) {
                 deviceInfo = null
             }
-        }
-        try {
-            shizukuAvailable = withContext(Dispatchers.Default) { ADBTools.isShizukuAvailable() }
-        } catch (e: Exception) {
-            shizukuAvailable = false
         }
     }
 
@@ -104,10 +100,16 @@ fun HomeScreen(
             style = TextStyle(contentColor, 28f.sp, androidx.compose.ui.text.font.FontWeight.Bold)
         )
 
+        // Shizuku 状态：三态如实显示（服务在跑但没授权时提示去授权，而不是笼统说"未连接"）
+        val shizukuState = AppCache.shizukuState.value
         BasicText(
-            if (shizukuAvailable) AppStrings.get("shizuku_connected") else AppStrings.get("shizuku_not_connected"),
+            when (shizukuState) {
+                "granted" -> AppStrings.get("shizuku_connected")
+                "no_permission" -> AppStrings.get("shizuku_no_permission")
+                else -> AppStrings.get("shizuku_not_connected")
+            },
             style = TextStyle(
-                if (shizukuAvailable) Color(0xFF34C759) else Color(0xFFFF9500),
+                if (shizukuState == "granted") Color(0xFF34C759) else Color(0xFFFF9500),
                 14f.sp
             )
         )
@@ -165,6 +167,10 @@ fun HomeScreen(
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12f.dp)) {
             QuickActionButton(backdrop, AppStrings.get("temp_root"), Color(0xFFFF9500), contentColor, Modifier.weight(1f)) { onNavigate(ADBDestination.TempRoot) }
             QuickActionButton(backdrop, AppStrings.get("huawei_boost"), AppTheme.accent, contentColor, Modifier.weight(1f)) { onNavigate(ADBDestination.HuaweiBoost) }
+        }
+        // v2.8 新增：已安装 Root 模块管理（列表/启停/卸载/action.sh）
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12f.dp)) {
+            QuickActionButton(backdrop, AppStrings.get("installed_root_modules"), AppTheme.accentAlt, contentColor, Modifier.weight(1f)) { onNavigate(ADBDestination.RootModules) }
         }
         // v2.8 新增：品牌自适应一键性能加速 + 手机体检（配色跟随当前主题）
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12f.dp)) {
@@ -318,16 +324,17 @@ fun GlassCard(
     val cardShadow: () -> Shadow? = remember(highlight, glowIntensity, glowSize, glowColor) {
         {
             val lp = highlight.longPressProgress
-            // 静止时不画外阴影：卡片原先外面有 clip，阴影本来就被裁掉不可见，白白每帧算一张大图层的模糊
+            // 静止时不画阴影：卡片原先外面有 clip，阴影本来就被裁掉不可见，白白每帧算一张大图层的模糊；
+            // 而且黑色投影糊在卡片下面会让边缘看起来是"暗边"（用户要的是亮边）
             if (lp <= 0.01f) {
                 null
             } else {
-                // 四周外发光光晕，半径由 longPressGlowSize 决定（按住期间半径固定，避免每帧重建大图层）
+                // 长按：只留一圈紧贴边缘的薄发光（半径 4~12dp、透明度上限 0.3），不再往外飘
                 Shadow(
-                    radius = (10f + 22f * glowSize).dp,
+                    radius = (4f + 8f * glowSize).dp,
                     offset = DpOffset.Zero,
                     color = glowColor,
-                    alpha = (0.55f * lp * glowIntensity).coerceIn(0f, 1f)
+                    alpha = (0.30f * lp * glowIntensity).coerceIn(0f, 1f)
                 )
             }
         }
@@ -357,22 +364,25 @@ fun GlassCard(
             // （原来的默认外阴影因此完全不可见，却仍在每帧计算）
             .then(highlight.gestureModifier)
             .drawWithContent {
-                // 边缘高光描边画在最上层：按压时轻微出现，长按按配置发光（用形状 outline 描边，圆角精确贴合）
+                // 边缘高光描边：静息就有一条很淡的亮边，按压/长按按配置加强。
+                // 整条描边裁在卡片形状内部 ⇒ 只贴在玻璃内侧，不会越过轮廓飘到卡片外面。
                 drawContent()
                 val press = highlight.pressProgress
                 val lp = highlight.longPressProgress
-                val alpha = (0.12f * press + 0.88f * lp * glowIntensity).coerceIn(0f, 1f)
-                if (alpha > 0.01f && size.width > 0f && size.height > 0f) {
+                val rimAlpha = (0.10f + 0.16f * press + 0.74f * lp * glowIntensity).coerceIn(0f, 1f)
+                if (size.width > 0f && size.height > 0f) {
                     rimPath.reset()
                     rimPath.addOutline(cardShape.createOutline(size, layoutDirection, this))
                     val strokeWidth =
-                        (0.8f.dp.toPx() + 1.8f.dp.toPx() * glowSize * (0.35f + 0.65f * lp))
+                        (0.9f.dp.toPx() + 1.6f.dp.toPx() * glowSize * (0.35f + 0.65f * lp))
                             .coerceAtMost(size.minDimension * 0.2f)
-                    drawPath(
-                        rimPath,
-                        color = glowColor.copy(alpha = alpha * 0.85f),
-                        style = Stroke(width = strokeWidth)
-                    )
+                    clipPath(rimPath) {
+                        drawPath(
+                            rimPath,
+                            color = glowColor.copy(alpha = rimAlpha * 0.85f),
+                            style = Stroke(width = strokeWidth)
+                        )
+                    }
                 }
             }
             .then(highlight.modifier)

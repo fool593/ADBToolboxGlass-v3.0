@@ -46,6 +46,20 @@ actual object ADBTools {
         return finalResult
     }
 
+    actual fun getShizukuState(): String {
+        return try {
+            if (!Shizuku.pingBinder()) {
+                "not_running"
+            } else if (Shizuku.checkSelfPermission() == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                "granted"
+            } else {
+                "no_permission"
+            }
+        } catch (e: Exception) {
+            "not_running"
+        }
+    }
+
     // 通过 Dhizuku 执行命令（反射调用 Dhizuku API，避免硬依赖）
     private fun execWithDhizuku(command: String, timeout: Int): CommandResult? {
         return try {

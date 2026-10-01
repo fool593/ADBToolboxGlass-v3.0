@@ -31,6 +31,21 @@ actual object RootModuleManager {
     }
 
     /**
+     * 界面用：真实提权检测（不猜 su 路径，直接看 `id` 是否 uid=0）。
+     *
+     * 为什么不让界面直接用 ADBTools.isRooted()：它靠 su 文件路径 / `which su` 判断，
+     * "设备装了 Magisk 但本应用没被授权"时会返回 true，于是界面点亮所有按钮，
+     * 用户点下去每个操作都返回 false 却没有任何解释。
+     */
+    actual fun canUseRoot(): Boolean {
+        return try {
+            hasRootAccess()
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    /**
      * 读取单个文本文件内容。
      * 用 base64 编码后一次性带回，避免多行内容在拼装 shell 命令时被截断。
      */
@@ -59,27 +74,34 @@ actual object RootModuleManager {
         return if (root.output.isNotBlank() || root.error.isNotBlank()) root else direct
     }
 
+    /**
+     * 处理器的错误标识统一成 `E_XXX` 前缀的稳定错误码（不写死任何语言），
+     * 界面再用 AppStrings 翻译成当前语言；`detail` 原样附带在错误码之后。
+     */
+    private fun err(code: String, detail: String = ""): String =
+        if (detail.isBlank()) code else "$code\n$detail"
+
     actual fun installModule(zipFilePath: String): RootModuleInstallResult {
         return try {
             if (!hasRootAccess()) {
-                return RootModuleInstallResult(false, "Root permission required")
+                return RootModuleInstallResult(false, err("E_ROOT_REQUIRED"))
             }
             val zipFile = File(zipFilePath)
             if (!zipFile.exists()) {
-                return RootModuleInstallResult(false, "Zip file not found")
+                return RootModuleInstallResult(false, err("E_FILE_NOT_FOUND", zipFilePath))
             }
             if (!zipFilePath.endsWith(".zip", ignoreCase = true)) {
-                return RootModuleInstallResult(false, "Only .zip module files are supported")
+                return RootModuleInstallResult(false, err("E_NOT_ZIP", zipFilePath))
             }
 
             // 优先走 Magisk / KernelSU 官方安装器（会正确处理模块目录、权限与状态文件）
             val magisk = runCommand("magisk --install-module ${shq(zipFilePath)}", timeout = 180)
             if (magisk.exitCode == 0) {
-                return RootModuleInstallResult(true, "Module installed successfully via Magisk")
+                return RootModuleInstallResult(true, err("E_OK_MAGISK"))
             }
             val ksud = runCommand("ksud module install ${shq(zipFilePath)}", timeout = 180)
             if (ksud.exitCode == 0) {
-                return RootModuleInstallResult(true, "Module installed successfully via KernelSU")
+                return RootModuleInstallResult(true, err("E_OK_KSU"))
             }
 
             // 兜底：手工解压到 /data/adb/modules/<id>
@@ -88,18 +110,20 @@ actual object RootModuleManager {
             val unzip = runCommand("unzip -o ${shq(zipFilePath)} -d ${shq("$stage/unzip")}")
             if (unzip.exitCode != 0) {
                 runCommand("rm -rf ${shq(stage)}")
-                val detail = listOf(magisk.error, ksud.error).firstOrNull { it.isNotBlank() } ?: ""
+                val detail = listOf(magisk.error, ksud.error, unzip.error)
+                    .firstOrNull { it.isNotBlank() }
+                    ?.trim()
+                    .orEmpty()
                 return RootModuleInstallResult(
                     false,
-                    "Install failed: no Magisk/KernelSU installer and unzip failed" +
-                        (if (detail.isBlank()) "" else "\n$detail")
+                    err("E_NO_INSTALLER_AND_UNZIP_FAILED", detail)
                 )
             }
 
             val propText = readTextFile("$stage/unzip/module.prop")
             if (propText.isBlank()) {
                 runCommand("rm -rf ${shq(stage)}")
-                return RootModuleInstallResult(false, "Invalid module: module.prop not found")
+                return RootModuleInstallResult(false, err("E_NO_MODULE_PROP"))
             }
             val moduleId = propText.lineSequence()
                 .map { it.trim() }
@@ -108,7 +132,7 @@ actual object RootModuleManager {
                 .orEmpty()
             if (moduleId.isBlank()) {
                 runCommand("rm -rf ${shq(stage)}")
-                return RootModuleInstallResult(false, "Invalid module: id not found in module.prop")
+                return RootModuleInstallResult(false, err("E_NO_MODULE_ID"))
             }
 
             val targetDir = "$MODULES_DIR/$moduleId"
@@ -119,19 +143,87 @@ actual object RootModuleManager {
             runCommand("rm -rf ${shq(stage)}")
 
             if (copy.exitCode != 0) {
-                return RootModuleInstallResult(false, "Install failed: could not copy module files\n${copy.error}")
+                return RootModuleInstallResult(
+                    false,
+                    err("E_COPY_FAILED", copy.error.trim())
+                )
             }
-            RootModuleInstallResult(true, "Module installed successfully: $moduleId (reboot to apply)")
+            // Magisk/KernelSU 都是重启后才会加载新模块，文案必须如实说明
+            RootModuleInstallResult(true, err("E_OK_MANUAL", moduleId))
         } catch (e: Exception) {
-            RootModuleInstallResult(false, "Installation failed: ${e.message}")
+            RootModuleInstallResult(false, err("E_EXCEPTION", e.message.orEmpty()))
         }
+    }
+
+    /**
+     * 人类可读的大小。原实现固定给 `size = ""`，界面因此永远显示不出模块大小。
+     * 这里在 shell 端用 `du -sk` 取 KB，格式化放在 Kotlin 侧，单位与当前语言无关。
+     */
+    private fun formatKb(kb: Long): String = when {
+        kb <= 0L -> ""
+        kb < 1024L -> "$kb KB"
+        kb < 1024L * 1024L -> "${kb / 1024L}.${(kb % 1024L) * 10L / 1024L} MB"
+        else -> "${kb / (1024L * 1024L)}.${(kb % (1024L * 1024L)) * 10L / (1024L * 1024L)} GB"
+    }
+
+    /**
+     * 解析 `stat` 输出的秒级时间戳。
+     *
+     * 兼容两种格式：GNU/coreutils `stat -c %Y` 直接给 epoch 秒；
+     * 部分 toybox/busybox 不认 `-c`，会打印 "Modify: 2024-05-01 12:00:00.000000000 +0800"，
+     * 这时取 "Modify:" 后面的 "yyyy-MM-dd HH:mm:ss" 手工换算。取不到返回 0。
+     */
+    private fun parseStatOutput(text: String): Long {
+        val lines = text.lineSequence().map { it.trim() }.filter { it.isNotEmpty() }.toList()
+        lines.forEach { line ->
+            val tail = line.substringAfter("Modify:", "").trim()
+            if (tail.isNotEmpty()) {
+                val stamp = tail.substringBefore(".").trim()
+                if (stamp.length >= 19) {
+                    try {
+                        val date = stamp.substring(0, 10)
+                        val time = stamp.substring(11, 19)
+                        val parsed = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US)
+                            .parse("$date $time")
+                        if (parsed != null) return parsed.time
+                    } catch (_: Exception) {
+                    }
+                }
+            }
+        }
+        // 纯 epoch 秒（coreutils）
+        lines.forEach { line ->
+            val seconds = line.trim().toLongOrNull()
+            if (seconds != null && seconds > 0L) return seconds * 1000L
+        }
+        return 0L
     }
 
     actual fun getInstalledModules(): List<RootModuleData> {
         return try {
+            RootModuleData.setLastError(RootModuleError.None)
             // 用 shell 列出 /data/adb/modules（应用进程直接 File.listFiles 会因权限被拒 -> 以前永远是空列表）
             val ls = run("ls -1 ${shq(MODULES_DIR)} 2>/dev/null")
-            if (ls.exitCode != 0 || ls.output.isBlank()) return emptyList()
+            if (ls.exitCode != 0 || ls.output.isBlank()) {
+                // 区分「真的没有模块」与「读不到目录」：把失败原因记录下来交给界面显示，
+                // 否则界面只能看到空列表，会给用户"设备上没有任何模块"的错误结论。
+                val probe = run(
+                    "if [ -d ${shq(MODULES_DIR)} ]; then echo RMM_DIR_OK; else echo RMM_DIR_MISSING; fi"
+                )
+                val probeText = probe.output
+                when {
+                    probeText.contains("RMM_DIR_OK") -> RootModuleData.setLastError(RootModuleError.None)
+                    probeText.contains("RMM_DIR_MISSING") && probe.exitCode == 0 -> RootModuleData.setLastError(
+                        RootModuleError.PermissionDenied,
+                        probe.error.trim()
+                    )
+                    else -> RootModuleData.setLastError(
+                        RootModuleError.CommandFailed,
+                        listOf(probe.error, probe.output).firstOrNull { it.isNotBlank() }?.trim().orEmpty()
+                    )
+                }
+                return emptyList()
+            }
 
             val ids = ls.output.lineSequence()
                 .map { it.trim() }
@@ -152,6 +244,9 @@ actual object RootModuleManager {
                 }
                 script.append("echo '@@@DISABLE|'\"$([ -f ${shq("$dir/disable")} ] && echo 1 || echo 0)\"; ")
                 script.append("echo '@@@ACTION|'\"$([ -f ${shq("$dir/action.sh")} ] && echo 1 || echo 0)\"; ")
+                // 模块体积与更新时间：原实现恒为空串/0L，界面显示不出这两个字段
+                script.append("echo '@@@SIZE|'\"$(du -sk ${shq(dir)} 2>/dev/null | awk '{print ${'$'}1}' | head -n 1)\"; ")
+                script.append("echo '@@@MTIME|'\"$(stat -c %Y ${shq("$dir/module.prop")} 2>/dev/null || stat ${shq("$dir/module.prop")} 2>/dev/null)\"; ")
             }
 
             val dump = runCommand(script.toString(), timeout = 30)
@@ -161,6 +256,8 @@ actual object RootModuleManager {
             val props = mutableMapOf<String, String>()
             var disabled = false
             var hasAction = false
+            var sizeKb = 0L
+            var mtimeMs = 0L
 
             fun flush() {
                 if (id.isEmpty()) return
@@ -176,8 +273,8 @@ actual object RootModuleManager {
                         isInstalled = true,
                         moduleDir = "$MODULES_DIR/$id",
                         hasAction = hasAction,
-                        updateTime = 0L,
-                        size = ""
+                        updateTime = mtimeMs,
+                        size = formatKb(sizeKb)
                     )
                 )
             }
@@ -195,9 +292,13 @@ actual object RootModuleManager {
                         props.clear()
                         disabled = false
                         hasAction = false
+                        sizeKb = 0L
+                        mtimeMs = 0L
                     }
                     "DISABLE" -> disabled = value == "1"
                     "ACTION" -> hasAction = value == "1"
+                    "SIZE" -> sizeKb = value.toLongOrNull() ?: 0L
+                    "MTIME" -> mtimeMs = parseStatOutput(value)
                     else -> if (id.isNotEmpty()) props[key] = value
                 }
             }
@@ -249,12 +350,12 @@ actual object RootModuleManager {
             )
             val signal = guard.output
             when {
-                signal.contains("RMM_NO_ACTION") -> "Error: This module has no action.sh"
-                signal.contains("RMM_DISABLED") -> "Error: Module is disabled, please enable it first"
-                !signal.contains("RMM_RUN_OK") -> buildString {
-                    appendLine("Error: Operation failed (no permission to read $dir)")
-                    if (guard.error.isNotBlank()) appendLine(guard.error)
-                }
+                signal.contains("RMM_NO_ACTION") -> err("E_NO_ACTION")
+                signal.contains("RMM_DISABLED") -> err("E_ACTION_DISABLED")
+                !signal.contains("RMM_RUN_OK") -> err(
+                    "E_ACTION_GUARD_FAILED",
+                    listOf("$dir", guard.error.trim()).filter { it.isNotBlank() }.joinToString("\n")
+                )
                 else -> {
                     val result = runCommand(
                         "cd ${shq(dir)} && MODDIR=${shq(dir)} sh action.sh",
@@ -274,7 +375,7 @@ actual object RootModuleManager {
                 }
             }
         } catch (e: Exception) {
-            "Execution failed: ${e.message}"
+            err("E_ACTION_EXCEPTION", e.message.orEmpty())
         }
     }
 }

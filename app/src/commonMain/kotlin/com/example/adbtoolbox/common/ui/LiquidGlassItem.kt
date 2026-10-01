@@ -13,6 +13,7 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.addOutline
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.GraphicsLayerScope
 import androidx.compose.ui.unit.Dp
@@ -109,14 +110,17 @@ fun Modifier.liquidGlassItem(
             val glowIntensity = GlassEffectConfig.longPressGlowIntensity.value
             val glowSize = GlassEffectConfig.longPressGlowSize.value
             if (lp <= 0.01f) {
-                Shadow.Default
+                // 静息态不画投影。Shadow.Default 是「纯黑 10% + 24dp 模糊 + 向下偏 4dp」，
+                // 它糊在玻璃下面，让边缘看起来是一条暗边——用户明确要求这里应该是亮边，不是黑影。
+                null
             } else {
-                // 四周外发光光晕：半径来自 longPressGlowSize（按住期间半径固定，避免每帧重建大图层）
+                // 长按：只留一圈紧贴边缘的薄发光（半径 4~12dp、透明度上限 0.3），
+                // 不再用之前 10~32dp 的大范围光晕往卡片外面飘
                 Shadow(
-                    radius = (10f + 22f * glowSize).dp,
+                    radius = (4f + 8f * glowSize).dp,
                     offset = DpOffset.Zero,
                     color = GlassEffectConfig.longPressGlowColor.value,
-                    alpha = (0.6f * lp * glowIntensity).coerceIn(0f, 1f)
+                    alpha = (0.30f * lp * glowIntensity).coerceIn(0f, 1f)
                 )
             }
         }
@@ -156,24 +160,27 @@ fun Modifier.liquidGlassItem(
     var m: Modifier = this
         .then(highlight.gestureModifier)
         .drawWithContent {
-            // 边缘高光描边：按压时轻微出现，长按按配置发光（用形状 outline 描边，圆角精确贴合）
+            // 边缘高光描边：静息就有一条很淡的亮边（玻璃本该有边缘高光），按压/长按再加强。
+            // 关键：整条描边裁在形状内部，只贴在玻璃内侧，不会溢出到轮廓外面。
             drawContent()
             val press = highlight.pressProgress
             val lp = highlight.longPressProgress
             val glowIntensity = GlassEffectConfig.longPressGlowIntensity.value
             val glowSize = GlassEffectConfig.longPressGlowSize.value
-            val alpha = (0.12f * press + 0.88f * lp * glowIntensity).coerceIn(0f, 1f)
-            if (alpha > 0.01f && size.width > 0f && size.height > 0f) {
+            val alpha = (0.10f + 0.16f * press + 0.74f * lp * glowIntensity).coerceIn(0f, 1f)
+            if (size.width > 0f && size.height > 0f) {
                 rimPath.reset()
                 rimPath.addOutline(shape.createOutline(size, layoutDirection, this))
                 val strokeWidth =
-                    (0.8f.dp.toPx() + 1.8f.dp.toPx() * glowSize * (0.35f + 0.65f * lp))
+                    (0.9f.dp.toPx() + 1.6f.dp.toPx() * glowSize * (0.35f + 0.65f * lp))
                         .coerceAtMost(size.minDimension * 0.2f)
-                drawPath(
-                    rimPath,
-                    color = GlassEffectConfig.longPressGlowColor.value.copy(alpha = alpha * 0.85f),
-                    style = Stroke(width = strokeWidth)
-                )
+                clipPath(rimPath) {
+                    drawPath(
+                        rimPath,
+                        color = GlassEffectConfig.longPressGlowColor.value.copy(alpha = alpha * 0.85f),
+                        style = Stroke(width = strokeWidth)
+                    )
+                }
             }
         }
         .then(highlight.modifier)

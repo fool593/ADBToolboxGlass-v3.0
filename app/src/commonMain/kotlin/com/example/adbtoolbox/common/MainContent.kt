@@ -45,6 +45,8 @@ import com.kyant.backdrop.backdrops.LayerBackdrop
 import com.kyant.backdrop.catalog.BackdropDemoScaffold
 import com.kyant.backdrop.catalog.components.LiquidBottomTab
 import com.kyant.backdrop.catalog.components.LiquidBottomTabs
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @Composable
 fun MainContent() {
@@ -68,6 +70,24 @@ fun MainContent() {
         if (dynamicWallpaperEnabled && dynamicWallpaperVideoPath != null) {
             clearWallpaperTrigger++
         }
+    }
+
+    // ---------------- Shizuku 状态：全局唯一检测点 ----------------
+    // 以前每个页面各自查一次，进页面时没连上就永远显示"未连接"，只能杀进程重进。
+    // 现在统一由这里检测，任何地方调用 AppCache.requestShizukuRefresh() 都会重新查并全局同步。
+    LaunchedEffect(AppCache.shizukuRefreshTick.value) {
+        val state = try {
+            withContext(Dispatchers.Default) { ADBTools.getShizukuState() }
+        } catch (e: Exception) {
+            "not_running"
+        }
+        AppCache.shizukuState.value = state
+        AppCache.shizukuAvailable.value = state == "granted"
+        AppCache.shizukuChecked.value = true
+    }
+    // 每次回到首页都重查一次：用户很可能刚在系统里把 Shizuku 启动/授权完再回来
+    LaunchedEffect(currentDestination) {
+        if (currentDestination == ADBDestination.Home) AppCache.requestShizukuRefresh()
     }
 
     Box(Modifier.fillMaxSize()) {
@@ -210,6 +230,14 @@ fun MainContent() {
                                 AppCache.terminalInitialCommand.value = command
                                 currentDestination = ADBDestination.Terminal
                             }
+                        )
+                        // v2.8 已安装 Root 模块管理（此前 RootModuleManager.getInstalledModules() 没有任何 UI 调用者）
+                        ADBDestination.RootModules -> com.example.adbtoolbox.common.ui.RootModuleScreen(
+                            backdrop = backdrop,
+                            contentColor = contentColor,
+                            onBack = { currentDestination = ADBDestination.Home },
+                            onInstallModule = { AppCache.pickRootModuleFileTrigger.value++ },
+                            selectedFilePath = AppCache.selectedRootModulePath.value
                         )
                     }
                 }

@@ -1,5 +1,7 @@
 package com.example.adbtoolbox.common.ui
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -19,6 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -26,7 +29,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -36,6 +42,7 @@ import androidx.compose.ui.window.Dialog
 import com.example.adbtoolbox.common.AppStrings
 import com.example.adbtoolbox.common.perf.PerfItem
 import com.example.adbtoolbox.common.perf.PerfRunResult
+import com.example.adbtoolbox.common.theme.AppMotion
 import com.example.adbtoolbox.common.theme.AppTheme
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.catalog.components.LiquidButton
@@ -94,25 +101,41 @@ fun PerfItemRow(
     result: PerfRunResult? = null
 ) {
     var expanded by remember { mutableStateOf(false) }
+    // 运行中的高亮：按全局动效规范淡入淡出，避免背景硬切。
+    // 用 animateFloatAsState + drawBehind 在绘制阶段读取进度，逐帧只重绘、不重组整行。
+    val runningHighlight by animateFloatAsState(
+        targetValue = if (running) 1f else 0f,
+        animationSpec = if (running) AppMotion.fadeIn else AppMotion.fadeOut,
+        label = "perfItemRunningHighlight"
+    )
     Column(
         Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
-            .background(
-                if (running) AppTheme.accent.copy(alpha = 0.18f)
-                else contentColor.copy(alpha = 0.05f)
-            )
+            .drawBehind {
+                drawRect(
+                    lerp(
+                        contentColor.copy(alpha = 0.05f),
+                        AppTheme.accent.copy(alpha = 0.18f),
+                        runningHighlight
+                    )
+                )
+            }
             .padding(12.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
                 Modifier
                     .size(22.dp)
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(
-                        if (selected) AppTheme.accent else contentColor.copy(alpha = 0.15f)
-                    )
-                    .clickable(onClick = onToggle),
+                    // 勾选框原先是静态底色 + 无反馈点击：改成液态玻璃可点项，保留原选中色/未选中底色
+                    // （liquidGlassItem 按 tint.alpha * 0.45f 着色，这里除以 0.45f 还原原来浓度）
+                    .liquidGlassItem(
+                        backdrop = backdrop,
+                        corner = 6.dp,
+                        tint = if (selected) AppTheme.accent
+                        else contentColor.copy(alpha = (0.15f / 0.45f).coerceAtMost(1f)),
+                        onClick = onToggle
+                    ),
                 contentAlignment = Alignment.Center
             ) {
                 if (selected) BasicText("✓", style = TextStyle(Color.White, 13f.sp, FontWeight.Bold))
@@ -135,9 +158,16 @@ fun PerfItemRow(
                         PerfBadge(it, AppTheme.accentAlt)
                     }
                     if (result != null) {
+                        // 结果徽标出现：小幅上移 + 淡入（AppMotion.fadeIn）
+                        val resultAppear = remember { Animatable(0f) }
+                        LaunchedEffect(Unit) { resultAppear.animateTo(1f, AppMotion.fadeIn) }
                         PerfBadge(
                             if (result.succeeded) "OK" else "FAIL",
-                            if (result.succeeded) Color(0xFF34C759) else Color(0xFFFF3B30)
+                            if (result.succeeded) Color(0xFF34C759) else Color(0xFFFF3B30),
+                            Modifier.graphicsLayer {
+                                alpha = resultAppear.value
+                                translationY = (1f - resultAppear.value) * 4.dp.toPx()
+                            }
                         )
                     }
                     if (running) PerfBadge(AppStrings.get("running_item"), AppTheme.accent)
@@ -146,8 +176,8 @@ fun PerfItemRow(
             Spacer(Modifier.width(8.dp))
             Box(
                 Modifier
-                    .clip(RoundedCornerShape(6.dp))
-                    .clickable { expanded = !expanded }
+                    // 原先是纯文字点击区：改成液态玻璃可点项，尺寸/内边距不变
+                    .liquidGlassItem(backdrop = backdrop, corner = 6.dp, onClick = { expanded = !expanded })
                     .padding(horizontal = 6.dp, vertical = 4.dp)
             ) {
                 BasicText(

@@ -3,8 +3,6 @@ package com.kyant.backdrop.catalog.utils
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.VectorConverter
 import androidx.compose.animation.core.VisibilityThreshold
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
@@ -24,6 +22,7 @@ import androidx.compose.ui.util.fastCoerceIn
 import com.kyant.backdrop.RuntimeShader
 import com.kyant.backdrop.asComposeShader
 import com.kyant.backdrop.isRuntimeShaderSupported
+import com.example.adbtoolbox.common.theme.AppMotion
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -52,10 +51,10 @@ class InteractiveHighlight(
     val edgeBoost: Float = 0.75f
 ) {
 
-    private val pressProgressAnimationSpec =
-        spring(0.5f, 300f, 0.001f)
-    private val positionAnimationSpec =
-        spring(0.5f, 300f, Offset.VisibilityThreshold)
+    // 动效统一走 AppMotion：按下/回弹/光斑跟随用弹簧（手感一致），长按淡入淡出用 tween
+    private val pressProgressAnimationSpec = AppMotion.pressSpring
+    private val releaseProgressAnimationSpec = AppMotion.releaseSpring
+    private val positionAnimationSpec = AppMotion.followSpring
 
     private val pressProgressAnimation =
         Animatable(0f, 0.001f)
@@ -114,15 +113,15 @@ half4 main(float2 coord) {
         }
     }
 
-    /** 按下：高光淡入 + 启动长按计时（350ms 后长按发光淡入） */
+    /** 按下：高光淡入 + 启动长按计时（超过 longPressDelayMs 后长按发光淡入） */
     fun press() {
         animationScope.launch {
             pressProgressAnimation.animateTo(1f, pressProgressAnimationSpec)
         }
         longPressJob?.cancel()
         longPressJob = animationScope.launch {
-            delay(350)
-            longPressProgressAnimation.animateTo(1f, tween(220))
+            delay(AppMotion.longPressDelayMs)
+            longPressProgressAnimation.animateTo(1f, AppMotion.longPressIn)
         }
     }
 
@@ -131,10 +130,10 @@ half4 main(float2 coord) {
         longPressJob?.cancel()
         longPressJob = null
         animationScope.launch {
-            pressProgressAnimation.animateTo(0f, pressProgressAnimationSpec)
+            pressProgressAnimation.animateTo(0f, releaseProgressAnimationSpec)
         }
         animationScope.launch {
-            longPressProgressAnimation.animateTo(0f, tween(320))
+            longPressProgressAnimation.animateTo(0f, AppMotion.longPressOut)
         }
     }
 

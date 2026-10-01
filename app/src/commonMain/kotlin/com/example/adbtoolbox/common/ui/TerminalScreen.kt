@@ -376,18 +376,15 @@ fun QuickCommandPanel(
 fun QuickCmdButton(backdrop: Backdrop, label: String, contentColor: Color, onClick: () -> Unit) {
     Box(
         Modifier
-            .clip(RoundedRectangle(12f.dp))
-            .drawBackdrop(
+            // 原先是静态色块 + 无反馈点击：改成液态玻璃可点项，保留原模糊半径与圆角
+            // （liquidGlassItem 按 tint.alpha * 0.45f 着色，这里除以 0.45f 还原原来的白色蒙层浓度）
+            .liquidGlassItem(
                 backdrop = backdrop,
-                shape = { RoundedRectangle(12f.dp * GlassEffectConfig.terminalCornerRadius.value) },
-                effects = {
-                    blur(GlassEffectConfig.terminalBlurRadius.value.dp.toPx() * 0.5f)
-                },
-                onDrawSurface = {
-                    drawRect(Color.White.copy(alpha = GlassEffectConfig.terminalOpacity.value * 0.2f))
-                }
+                corner = 12f.dp * GlassEffectConfig.terminalCornerRadius.value,
+                blurPx = GlassEffectConfig.terminalBlurRadius.value * 0.5f,
+                tint = Color.White.copy(alpha = (GlassEffectConfig.terminalOpacity.value * 0.2f / 0.45f).coerceAtMost(1f)),
+                onClick = onClick
             )
-            .clickableNoRipple(onClick)
             .padding(horizontal = 14f.dp, vertical = 8f.dp)
     ) {
         BasicText(label, style = TextStyle(contentColor, 12f.sp))
