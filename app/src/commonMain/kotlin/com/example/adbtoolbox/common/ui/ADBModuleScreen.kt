@@ -114,17 +114,20 @@ fun ADBModuleScreen(
                 // 以前异常会直接抛出协程，日志永远停在"正在刷入..."，用户看不到任何失败原因
                 "${AppStrings.get("operation_failed")}: ${e.javaClass.simpleName}: ${e.message}"
             }
-            val failed = result.contains("Error:", ignoreCase = true) ||
-                result.contains("failed", ignoreCase = true) ||
-                result.contains(AppStrings.get("operation_failed"))
+            // 注意：不能简单匹配任意 "Error:"，因为 ADB 模式的正常日志里也会出现
+            // "Warning: Magisk not detected"；只认真正表示终止失败的几行。
+            val failureLines = result.lineSequence()
+                .map { it.trim() }
+                .filter { line ->
+                    line.startsWith("Error:") ||
+                        line.contains("Operation failed") ||
+                        line.contains("Installation failed")
+                }
+                .toList()
+            val failed = failureLines.isNotEmpty()
             isSuccess = !failed && result.isNotBlank()
-            failureMessage = if (failed) {
-                result.lineSequence().firstOrNull { it.contains("Error:", true) || it.contains("failed", true) }
-                    ?.trim()
-                    ?: AppStrings.get("operation_failed")
-            } else {
-                null
-            }
+            failureMessage = failureLines.firstOrNull()
+                ?: if (failed) AppStrings.get("operation_failed") else null
             installLog = result
             isInstalling = false
         }

@@ -101,8 +101,9 @@ fun TerminalScreen(
      * 既清不掉终端显示、也留不下历史、更不会退出本 App，等于点了完全没用。
      */
     suspend fun runLocalCommand(cmd: String): Boolean {
-        when (cmd.trim()) {
-            "clear", "cls" -> lines = lines + TerminalLine(AppStrings.get("clear_screen"), LineType.INFO)
+        val normalized = cmd.trim().lowercase()
+        when (normalized) {
+            "clear", "cls" -> lines = mutableListOf(TerminalLine(AppStrings.get("clear_screen"), LineType.INFO))
             "history" -> lines = lines + if (commandHistory.isEmpty()) {
                 listOf(TerminalLine("(no history)", LineType.INFO))
             } else {
@@ -110,7 +111,7 @@ fun TerminalScreen(
                     TerminalLine("${index + 1}  $item", LineType.OUTPUT)
                 }
             }
-            "exit" -> lines = lines + TerminalLine("Use the back button to leave the terminal.", LineType.INFO)
+            "exit" -> lines = lines + TerminalLine("Exit is not supported here - use the back button to leave the terminal.", LineType.INFO)
             else -> return false
         }
         return true
@@ -127,13 +128,11 @@ fun TerminalScreen(
             return
         }
         commandHistory = commandHistory + shellCommand
-        if (Regex("^adb\\s+", RegexOption.IGNORE_CASE).containsMatchIn(shellCommand) ||
-            shellCommand == "adb" || shellCommand.startsWith("adb ")
-        ) {
+        if (Regex("^adb(\\s|$)", RegexOption.IGNORE_CASE).containsMatchIn(shellCommand)) {
             // adb push/pull/install 需要连接电脑，本 App 无法直接执行，明确告知而不是静默失败
             lines = lines + TerminalLine(
-                "adb: 本 App 已在设备端 shell 内执行命令，无需 adb 前缀。\n" +
-                    "若需推拉文件/安装 APK，请使用「ADB面板」，或先把命令写进设备路径再执行。",
+                "This app already runs commands in the device shell, so the 'adb' prefix is not needed.\n" +
+                    "For file push/pull or APK install, use the ADB Panel instead.",
                 LineType.INFO
             )
             return

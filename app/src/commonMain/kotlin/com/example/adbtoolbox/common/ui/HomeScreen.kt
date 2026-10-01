@@ -161,6 +161,11 @@ fun HomeScreen(
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12f.dp)) {
             QuickActionButton(backdrop, AppStrings.get("temp_root"), Color(0xFFFF9500), contentColor, Modifier.weight(1f)) { onNavigate(ADBDestination.TempRoot) }
         }
+        // v2.8 新增：品牌自适应一键性能加速 + 手机体检
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12f.dp)) {
+            QuickActionButton(backdrop, AppStrings.get("performance_boost"), Color(0xFF0088FF), contentColor, Modifier.weight(1f)) { onNavigate(ADBDestination.PerformanceBoost) }
+            QuickActionButton(backdrop, AppStrings.get("phone_inspector"), Color(0xFF34C759), contentColor, Modifier.weight(1f)) { onNavigate(ADBDestination.PhoneInspector) }
+        }
 
         Spacer(Modifier.height(16f.dp))
     }
