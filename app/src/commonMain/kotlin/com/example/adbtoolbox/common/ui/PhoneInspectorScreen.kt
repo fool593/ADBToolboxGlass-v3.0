@@ -42,6 +42,7 @@ import com.example.adbtoolbox.common.perf.InspectGroup
 import com.example.adbtoolbox.common.perf.InspectReport
 import com.example.adbtoolbox.common.perf.PerfItem
 import com.example.adbtoolbox.common.perf.PerfRunner
+import com.example.adbtoolbox.common.theme.AppTheme
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.catalog.components.LiquidButton
 import kotlinx.coroutines.Dispatchers
@@ -224,7 +225,7 @@ fun PhoneInspectorScreen(
                 PerfButtonRow(
                     backdrop = backdrop,
                     leftLabel = AppStrings.get("re_inspect"),
-                    leftTint = Color(0xFF0088FF),
+                    leftTint = AppTheme.accent,
                     onLeft = { runInspect() },
                     rightLabel = AppStrings.get("inspect_fix_all"),
                     rightTint = Color(0xFFFF3B30),
@@ -297,7 +298,7 @@ fun PhoneInspectorScreen(
                         onClick = { runInspect() },
                         backdrop = backdrop,
                         modifier = Modifier.fillMaxWidth().height(44.dp),
-                        tint = Color(0xFF0088FF)
+                        tint = AppTheme.accent
                     ) {
                         BasicText(
                             AppStrings.get("re_inspect"),
@@ -429,7 +430,7 @@ private fun InspectResultRow(
             Box(
                 Modifier
                     .clip(RoundedCornerShape(10.dp))
-                    .background(Color(0xFF0088FF).copy(alpha = 0.9f))
+                    .background(AppTheme.accent.copy(alpha = 0.9f))
                     .clickable(onClick = onFix)
                     .padding(horizontal = 14.dp, vertical = 7.dp)
             ) {

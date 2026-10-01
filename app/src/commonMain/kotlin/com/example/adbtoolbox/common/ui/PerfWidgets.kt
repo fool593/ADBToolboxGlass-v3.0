@@ -36,6 +36,7 @@ import androidx.compose.ui.window.Dialog
 import com.example.adbtoolbox.common.AppStrings
 import com.example.adbtoolbox.common.perf.PerfItem
 import com.example.adbtoolbox.common.perf.PerfRunResult
+import com.example.adbtoolbox.common.theme.AppTheme
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.catalog.components.LiquidButton
 import com.kyant.backdrop.catalog.components.LiquidToggle
@@ -98,7 +99,7 @@ fun PerfItemRow(
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
             .background(
-                if (running) Color(0xFF0088FF).copy(alpha = 0.18f)
+                if (running) AppTheme.accent.copy(alpha = 0.18f)
                 else contentColor.copy(alpha = 0.05f)
             )
             .padding(12.dp)
@@ -109,7 +110,7 @@ fun PerfItemRow(
                     .size(22.dp)
                     .clip(RoundedCornerShape(6.dp))
                     .background(
-                        if (selected) Color(0xFF0088FF) else contentColor.copy(alpha = 0.15f)
+                        if (selected) AppTheme.accent else contentColor.copy(alpha = 0.15f)
                     )
                     .clickable(onClick = onToggle),
                 contentAlignment = Alignment.Center
@@ -131,7 +132,7 @@ fun PerfItemRow(
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     if (item.risk != "safe") PerfBadge(riskLabel(item.risk), riskColor(item.risk))
                     permissionLabel(item.requiresPermission)?.let {
-                        PerfBadge(it, Color(0xFFAF52DE))
+                        PerfBadge(it, AppTheme.accentAlt)
                     }
                     if (result != null) {
                         PerfBadge(
@@ -139,7 +140,7 @@ fun PerfItemRow(
                             if (result.succeeded) Color(0xFF34C759) else Color(0xFFFF3B30)
                         )
                     }
-                    if (running) PerfBadge(AppStrings.get("running_item"), Color(0xFF0088FF))
+                    if (running) PerfBadge(AppStrings.get("running_item"), AppTheme.accent)
                 }
             }
             Spacer(Modifier.width(8.dp))

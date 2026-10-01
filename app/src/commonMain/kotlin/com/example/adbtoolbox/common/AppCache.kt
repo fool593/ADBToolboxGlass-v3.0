@@ -1,12 +1,25 @@
 package com.example.adbtoolbox.common
 
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.graphics.ImageBitmap
 
 // 全局数据缓存，预加载后各页面直接读取，避免重复加载导致卡顿
 object AppCache {
     // 应用列表缓存
     val installedApps = mutableStateOf<List<AppInfoData>>(emptyList())
     val appsLoaded = mutableStateOf(false)
+
+    // 应用图标解码缓存（packageName -> ImageBitmap）。
+    // 列表来回滚动时不必反复走 PackageManager 取图标 + 解码。
+    private val appIconCache = mutableMapOf<String, ImageBitmap>()
+
+    fun getAppIcon(packageName: String): ImageBitmap? = appIconCache[packageName]
+
+    fun putAppIcon(packageName: String, icon: ImageBitmap) {
+        appIconCache[packageName] = icon
+    }
+
+    fun clearAppIcons() = appIconCache.clear()
 
     // 设备信息缓存
     val deviceInfo = mutableStateOf<DeviceInfoData?>(null)

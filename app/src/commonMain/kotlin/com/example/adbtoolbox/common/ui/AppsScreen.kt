@@ -32,6 +32,7 @@ import com.example.adbtoolbox.common.ADBTools
 import com.example.adbtoolbox.common.AppCache
 import com.example.adbtoolbox.common.AppInfoData
 import com.example.adbtoolbox.common.AppStrings
+import com.example.adbtoolbox.common.theme.AppTheme
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.catalog.components.LiquidButton
 import com.kyant.backdrop.catalog.components.LiquidToggle
@@ -159,25 +160,15 @@ fun AppListItem(
             .padding(14f.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            Modifier
-                .size(44f.dp)
-                .clip(RoundedCornerShape(12f.dp))
-                .drawBackdrop(
-                    backdrop = backdrop,
-                    shape = { RoundedRectangle(12f.dp) },
-                    effects = { blur(10f.dp.toPx()) },
-                    onDrawSurface = { drawRect(if (app.isSystem) Color(0xFFFF9500).copy(0.3f) else Color(0xFF0088FF).copy(0.3f)) }
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            // 说明：AppInfoData.iconBase64 由 ADBTools 提供，当前实现永远返回 null（见 ADBTools.kt 第 617 行），
-            // 因此这里保留首字母占位图标（真实图标展示需先修复 ADBTools 的数据源）。
-            BasicText(
-                app.appName.take(1),
-                style = TextStyle(Color.White, 18f.sp, androidx.compose.ui.text.font.FontWeight.Bold)
-            )
-        }
+        // 真实应用图标（数据来自 ADBTools.getAppIconBase64，按需解码 + 缓存）；
+        // 取不到时 AppIconView 内部回退到首字母占位。
+        AppIconView(
+            packageName = app.packageName,
+            appName = app.appName,
+            backdrop = backdrop,
+            isSystem = app.isSystem,
+            tint = if (app.isSystem) Color(0xFFFF9500).copy(alpha = 0.3f) else AppTheme.accent.copy(alpha = 0.3f)
+        )
         Spacer(Modifier.width(12f.dp))
         Column(Modifier.weight(1f)) {
             BasicText(app.appName, style = TextStyle(contentColor, 15f.sp, androidx.compose.ui.text.font.FontWeight.Medium), maxLines = 1)

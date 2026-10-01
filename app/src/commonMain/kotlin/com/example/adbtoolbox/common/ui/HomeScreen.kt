@@ -44,6 +44,7 @@ import com.example.adbtoolbox.common.AppCache
 import com.example.adbtoolbox.common.AppStrings
 import com.example.adbtoolbox.common.DeviceInfoData
 import com.example.adbtoolbox.common.GlassEffectConfig
+import com.example.adbtoolbox.common.theme.AppTheme
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.BackdropEffectScope
 import com.kyant.backdrop.catalog.components.LiquidButton
@@ -111,6 +112,9 @@ fun HomeScreen(
             )
         )
 
+        // 国庆主题横幅：只有主题选中"国庆"时才出现（见 ThemeBanner.kt）
+        NationalDayBanner(backdrop = backdrop, contentColor = contentColor)
+
         // 设备信息卡片
         GlassCard(backdrop = backdrop, pageType = "home") {
             Column(Modifier.padding(20f.dp)) {
@@ -160,11 +164,12 @@ fun HomeScreen(
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12f.dp)) {
             QuickActionButton(backdrop, AppStrings.get("temp_root"), Color(0xFFFF9500), contentColor, Modifier.weight(1f)) { onNavigate(ADBDestination.TempRoot) }
+            QuickActionButton(backdrop, AppStrings.get("huawei_boost"), AppTheme.accent, contentColor, Modifier.weight(1f)) { onNavigate(ADBDestination.HuaweiBoost) }
         }
-        // v2.8 新增：品牌自适应一键性能加速 + 手机体检
+        // v2.8 新增：品牌自适应一键性能加速 + 手机体检（配色跟随当前主题）
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12f.dp)) {
-            QuickActionButton(backdrop, AppStrings.get("performance_boost"), Color(0xFF0088FF), contentColor, Modifier.weight(1f)) { onNavigate(ADBDestination.PerformanceBoost) }
-            QuickActionButton(backdrop, AppStrings.get("phone_inspector"), Color(0xFF34C759), contentColor, Modifier.weight(1f)) { onNavigate(ADBDestination.PhoneInspector) }
+            QuickActionButton(backdrop, AppStrings.get("performance_boost"), AppTheme.accent, contentColor, Modifier.weight(1f)) { onNavigate(ADBDestination.PerformanceBoost) }
+            QuickActionButton(backdrop, AppStrings.get("phone_inspector"), AppTheme.deep, contentColor, Modifier.weight(1f)) { onNavigate(ADBDestination.PhoneInspector) }
         }
 
         Spacer(Modifier.height(16f.dp))

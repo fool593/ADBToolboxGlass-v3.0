@@ -1,5 +1,7 @@
 package com.example.adbtoolbox.common.ui
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
@@ -28,6 +31,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
@@ -37,6 +41,7 @@ import com.example.adbtoolbox.common.AppCache
 import com.example.adbtoolbox.common.AppSettings
 import com.example.adbtoolbox.common.AppStrings
 import com.example.adbtoolbox.common.GlassEffectPersistence
+import com.example.adbtoolbox.common.theme.AppTheme
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.catalog.components.LiquidButton
 import com.kyant.backdrop.catalog.components.LiquidSlider
@@ -223,6 +228,66 @@ fun SettingsScreen(
                     tint = Color(0xFF0088FF)
                 ) {
                     BasicText(AppStrings.get("glass_playground"), Modifier.padding(horizontal = 8f.dp), style = TextStyle(Color.White, 14f.sp))
+                }
+            }
+        }
+
+        Spacer(Modifier.height(16f.dp))
+
+        // 主题（配色方案）
+        GlassCard(backdrop = backdrop, pageType = "settings") {
+            Column(Modifier.padding(20f.dp)) {
+                BasicText(AppStrings.get("theme"), style = TextStyle(contentColor, 18f.sp, androidx.compose.ui.text.font.FontWeight.Medium))
+                Spacer(Modifier.height(4f.dp))
+                BasicText(AppStrings.get("theme_hint"), style = TextStyle(contentColor.copy(alpha = 0.55f), 11f.sp))
+                Spacer(Modifier.height(14f.dp))
+
+                AppTheme.all.forEach { palette ->
+                    val selected = AppTheme.id == palette.id
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .height(62f.dp)
+                            .clip(RoundedCornerShape(14f.dp))
+                            .background(
+                                if (selected) palette.accent.copy(alpha = 0.18f)
+                                else contentColor.copy(alpha = 0.06f)
+                            )
+                            .clickable {
+                                AppSettings.themeChosenByUser = true
+                                AppTheme.apply(palette.id)
+                            }
+                            .padding(horizontal = 12f.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        ThemePreviewSwatch(
+                            colors = palette.preview,
+                            modifier = Modifier.size(46f.dp, 26f.dp).clip(RoundedCornerShape(13f.dp))
+                        )
+                        Spacer(Modifier.width(12f.dp))
+                        Column(Modifier.weight(1f)) {
+                            BasicText(
+                                AppStrings.get(palette.nameKey),
+                                style = TextStyle(
+                                    if (selected) palette.accent else contentColor,
+                                    14f.sp,
+                                    androidx.compose.ui.text.font.FontWeight.Medium
+                                )
+                            )
+                            Spacer(Modifier.height(2f.dp))
+                            BasicText(
+                                AppStrings.get(palette.descKey),
+                                style = TextStyle(contentColor.copy(alpha = 0.55f), 11f.sp)
+                            )
+                        }
+                        if (selected) {
+                            BasicText(
+                                AppStrings.get("theme_current"),
+                                style = TextStyle(palette.accent, 11f.sp)
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(8f.dp))
                 }
             }
         }

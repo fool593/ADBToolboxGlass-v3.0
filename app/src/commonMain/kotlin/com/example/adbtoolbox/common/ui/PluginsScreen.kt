@@ -107,7 +107,7 @@ fun PluginsScreen(
                 refreshTrigger++
             } else {
                 // 以前 catch(_: Exception) {} + 无视返回值 => 开关点了完全没反应
-                errorMessage = "${AppStrings.get("plugin_toggle_failed")} ${plugin.name}"
+                errorMessage = "${AppStrings.get("operation_failed")}: ${plugin.name} (${AppStrings.get("enable")}/${AppStrings.get("disable")})"
             }
         }
     }
@@ -146,7 +146,7 @@ fun PluginsScreen(
                 refreshTrigger++
             } else {
                 // 以前完全静默：删除失败时列表不会变，用户以为按钮坏了
-                errorMessage = "${AppStrings.get("plugin_delete_failed")} ${plugin.name}"
+                errorMessage = "${AppStrings.get("operation_failed")}: ${AppStrings.get("uninstall")} - ${plugin.name}"
             }
         }
     }

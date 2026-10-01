@@ -20,5 +20,7 @@ enum class ADBDestination {
     /** v2.8 品牌自适应一键性能加速 */
     PerformanceBoost,
     /** v2.8 手机体检（指令可用性检查员） */
-    PhoneInspector
+    PhoneInspector,
+    /** v2.8 华为深度优化（HarmonyOS / EMUI 专属） */
+    HuaweiBoost
 }

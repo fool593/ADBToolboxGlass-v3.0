@@ -201,6 +201,16 @@ fun MainContent() {
                             onBack = { currentDestination = ADBDestination.Home },
                             onOpenBoost = { currentDestination = ADBDestination.PerformanceBoost }
                         )
+                        // v2.8 华为深度优化（HarmonyOS / EMUI 专属）
+                        ADBDestination.HuaweiBoost -> com.example.adbtoolbox.common.ui.HuaweiBoostScreen(
+                            backdrop = backdrop,
+                            contentColor = contentColor,
+                            onBack = { currentDestination = ADBDestination.Home },
+                            onRunInTerminal = { command ->
+                                AppCache.terminalInitialCommand.value = command
+                                currentDestination = ADBDestination.Terminal
+                            }
+                        )
                     }
                 }
 

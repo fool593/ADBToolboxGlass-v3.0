@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.adbtoolbox.common.ADBTools
 import com.example.adbtoolbox.common.AppCache
+import com.example.adbtoolbox.common.AppStrings
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.catalog.components.LiquidButton
 import kotlinx.coroutines.Dispatchers
@@ -66,16 +67,24 @@ fun TempRootScreen(backdrop: Backdrop) {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        BasicText("临时 Root 提权", style = TextStyle(Color.White, 24.sp, FontWeight.Bold))
+        BasicText(AppStrings.get("temp_root_title"), style = TextStyle(Color.White, 24.sp, FontWeight.Bold))
 
         // 处理器信息
         GlassCard(backdrop = backdrop, pageType = "plugins") {
             Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                BasicText("处理器信息", style = TextStyle(Color.White, 18.sp, FontWeight.Medium))
-                InfoRow("型号", cpuModel, Color.White)
-                InfoRow("厂商", if (cpuVendor == "mediatek") "联发科 (天玑)" else if (cpuVendor == "qualcomm") "高通 (骁龙)" else cpuVendor, Color.White)
+                BasicText(AppStrings.get("cpu_info"), style = TextStyle(Color.White, 18.sp, FontWeight.Medium))
+                InfoRow(AppStrings.get("model"), cpuModel, Color.White)
+                InfoRow(
+                    AppStrings.get("temp_root_vendor"),
+                    when (cpuVendor) {
+                        "mediatek" -> AppStrings.get("temp_root_soc_mediatek")
+                        "qualcomm" -> AppStrings.get("temp_root_soc_qualcomm")
+                        else -> cpuVendor
+                    },
+                    Color.White
+                )
                 BasicText(
-                    "提示：请选择与您的处理器型号匹配的提权包，不同机型的提权方法不同。",
+                    AppStrings.get("temp_root_cpu_hint"),
                     style = TextStyle(Color.White.copy(alpha = 0.6f), 12.sp)
                 )
             }
@@ -84,11 +93,14 @@ fun TempRootScreen(backdrop: Backdrop) {
         // 选择提权包
         GlassCard(backdrop = backdrop, pageType = "plugins") {
             Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                BasicText("提权包", style = TextStyle(Color.White, 18.sp, FontWeight.Medium))
+                BasicText(AppStrings.get("temp_root_package"), style = TextStyle(Color.White, 18.sp, FontWeight.Medium))
                 if (selectedFile != null) {
-                    BasicText("已选择: ${selectedFile!!.substringAfterLast('/')}", style = TextStyle(Color(0xFF34C759), 14.sp))
+                    BasicText(
+                        String.format(AppStrings.get("temp_root_selected"), selectedFile!!.substringAfterLast('/')),
+                        style = TextStyle(Color(0xFF34C759), 14.sp)
+                    )
                 } else {
-                    BasicText("未选择文件", style = TextStyle(Color.White.copy(alpha = 0.6f), 14.sp))
+                    BasicText(AppStrings.get("no_file_selected"), style = TextStyle(Color.White.copy(alpha = 0.6f), 14.sp))
                 }
                 LiquidButton(
                     onClick = { AppCache.pickTempRootFileTrigger.value++ },
@@ -96,11 +108,11 @@ fun TempRootScreen(backdrop: Backdrop) {
                     modifier = Modifier.height(44.dp).fillMaxWidth(),
                     tint = Color(0xFF007AFF)
                 ) {
-                    BasicText("选择提权包 (ZIP)", style = TextStyle(Color.White, 14.sp))
+                    BasicText(AppStrings.get("temp_root_pick_zip"), style = TextStyle(Color.White, 14.sp))
                 }
                 if (permissionWarning) {
                     BasicText(
-                        "提示：提权包需要以 shell/Root 身份执行脚本，当前未检测到 Shizuku(ADB) 或 Root 权限，执行大概率会失败。",
+                        AppStrings.get("temp_root_perm_hint"),
                         style = TextStyle(Color(0xFFFF9500), 12.sp)
                     )
                 }
@@ -111,9 +123,9 @@ fun TempRootScreen(backdrop: Backdrop) {
         if (selectedFile != null) {
             GlassCard(backdrop = backdrop, pageType = "plugins") {
                 Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    BasicText("执行提权", style = TextStyle(Color.White, 18.sp, FontWeight.Medium))
+                    BasicText(AppStrings.get("temp_root_flash"), style = TextStyle(Color.White, 18.sp, FontWeight.Medium))
                     BasicText(
-                        "警告：提权操作有风险，可能导致设备无法启动。请确保已备份重要数据。",
+                        AppStrings.get("temp_root_warn"),
                         style = TextStyle(Color(0xFFFF9500), 12.sp)
                     )
                     LiquidButton(
@@ -122,7 +134,7 @@ fun TempRootScreen(backdrop: Backdrop) {
                             if (!isFlashing) {
                                 val zipPath = selectedFile
                                 if (zipPath == null) {
-                                    flashResult = "提权失败：未选择提权包"
+                                    flashResult = AppStrings.get("temp_root_fail_no_file")
                                 } else {
                                     isFlashing = true
                                     flashResult = ""
@@ -133,12 +145,12 @@ fun TempRootScreen(backdrop: Backdrop) {
                                             null
                                         }
                                         if (result == null) {
-                                            flashResult = "提权失败：执行异常，请确认 Shizuku/Root 权限后重试"
+                                            flashResult = AppStrings.get("temp_root_fail_exception")
                                         } else {
                                             flashResult = if (result.exitCode == 0) {
-                                                "提权成功！\n${result.output}"
+                                                String.format(AppStrings.get("temp_root_ok"), result.output)
                                             } else {
-                                                "提权失败：${result.error}\n${result.output}"
+                                                String.format(AppStrings.get("temp_root_fail"), result.error, result.output)
                                             }
                                         }
                                         isFlashing = false
@@ -150,7 +162,10 @@ fun TempRootScreen(backdrop: Backdrop) {
                         modifier = Modifier.height(44.dp).fillMaxWidth(),
                         tint = if (isFlashing) Color(0xFF8E8E93) else Color(0xFFFF3B30)
                     ) {
-                        BasicText(if (isFlashing) "正在提权..." else "开始提权", style = TextStyle(Color.White, 14.sp))
+                        BasicText(
+                            if (isFlashing) AppStrings.get("temp_root_running") else AppStrings.get("temp_root_start"),
+                            style = TextStyle(Color.White, 14.sp)
+                        )
                     }
                     if (flashResult.isNotEmpty()) {
                         BasicText(flashResult, style = TextStyle(Color.White, 12.sp))

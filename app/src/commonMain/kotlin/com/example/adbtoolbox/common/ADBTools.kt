@@ -11,6 +11,12 @@ expect object ADBTools {
     fun unfreezeApp(packageName: String): Boolean
     fun uninstallApp(packageName: String): Boolean
     fun clearCache(packageName: String): Boolean
+
+    /**
+     * 清除应用**全部数据**（等价系统设置里的"清除数据"，不可逆）。
+     * 与 [clearCache] 严格区分：只在界面明确二次确认后调用，绝不作为清缓存的兜底。
+     */
+    fun clearAppData(packageName: String): Boolean
     fun forceStop(packageName: String): Boolean
     fun clearAllCache(): Boolean
     fun isRooted(): Boolean
@@ -100,6 +106,15 @@ expect object ADBTools {
 
     /** 直接执行 shell（Shizuku/Root/普通三级回退），供性能加速与体检逐条执行使用。 */
     fun execPerfCommand(command: String, timeout: Int = 20): CommandResult
+
+    /**
+     * 读取应用图标的 Base64（WebP，已降采样）。
+     *
+     * 为什么单独提供而不塞进 [getInstalledApps]：一次加载 300+ 个图标会明显拖慢启动，
+     * 列表页按需逐项调用并把结果缓存进 AppCache 才是正确做法。
+     * 返回 null 表示该应用没有可用图标（调用方应回退到首字母占位）。
+     */
+    fun getAppIconBase64(packageName: String): String?
 }
 
 data class CommandResult(

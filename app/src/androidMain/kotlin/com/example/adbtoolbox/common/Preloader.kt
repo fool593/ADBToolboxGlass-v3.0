@@ -22,7 +22,8 @@ object Preloader {
                 withContext(Dispatchers.Default) {
                     val apps = ADBTools.getInstalledApps()
                     AppCache.installedApps.value = apps
-                    AppCache.appsLoaded.value = true
+                    // 只有真的读到应用才标记"已加载"：失败时若置位，页面会永远显示空列表且不再重试
+                    if (apps.isNotEmpty()) AppCache.appsLoaded.value = true
                 }
                 AppCache.preloadProgress.value = 0.5f
 
@@ -48,7 +49,8 @@ object Preloader {
         scope.launch {
             val apps = ADBTools.getInstalledApps()
             AppCache.installedApps.value = apps
-            AppCache.appsLoaded.value = true
+            // 同上：空结果不代表加载成功，不能置位 appsLoaded，否则永远不再重试
+            if (apps.isNotEmpty()) AppCache.appsLoaded.value = true
         }
     }
 

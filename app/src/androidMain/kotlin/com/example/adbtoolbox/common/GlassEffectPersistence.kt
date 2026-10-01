@@ -131,6 +131,10 @@ actual object GlassEffectPersistence {
         editor.putString("app_language", AppSettings.language)
         editor.putBoolean("app_dark_mode", AppSettings.isDarkMode)
 
+        // 主题
+        editor.putString("app_theme", AppSettings.themeId)
+        editor.putBoolean("app_theme_chosen", AppSettings.themeChosenByUser)
+
         editor.apply()
     }
 
@@ -140,6 +144,25 @@ actual object GlassEffectPersistence {
         // 应用设置（语言、深色模式）
         if (prefs.contains("app_language")) AppSettings.language = prefs.getString("app_language", "zh") ?: "zh"
         if (prefs.contains("app_dark_mode")) AppSettings.isDarkMode = prefs.getBoolean("app_dark_mode", true)
+
+        // 主题：先恢复用户的选择；如果用户从未选过主题、也没有任何已保存的玻璃配色
+        // （即全新安装），且当前处于国庆档期（10 月 1 日—7 日），首次启动自动套用国庆主题。
+        // 老版本升级上来的用户（已有 glassColor 等配置）不会被改动配色。
+        val savedTheme = prefs.getString("app_theme", null)
+        AppSettings.themeChosenByUser = prefs.getBoolean("app_theme_chosen", false)
+        if (savedTheme != null) {
+            AppSettings.themeId = savedTheme
+        } else if (!AppSettings.themeChosenByUser && !prefs.contains("glassColor")) {
+            val cal = java.util.Calendar.getInstance()
+            val month = cal.get(java.util.Calendar.MONTH) + 1
+            val day = cal.get(java.util.Calendar.DAY_OF_MONTH)
+            if (com.example.adbtoolbox.common.theme.AppTheme.isNationalDaySeason(month, day)) {
+                // persist=false：此刻 prefs 尚未写入，直接落盘会被下面的读取逻辑覆盖，统一在最后 saveAll()
+                com.example.adbtoolbox.common.theme.AppTheme.apply(
+                    com.example.adbtoolbox.common.theme.AppTheme.NATIONAL_DAY, persist = false
+                )
+            }
+        }
 
         val config = GlassEffectConfig
 

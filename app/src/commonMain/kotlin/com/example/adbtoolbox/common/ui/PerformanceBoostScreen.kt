@@ -42,6 +42,7 @@ import com.example.adbtoolbox.common.perf.PerfItem
 import com.example.adbtoolbox.common.perf.PerfRunReport
 import com.example.adbtoolbox.common.perf.PerfRunResult
 import com.example.adbtoolbox.common.perf.PerfRunner
+import com.example.adbtoolbox.common.theme.AppTheme
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.catalog.components.LiquidButton
 import kotlinx.coroutines.Dispatchers
@@ -218,7 +219,7 @@ fun PerformanceBoostScreen(
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         PerfBadge(
                             AppStrings.get("generic_count").trim(),
-                            Color(0xFF0088FF)
+                            AppTheme.accent
                         )
                         if (info.hasBrandSpecific) {
                             PerfBadge(
@@ -234,7 +235,7 @@ fun PerformanceBoostScreen(
                     PerfButtonRow(
                         backdrop = backdrop,
                         leftLabel = AppStrings.get("phone_inspector"),
-                        leftTint = Color(0xFFAF52DE),
+                        leftTint = AppTheme.accentAlt,
                         onLeft = onOpenInspector,
                         rightLabel = AppStrings.get("grant_shizuku"),
                         rightTint = Color(0xFF34C759),
@@ -275,7 +276,7 @@ fun PerformanceBoostScreen(
                     },
                     backdrop = backdrop,
                     modifier = Modifier.fillMaxWidth().height(50.dp),
-                    tint = if (running) Color(0xFF8E8E93) else Color(0xFF0088FF)
+                    tint = if (running) Color(0xFF8E8E93) else AppTheme.accent
                 ) {
                     BasicText(
                         if (running) AppStrings.get("running_item") else AppStrings.get("one_tap_boost"),
@@ -288,7 +289,7 @@ fun PerformanceBoostScreen(
                 PerfButtonRow(
                     backdrop = backdrop,
                     leftLabel = AppStrings.get("select_all"),
-                    leftTint = Color(0xFF5AC8FA),
+                    leftTint = AppTheme.accentAlt,
                     onLeft = {
                         selected.clear()
                         selected.addAll(items.map { it.id })

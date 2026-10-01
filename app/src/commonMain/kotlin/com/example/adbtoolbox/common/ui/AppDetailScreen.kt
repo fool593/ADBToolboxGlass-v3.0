@@ -35,6 +35,7 @@ import com.example.adbtoolbox.common.AppCache
 import com.example.adbtoolbox.common.AppInfoData
 import com.example.adbtoolbox.common.AppStrings
 import com.example.adbtoolbox.common.PermissionInfoData
+import com.example.adbtoolbox.common.theme.AppTheme
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.catalog.components.LiquidButton
 import com.kyant.backdrop.drawBackdrop
@@ -269,22 +270,16 @@ fun AppDetailScreen(
             GlassCard(backdrop = backdrop, pageType = "apps") {
                 Column(Modifier.padding(20f.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            Modifier
-                                .size(56f.dp)
-                                .clip(RoundedCornerShape(16f.dp))
-                                .drawBackdrop(
-                                    backdrop = backdrop,
-                                    shape = { RoundedRectangle(16f.dp) },
-                                    effects = { blur(10f.dp.toPx()) },
-                                    onDrawSurface = { drawRect(Color(0xFF0088FF).copy(0.3f)) }
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            // ADBTools.getInstalledApps() 目前恒返回 iconBase64 = null（ADBTools.kt:617），
-                            // 因此这里保留首字母占位图标。
-                            BasicText(app.appName.take(1), style = TextStyle(Color.White, 22f.sp, androidx.compose.ui.text.font.FontWeight.Bold))
-                        }
+                        // 真实应用图标，取不到时内部回退首字母占位
+                        AppIconView(
+                            packageName = app.packageName,
+                            appName = app.appName,
+                            backdrop = backdrop,
+                            size = 56f.dp,
+                            corner = 16f.dp,
+                            isSystem = app.isSystem,
+                            tint = AppTheme.accent.copy(alpha = 0.3f)
+                        )
                         Spacer(Modifier.width(14f.dp))
                         Column(Modifier.weight(1f)) {
                             BasicText(app.appName, style = TextStyle(contentColor, 18f.sp, androidx.compose.ui.text.font.FontWeight.Bold))
@@ -353,23 +348,39 @@ fun AppDetailScreen(
                     ActionBtn(backdrop, AppStrings.get("force_stop"), Color(0xFFFF3B30)) {
                         requestAction(AppStrings.get("force_stop")) { ADBTools.forceStop(packageName) }
                     }
-                    ActionBtn(backdrop, AppStrings.get("clear_cache"), Color(0xFF0088FF)) {
+                    ActionBtn(backdrop, AppStrings.get("clear_cache"), AppTheme.accent) {
                         requestAction(
                             label = AppStrings.get("clear_cache"),
                             destructive = true,
-                            confirmHint = "${AppStrings.get("clear_cache")} / ${AppStrings.get("clear_data")}"
+                            // 这里只清缓存（ADBTools.clearCache 已改成 cache-only），语义必须说准，
+                            // 否则用户会以为点一下就把应用数据清了
+                            confirmHint = AppStrings.get("clear_cache_hint")
                         ) { ADBTools.clearCache(packageName) }
                     }
                 }
                 Spacer(Modifier.height(8f.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8f.dp)) {
+                    // 清除数据是另一件事：不可逆，必须单独确认，绝不作为清缓存的兜底
+                    ActionBtn(backdrop, AppStrings.get("clear_data"), Color(0xFFFF2D55)) {
+                        requestAction(
+                            label = AppStrings.get("clear_data"),
+                            destructive = true,
+                            confirmHint = AppStrings.get("clear_data_warn_hint")
+                        ) { ADBTools.clearAppData(packageName) }
+                    }
                     ActionBtn(backdrop, AppStrings.get("uninstall"), Color(0xFFFF3B30)) {
                         requestAction(
                             label = AppStrings.get("uninstall"),
                             destructive = true,
-                            action = { ADBTools.uninstallApp(packageName) },
-                            onSuccess = { uninstalled = true },
-                            refreshAfter = false
+                            onSuccess = {
+                                // 立即从全局缓存移除，返回列表页时不会再显示已卸载的应用
+                                AppCache.installedApps.value =
+                                    AppCache.installedApps.value.filterNot { it.packageName == packageName }
+                                AppCache.clearPermissions(packageName)
+                                uninstalled = true
+                            },
+                            refreshAfter = false,
+                            action = { ADBTools.uninstallApp(packageName) }
                         )
                     }
                 }

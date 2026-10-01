@@ -694,19 +694,32 @@ actual object ADBTools {
         return try { execCommand("pm uninstall -k --user 0 $packageName").exitCode == 0 } catch (e: Exception) { false }
     }
 
+    /**
+     * 清除应用缓存（**只清缓存，不动用户数据**）。
+     *
+     * 原实现把 `pm clear` 放在第一步——那是"清除全部数据"（账号、登录态、聊天记录全没），
+     * 和界面上"清缓存"的语义完全不符，是实打实的数据丢失隐患。现在按"只清缓存"的顺序来：
+     * 1) `pm clear --cache-only`（Android 12 / API 31+ 才有该参数）；
+     * 2) 直接删 cache / code_cache 目录（需要 Shizuku 或 Root）；
+     * 3) `run-as` 删缓存（仅 debuggable 应用）；
+     * 4) `pm trim-caches`（全局裁剪缓存，属于系统行为）。
+     * 全部失败就返回 false，由界面如实提示需要提权，而不是偷偷把用户数据抹掉。
+     */
     actual fun clearCache(packageName: String): Boolean {
         return try {
             var anySuccess = false
 
-            // 方式1：pm clear（清除所有数据，包括缓存）
-            var result = execCommand("pm clear $packageName")
-            val pmClearSuccess = result.exitCode == 0 || result.output.contains("Success", true)
-            if (pmClearSuccess) return true
+            // 方式1：pm clear --cache-only（仅 Android 12+ 支持；低版本会报错，自动落到下一步）
+            var result = execCommand("pm clear --cache-only $packageName 2>/dev/null")
+            if (result.output.contains("Success", true) || result.output.contains("success", true)) {
+                return true
+            }
 
-            // 方式2：只删除缓存目录
+            // 方式2：只删除缓存目录（需要 Shizuku / Root）
             val cacheDirs = listOf(
                 "/data/data/$packageName/cache",
                 "/data/user/0/$packageName/cache",
+                "/data/data/$packageName/code_cache",
                 "/sdcard/Android/data/$packageName/cache",
                 "/sdcard/Android/data/$packageName/code_cache"
             )
@@ -717,25 +730,28 @@ actual object ADBTools {
                 }
             }
 
-            // 方式3：pm trim-caches（释放缓存，需要 ADB 权限）
-            result = execCommand("pm trim-caches 999999999")
-            val trimSuccess = result.exitCode == 0 || result.output.contains("Success", true)
-            if (trimSuccess) anySuccess = true
-
-            // 方式4：通过 run-as 删除缓存（只对 debuggable 应用有效）
+            // 方式3：run-as 删除缓存（只对 debuggable 应用有效）
             result = execCommand("run-as $packageName rm -rf cache/* 2>/dev/null && echo CLEANED || echo FAILED")
             if (result.output.contains("CLEANED", true)) {
                 anySuccess = true
             }
 
-            // 方式5：cmd package compile -m verify -f（触发编译，可能清理部分缓存）
-            result = execCommand("cmd package compile -m verify -f $packageName 2>/dev/null && echo DONE || echo FAILED")
-            if (result.output.contains("DONE", true)) {
-                anySuccess = true
-            }
+            // 方式4：pm trim-caches（让系统回收缓存空间）
+            result = execCommand("pm trim-caches 999999999")
+            if (result.exitCode == 0 || result.output.contains("Success", true)) anySuccess = true
 
-            // 至少有一种方式成功就算清缓存成功
             anySuccess
+        } catch (e: Exception) { false }
+    }
+
+    /**
+     * 清除应用**全部数据**（等价于系统设置里的"清除数据"）。
+     * 与 [clearCache] 严格区分：这是不可逆操作，只能由界面在明确二次确认后调用。
+     */
+    actual fun clearAppData(packageName: String): Boolean {
+        return try {
+            val result = execCommand("pm clear $packageName")
+            result.exitCode == 0 || result.output.contains("Success", true)
         } catch (e: Exception) { false }
     }
 
@@ -1649,24 +1665,83 @@ actual object ADBTools {
         val max = getMaxRefreshRate()
         val current = getCurrentRefreshRate()
         if (max <= 61f) {
-            Pair(false, "屏幕仅支持最高 ${max.toInt()}Hz（或未能读取到屏幕高刷档位），无需修复")
+            Pair(
+                false,
+                String.format(AppStrings.get("screen_only_60"), fmtHzForFix(max))
+            )
         } else {
             val needFix = current < max - 1f || current <= 61f
             if (!needFix) {
-                Pair(true, "当前已是 ${current.toInt()}Hz，屏幕最高支持 ${max.toInt()}Hz")
+                Pair(
+                    true,
+                    String.format(
+                        AppStrings.get("refresh_rate_ok"),
+                        fmtHzForFix(current), fmtHzForFix(max)
+                    )
+                )
             } else {
                 val r = setRefreshRate(max, both = false)
                 val newRate = getCurrentRefreshRate()
                 val ok = r.exitCode == 0
                 val msg = buildString {
-                    append("目标 ${max.toInt()}Hz，修复前 ${current.toInt()}Hz")
-                    append("，修复后 ${if (newRate > 1f) "${newRate.toInt()}Hz" else "读取中"}")
-                    if (!ok) append("（写入被拒绝：请授予 Shizuku/Root 权限后重试）")
+                    append(AppStrings.get("refresh_rate_target")).append(' ').append(fmtHzForFix(max))
+                    append(" · ").append(AppStrings.get("refresh_rate_before")).append(' ')
+                    append(fmtHzForFix(current))
+                    append(" · ").append(AppStrings.get("refresh_rate_after")).append(' ')
+                    append(if (newRate > 1f) fmtHzForFix(newRate) else AppStrings.get("loading"))
+                    if (!ok) append("（").append(AppStrings.get("refresh_rate_read_denied")).append("）")
                 }
                 Pair(ok, msg)
             }
         }
     }
 
+    /** 刷新率显示：<=1Hz 视为读不到，用「未知」而不是 0 Hz。 */
+    private fun fmtHzForFix(v: Float): String =
+        if (v <= 1f) AppStrings.get("unknown")
+        else "${if (v % 1f == 0f) v.toInt().toString() else v.toString()} Hz"
+
     actual fun execPerfCommand(command: String, timeout: Int): CommandResult = execCommand(command, timeout)
+
+    /** 图标缓存：避免列表滚动时反复解码同一个图标。 */
+    private val iconCache = java.util.concurrent.ConcurrentHashMap<String, String>()
+
+    actual fun getAppIconBase64(packageName: String): String? {
+        iconCache[packageName]?.let { return it.ifEmpty { null } }
+        val encoded = try {
+            val pm = appContext.packageManager
+            val drawable = try {
+                pm.getApplicationIcon(packageName)
+            } catch (e: Exception) {
+                null
+            } ?: return null
+            // 降采样到 96px 再压 WebP，避免把 300+ 个原始图标塞进内存
+            val target = 96
+            val width = drawable.intrinsicWidth.coerceAtLeast(1)
+            val height = drawable.intrinsicHeight.coerceAtLeast(1)
+            val scale = if (width > target || height > target) {
+                target.toFloat() / maxOf(width, height)
+            } else 1f
+            val w = (width * scale).toInt().coerceAtLeast(1)
+            val h = (height * scale).toInt().coerceAtLeast(1)
+            val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bitmap)
+            drawable.setBounds(0, 0, w, h)
+            drawable.draw(canvas)
+            val stream = ByteArrayOutputStream()
+            val format = if (Build.VERSION.SDK_INT >= 30) {
+                Bitmap.CompressFormat.WEBP_LOSSY
+            } else {
+                @Suppress("DEPRECATION")
+                Bitmap.CompressFormat.WEBP
+            }
+            bitmap.compress(format, 80, stream)
+            bitmap.recycle()
+            Base64.encodeToString(stream.toByteArray(), Base64.NO_WRAP)
+        } catch (e: Exception) {
+            null
+        }
+        iconCache[packageName] = encoded ?: ""
+        return encoded
+    }
 }
