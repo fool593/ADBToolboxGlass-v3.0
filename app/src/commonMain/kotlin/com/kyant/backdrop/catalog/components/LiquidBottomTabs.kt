@@ -172,6 +172,17 @@ fun LiquidBottomTabs(
             else longPressAnim.animateTo(0f, AppMotion.longPressOut)
         }
 
+        // 按压/长按进度的 1/16 量化快照，只给下方指示器的 effects 用：
+        // 直接读动画值会让长按与回弹期间的每一帧都重建整条 RenderEffect 链
+        // （BlurEffect + RuntimeShaderEffect + createChainEffect，全是原生对象）。
+        // 1/16 台阶的模糊/折射增强在屏幕上看不出来，重建次数从"每帧"降到"十几次"。
+        val pressStep = remember(dampedDragAnimation) {
+            derivedStateOf { (dampedDragAnimation.pressProgress * 16f).toInt() / 16f }
+        }
+        val longPressStep = remember(longPressAnim) {
+            derivedStateOf { (longPressAnim.value * 16f).toInt() / 16f }
+        }
+
         val interactiveHighlight = remember(animationScope) {
             InteractiveHighlight(
                 animationScope = animationScope,
@@ -290,8 +301,8 @@ fun LiquidBottomTabs(
                         )
                     },
                     effects = {
-                        val progress = dampedDragAnimation.pressProgress
-                        val lp = longPressAnim.value
+                        val progress = pressStep.value
+                        val lp = longPressStep.value
                         val edgeRef = GlassEffectConfig.longPressRefraction.value
                         // 指示器胶囊模糊/折射绑定到导航栏可调节参数，滑块调节即时生效
                         blur(GlassEffectConfig.navIndicatorBlur.value.dp.toPx())
@@ -314,7 +325,10 @@ fun LiquidBottomTabs(
                         val glowSize = GlassEffectConfig.longPressGlowSize.value
                         Shadow(
                             alpha = (progress + lp * 0.85f * glowIntensity).coerceIn(0f, 1f),
-                            radius = 22f.dp * lp * glowSize
+                            radius = 22f.dp * lp * glowSize,
+                            // 必须显式传发光色：Shadow 的默认色是 Color.Black(alpha 0.1)，
+                            // 不传的话导航胶囊长按时出现的是一圈**黑晕**，和"高光是亮边"完全相反。
+                            color = GlassEffectConfig.longPressGlowColor.value
                         )
                     },
                     innerShadow = {

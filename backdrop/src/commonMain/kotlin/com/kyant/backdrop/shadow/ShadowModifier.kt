@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import com.kyant.backdrop.internal.ShapeProvider
 import com.kyant.backdrop.internal.blur
+import com.kyant.backdrop.internal.blurNeedsUpdate
 import kotlin.math.ceil
 
 internal class ShadowElement(
@@ -69,6 +70,15 @@ internal class ShadowNode(
     private var shadowLayer: GraphicsLayer? = null
 
     private val paint = Paint()
+
+    /**
+     * 上一次写进 paint 的模糊半径。
+     *
+     * [configurePaint] 在 draw() 里被调用，而 `Paint.blur` 每次都 new 一个原生 `BlurMaskFilter`，
+     * 无条件调用就是"每帧每节点一个原生分配"。这里按可见台阶（>max(4px, 10%)）复用，
+     * 长按发光的半径动画不再每帧产生新的原生对象。
+     */
+    private var prevBlurRadius = Float.NaN
 
     override fun ContentDrawScope.draw() {
         val shadow = shadow() ?: return drawContent()
@@ -124,11 +134,16 @@ internal class ShadowNode(
             graphicsContext.releaseGraphicsLayer(layer)
             shadowLayer = null
         }
+        prevBlurRadius = Float.NaN
     }
 
     private fun DrawScope.configurePaint(shadow: Shadow) {
         paint.color = shadow.color
-        paint.blur(shadow.radius.toPx())
+        val blurRadius = shadow.radius.toPx()
+        if (blurNeedsUpdate(prevBlurRadius, blurRadius)) {
+            paint.blur(blurRadius)
+            prevBlurRadius = blurRadius
+        }
     }
 }
 

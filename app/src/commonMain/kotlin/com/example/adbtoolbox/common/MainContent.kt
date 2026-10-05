@@ -60,6 +60,8 @@ fun MainContent() {
     var currentDestination by rememberSaveable { mutableStateOf(ADBDestination.Home) }
     var selectedAppPackage by remember { mutableStateOf<String?>(null) }
     var selectedPlugin by remember { mutableStateOf<com.example.adbtoolbox.common.PluginData?>(null) }
+    // 机型分类优化：从"机型分类"页进入性能页时带上品牌过滤（null = 全机型）
+    var pendingBrandFilter by remember { mutableStateOf<String?>(null) }
     var pickWallpaperTrigger by remember { mutableIntStateOf(0) }
     var clearWallpaperTrigger by remember { mutableIntStateOf(0) }
     val dynamicWallpaperEnabled = AppCache.dynamicWallpaperEnabled.value
@@ -110,135 +112,165 @@ fun MainContent() {
                     .systemBarsPadding()
             ) {
                 Box(Modifier.weight(1f)) {
-                    when (currentDestination) {
-                        ADBDestination.Home -> HomeScreen(
-                            backdrop = backdrop,
-                            contentColor = contentColor,
-                            onNavigate = { currentDestination = it }
-                        )
-                        ADBDestination.Apps -> AppsScreen(
-                            backdrop = backdrop,
-                            contentColor = contentColor,
-                            onAppClick = { pkg ->
-                                selectedAppPackage = pkg
-                                currentDestination = ADBDestination.AppDetail
-                            }
-                        )
-                        ADBDestination.Terminal -> TerminalScreen(
-                            backdrop = backdrop,
-                            contentColor = contentColor
-                        )
-                        ADBDestination.Settings -> SettingsScreen(
-                            backdrop = backdrop,
-                            contentColor = contentColor,
-                            onPickWallpaper = { pickWallpaperTrigger++ },
-                            onClearWallpaper = { clearWallpaperTrigger++ },
-                            onGlassPlayground = { currentDestination = ADBDestination.GlassPlayground }
-                        )
-                        ADBDestination.DeviceInfo -> DeviceInfoScreen(
-                            backdrop = backdrop,
-                            contentColor = contentColor,
-                            onBack = { currentDestination = ADBDestination.Home }
-                        )
-                        ADBDestination.ADBPanel -> ADBPanelScreen(
-                            backdrop = backdrop,
-                            contentColor = contentColor,
-                            onBack = { currentDestination = ADBDestination.Home }
-                        )
-                        ADBDestination.Permissions -> PermissionsScreen(
-                            backdrop = backdrop,
-                            contentColor = contentColor,
-                            onBack = { currentDestination = ADBDestination.Home }
-                        )
-                        ADBDestination.RootManager -> RootManagerScreen(
-                            backdrop = backdrop,
-                            contentColor = contentColor,
-                            onBack = { currentDestination = ADBDestination.Home }
-                        )
-                        ADBDestination.ShellExecutor -> ShellExecutorScreen(
-                            backdrop = backdrop,
-                            contentColor = contentColor,
-                            onBack = { currentDestination = ADBDestination.Home }
-                        )
-                        ADBDestination.AppDetail -> AppDetailScreen(
-                            backdrop = backdrop,
-                            contentColor = contentColor,
-                            packageName = selectedAppPackage ?: "",
-                            onBack = { currentDestination = ADBDestination.Apps }
-                        )
-                        ADBDestination.ADBModule -> ADBModuleScreen(
-                            backdrop = backdrop,
-                            contentColor = contentColor,
-                            onPickFile = { AppCache.pickModuleFileTrigger.value++ },
-                            onBack = { currentDestination = ADBDestination.Home },
-                            selectedFilePath = AppCache.selectedModulePath.value
-                        )
-                        ADBDestination.Plugins -> PluginsScreen(
-                            backdrop = backdrop,
-                            contentColor = contentColor,
-                            onPickPlugin = { AppCache.pickPluginFileTrigger.value++ },
-                            onPluginClick = { plugin ->
-                                selectedPlugin = plugin
-                                currentDestination = ADBDestination.PluginDetail
-                            }
-                        )
-                        ADBDestination.PluginDetail -> selectedPlugin?.let { plugin ->
-                            PluginDetailScreen(
-                                plugin = plugin,
+                    com.example.adbtoolbox.common.ui.ScreenTransitionHost(
+                        target = currentDestination,
+                        modifier = Modifier.fillMaxSize()
+                    ) { dest ->
+                        when (dest) {
+                            ADBDestination.Home -> HomeScreen(
                                 backdrop = backdrop,
                                 contentColor = contentColor,
-                                onBack = { currentDestination = ADBDestination.Plugins }
+                                onNavigate = { currentDestination = it }
+                            )
+                            ADBDestination.Apps -> AppsScreen(
+                                backdrop = backdrop,
+                                contentColor = contentColor,
+                                onAppClick = { pkg ->
+                                    selectedAppPackage = pkg
+                                    currentDestination = ADBDestination.AppDetail
+                                }
+                            )
+                            ADBDestination.Terminal -> TerminalScreen(
+                                backdrop = backdrop,
+                                contentColor = contentColor
+                            )
+                            ADBDestination.Settings -> SettingsScreen(
+                                backdrop = backdrop,
+                                contentColor = contentColor,
+                                onPickWallpaper = { pickWallpaperTrigger++ },
+                                onClearWallpaper = { clearWallpaperTrigger++ },
+                                onGlassPlayground = { currentDestination = ADBDestination.GlassPlayground }
+                            )
+                            ADBDestination.DeviceInfo -> DeviceInfoScreen(
+                                backdrop = backdrop,
+                                contentColor = contentColor,
+                                onBack = { currentDestination = ADBDestination.Home }
+                            )
+                            ADBDestination.ADBPanel -> ADBPanelScreen(
+                                backdrop = backdrop,
+                                contentColor = contentColor,
+                                onBack = { currentDestination = ADBDestination.Home }
+                            )
+                            ADBDestination.Permissions -> PermissionsScreen(
+                                backdrop = backdrop,
+                                contentColor = contentColor,
+                                onBack = { currentDestination = ADBDestination.Home }
+                            )
+                            ADBDestination.RootManager -> RootManagerScreen(
+                                backdrop = backdrop,
+                                contentColor = contentColor,
+                                onBack = { currentDestination = ADBDestination.Home }
+                            )
+                            ADBDestination.ShellExecutor -> ShellExecutorScreen(
+                                backdrop = backdrop,
+                                contentColor = contentColor,
+                                onBack = { currentDestination = ADBDestination.Home }
+                            )
+                            ADBDestination.AppDetail -> AppDetailScreen(
+                                backdrop = backdrop,
+                                contentColor = contentColor,
+                                packageName = selectedAppPackage ?: "",
+                                onBack = { currentDestination = ADBDestination.Apps }
+                            )
+                            ADBDestination.ADBModule -> ADBModuleScreen(
+                                backdrop = backdrop,
+                                contentColor = contentColor,
+                                onPickFile = { AppCache.pickModuleFileTrigger.value++ },
+                                onBack = { currentDestination = ADBDestination.Home },
+                                selectedFilePath = AppCache.selectedModulePath.value
+                            )
+                            ADBDestination.Plugins -> PluginsScreen(
+                                backdrop = backdrop,
+                                contentColor = contentColor,
+                                onPickPlugin = { AppCache.pickPluginFileTrigger.value++ },
+                                onPluginClick = { plugin ->
+                                    selectedPlugin = plugin
+                                    currentDestination = ADBDestination.PluginDetail
+                                }
+                            )
+                            ADBDestination.PluginDetail -> selectedPlugin?.let { plugin ->
+                                PluginDetailScreen(
+                                    plugin = plugin,
+                                    backdrop = backdrop,
+                                    contentColor = contentColor,
+                                    onBack = { currentDestination = ADBDestination.Plugins }
+                                )
+                            }
+                            ADBDestination.GlassPlayground -> GlassPlaygroundScreen(
+                                backdrop = backdrop,
+                                contentColor = contentColor,
+                                onBack = { currentDestination = ADBDestination.Settings }
+                            )
+                            ADBDestination.RootTool -> com.example.adbtoolbox.common.ui.RootToolScreen(
+                                backdrop = backdrop,
+                                contentColor = contentColor,
+                                onBack = { currentDestination = ADBDestination.Home },
+                                onNavigateToTerminal = { command ->
+                                    AppCache.terminalInitialCommand.value = command
+                                    currentDestination = ADBDestination.Terminal
+                                }
+                            )
+                            ADBDestination.TempRoot -> com.example.adbtoolbox.common.ui.TempRootScreen(
+                                backdrop = backdrop,
+                            )
+                            // v2.8 品牌自适应一键性能加速
+                            ADBDestination.PerformanceBoost -> com.example.adbtoolbox.common.ui.PerformanceBoostScreen(
+                                backdrop = backdrop,
+                                contentColor = contentColor,
+                                onBack = {
+                                    pendingBrandFilter = null
+                                    currentDestination = ADBDestination.Home
+                                },
+                                onOpenInspector = { currentDestination = ADBDestination.PhoneInspector },
+                                brandFilter = pendingBrandFilter
+                            )
+                            // v2.8 机型分类优化：每个品牌独立入口
+                            ADBDestination.BrandPerf -> com.example.adbtoolbox.common.ui.BrandPerfScreen(
+                                backdrop = backdrop,
+                                contentColor = contentColor,
+                                onBack = { currentDestination = ADBDestination.Home },
+                                onOpenBrand = { brandId ->
+                                    pendingBrandFilter = brandId.ifBlank { null }
+                                    currentDestination = ADBDestination.PerformanceBoost
+                                }
+                            )
+                            // v2.8 游戏帧率（全机型）：非华为用应用权限直写，华为/荣耀走 ADB 或 Root
+                            ADBDestination.GameFrameRate -> com.example.adbtoolbox.common.ui.GameFrameRateScreen(
+                                backdrop = backdrop,
+                                contentColor = contentColor,
+                                onBack = { currentDestination = ADBDestination.Home },
+                                onOpenWriteSettings = { AppCache.openWriteSettingsTrigger.value++ },
+                                onOpenTerminal = { command ->
+                                    AppCache.terminalInitialCommand.value = command
+                                    currentDestination = ADBDestination.Terminal
+                                }
+                            )
+                            // v2.8 手机体检（指令可用性检查员）
+                            ADBDestination.PhoneInspector -> com.example.adbtoolbox.common.ui.PhoneInspectorScreen(
+                                backdrop = backdrop,
+                                contentColor = contentColor,
+                                onBack = { currentDestination = ADBDestination.Home },
+                                onOpenBoost = { currentDestination = ADBDestination.PerformanceBoost }
+                            )
+                            // v2.8 华为深度优化（HarmonyOS / EMUI 专属）
+                            ADBDestination.HuaweiBoost -> com.example.adbtoolbox.common.ui.HuaweiBoostScreen(
+                                backdrop = backdrop,
+                                contentColor = contentColor,
+                                onBack = { currentDestination = ADBDestination.Home },
+                                onRunInTerminal = { command ->
+                                    AppCache.terminalInitialCommand.value = command
+                                    currentDestination = ADBDestination.Terminal
+                                }
+                            )
+                            // v2.8 已安装 Root 模块管理（此前 RootModuleManager.getInstalledModules() 没有任何 UI 调用者）
+                            ADBDestination.RootModules -> com.example.adbtoolbox.common.ui.RootModuleScreen(
+                                backdrop = backdrop,
+                                contentColor = contentColor,
+                                onBack = { currentDestination = ADBDestination.Home },
+                                onInstallModule = { AppCache.pickRootModuleFileTrigger.value++ },
+                                selectedFilePath = AppCache.selectedRootModulePath.value
                             )
                         }
-                        ADBDestination.GlassPlayground -> GlassPlaygroundScreen(
-                            backdrop = backdrop,
-                            contentColor = contentColor,
-                            onBack = { currentDestination = ADBDestination.Settings }
-                        )
-                        ADBDestination.RootTool -> com.example.adbtoolbox.common.ui.RootToolScreen(
-                            backdrop = backdrop,
-                            contentColor = contentColor,
-                            onBack = { currentDestination = ADBDestination.Home },
-                            onNavigateToTerminal = { command ->
-                                AppCache.terminalInitialCommand.value = command
-                                currentDestination = ADBDestination.Terminal
-                            }
-                        )
-                        ADBDestination.TempRoot -> com.example.adbtoolbox.common.ui.TempRootScreen(
-                            backdrop = backdrop,
-                        )
-                        // v2.8 品牌自适应一键性能加速
-                        ADBDestination.PerformanceBoost -> com.example.adbtoolbox.common.ui.PerformanceBoostScreen(
-                            backdrop = backdrop,
-                            contentColor = contentColor,
-                            onBack = { currentDestination = ADBDestination.Home },
-                            onOpenInspector = { currentDestination = ADBDestination.PhoneInspector }
-                        )
-                        // v2.8 手机体检（指令可用性检查员）
-                        ADBDestination.PhoneInspector -> com.example.adbtoolbox.common.ui.PhoneInspectorScreen(
-                            backdrop = backdrop,
-                            contentColor = contentColor,
-                            onBack = { currentDestination = ADBDestination.Home },
-                            onOpenBoost = { currentDestination = ADBDestination.PerformanceBoost }
-                        )
-                        // v2.8 华为深度优化（HarmonyOS / EMUI 专属）
-                        ADBDestination.HuaweiBoost -> com.example.adbtoolbox.common.ui.HuaweiBoostScreen(
-                            backdrop = backdrop,
-                            contentColor = contentColor,
-                            onBack = { currentDestination = ADBDestination.Home },
-                            onRunInTerminal = { command ->
-                                AppCache.terminalInitialCommand.value = command
-                                currentDestination = ADBDestination.Terminal
-                            }
-                        )
-                        // v2.8 已安装 Root 模块管理（此前 RootModuleManager.getInstalledModules() 没有任何 UI 调用者）
-                        ADBDestination.RootModules -> com.example.adbtoolbox.common.ui.RootModuleScreen(
-                            backdrop = backdrop,
-                            contentColor = contentColor,
-                            onBack = { currentDestination = ADBDestination.Home },
-                            onInstallModule = { AppCache.pickRootModuleFileTrigger.value++ },
-                            selectedFilePath = AppCache.selectedRootModulePath.value
-                        )
                     }
                 }
 

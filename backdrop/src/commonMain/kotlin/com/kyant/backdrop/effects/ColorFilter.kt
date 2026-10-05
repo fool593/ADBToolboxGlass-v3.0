@@ -4,14 +4,16 @@ import androidx.annotation.FloatRange
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.ColorMatrixColorFilter
+import androidx.compose.ui.graphics.RenderEffect
 import com.kyant.backdrop.BackdropEffectScope
+import com.kyant.backdrop.BackdropEffectStep
 import com.kyant.backdrop.internal.ColorFilterEffect
 import com.kyant.backdrop.isRenderEffectSupported
 
 fun BackdropEffectScope.colorFilter(colorFilter: ColorFilter) {
     if (!isRenderEffectSupported()) return
 
-    renderEffect = ColorFilterEffect(renderEffect, colorFilter)
+    addEffect(ColorFilterStep(colorFilter))
 }
 
 fun BackdropEffectScope.opacity(@FloatRange(from = 0.0, to = 1.0) alpha: Float) {
@@ -42,6 +44,25 @@ private val VibrantColorFilter = colorControlsColorFilter(saturation = 1.5f)
 
 fun BackdropEffectScope.vibrancy() {
     colorFilter(VibrantColorFilter)
+}
+
+private class ColorFilterStep(
+    val colorFilter: ColorFilter
+) : BackdropEffectStep {
+
+    override fun build(inner: RenderEffect?): RenderEffect {
+        return ColorFilterEffect(inner, colorFilter)
+    }
+
+    // ColorFilter 没有值语义（ColorMatrixColorFilter 未重写 equals），这里按同一实例判断：
+    // vibrancy() 用的是模块内共享的常量滤镜，所以结构比较稳定，不会每帧重建效果链。
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is ColorFilterStep) return false
+        return colorFilter === other.colorFilter
+    }
+
+    override fun hashCode(): Int = colorFilter.hashCode()
 }
 
 private fun colorControlsColorFilter(

@@ -39,6 +39,8 @@ import com.example.adbtoolbox.common.AppStrings
 import com.example.adbtoolbox.common.perf.BrandDatabase
 import com.example.adbtoolbox.common.perf.InspectGroup
 import com.example.adbtoolbox.common.perf.InspectReport
+import com.example.adbtoolbox.common.perf.InspectResult
+import com.example.adbtoolbox.common.perf.PerfChannels
 import com.example.adbtoolbox.common.perf.PerfItem
 import com.example.adbtoolbox.common.perf.PerfRunner
 import com.example.adbtoolbox.common.theme.AppTheme
@@ -54,6 +56,10 @@ import kotlinx.coroutines.withContext
  *
  * 作用：先检测机型/品牌/系统 → 再逐项验证"哪些指令在这台手机上真的能生效"，
  * 输出可执行项与结论，避免用户在一台设备上跑无效指令（即"普通 ADB 指令"的通病）。
+ *
+ * 明细结构（v2.8 用户要求）：每个体检分组内部再按**提权通道**分成两块，
+ * `Root 专属` 与 `ADB / Shizuku 可用` 各占自己的区块，不再把两类混在同一段里；
+ * 本机缺某条通道时，块标题上直接写明，块内条目也标明"因缺提权不可用"。
  */
 @Composable
 fun PhoneInspectorScreen(
@@ -229,8 +235,11 @@ fun PhoneInspectorScreen(
                     rightLabel = AppStrings.get("inspect_fix_all"),
                     rightTint = Color(0xFFFF3B30),
                     onRight = {
+                        // 缺提权的项不再提交：它们已经在各自区块里标明"因缺提权不可用"，
+                        // 提交过去只会得到一次必然失败的执行结果。
                         val actionable = report?.groups?.flatMap { it.results }
-                            ?.filter { it.fixCommand != null } ?: emptyList()
+                            ?.filter { it.fixCommand != null && missingPrivilegeNote(it, info) == null }
+                            ?: emptyList()
                         if (actionable.isEmpty()) {
                             toast = AppStrings.get("inspect_all_fixed").substringBefore('%').trim()
                         } else {
@@ -248,7 +257,7 @@ fun PhoneInspectorScreen(
             }
         }
 
-        // ---------------- 体检分组明细 ----------------
+        // ---------------- 体检分组明细：组内再按提权通道分成两块 ----------------
         report?.groups?.forEach { group ->
             Spacer(Modifier.height(14.dp))
             GlassCard(backdrop = backdrop, pageType = "home") {
@@ -257,17 +266,34 @@ fun PhoneInspectorScreen(
                         AppStrings.get(group.nameKey),
                         style = TextStyle(contentColor, 16f.sp, FontWeight.Bold)
                     )
-                    Spacer(Modifier.height(10.dp))
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        group.results.forEach { res ->
-                            InspectResultRow(
-                                title = announceTitle(res.id, group),
-                                status = res.status,
-                                detail = res.detail,
-                                fixResult = fixResults[res.id],
-                                contentColor = contentColor,
-                                backdrop = backdrop,
-                                onFix = res.fixCommand?.let { cmd ->
+                    val byChannel = group.results.groupBy { channelOfResult(it) }
+                    listOf(PerfChannels.ROOT, PerfChannels.ADB).forEach { channel ->
+                        val channelResults = byChannel[channel].orEmpty()
+                        // 空通道不画标题，避免出现"Root 专属 0 条"的噪音区块
+                        if (channelResults.isEmpty()) return@forEach
+                        val channelMissing = info != null && PerfChannels.missingOn(info, channel)
+                        Spacer(Modifier.height(12.dp))
+                        PerfChannelHeader(
+                            title = AppStrings.get(PerfChannels.titleKey(channel)),
+                            countText = String.format(AppStrings.get("perf_group_count"), channelResults.size),
+                            barColor = if (channel == PerfChannels.ROOT) Color(0xFFFF3B30) else AppTheme.accent,
+                            contentColor = contentColor,
+                            warning = when {
+                                !channelMissing -> null
+                                channel == PerfChannels.ROOT -> AppStrings.get("perf_group_root_missing")
+                                else -> AppStrings.get("perf_group_adb_missing")
+                            },
+                            note = when {
+                                channel == PerfChannels.ROOT -> AppStrings.get("perf_group_root_note")
+                                else -> AppStrings.get("perf_group_adb_note")
+                            }
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            channelResults.forEach { res ->
+                                // 缺提权时不再给出"执行修复"按钮：改成明确写出原因，避免点了没反应
+                                val unavailableNote = missingPrivilegeNote(res, info)
+                                val fixAction: (() -> Unit)? = res.fixCommand?.let { cmd ->
                                     {
                                         if (cmd == "__FIX_REFRESH__") {
                                             requestConfirm(AppStrings.get("refresh_rate_confirm")) {
@@ -278,7 +304,17 @@ fun PhoneInspectorScreen(
                                         }
                                     }
                                 }
-                            )
+                                InspectResultRow(
+                                    title = announceTitle(res.id, group),
+                                    status = res.status,
+                                    detail = res.detail,
+                                    fixResult = fixResults[res.id],
+                                    contentColor = contentColor,
+                                    backdrop = backdrop,
+                                    unavailableNote = unavailableNote,
+                                    onFix = if (unavailableNote != null) null else fixAction
+                                )
+                            }
                         }
                     }
                 }
@@ -369,6 +405,33 @@ private fun announceTitle(id: String, group: InspectGroup): String {
     }
 }
 
+/**
+ * 体检项归入哪条提权通道：查得到 [PerfItem] 的按它的 `requiresPermission` 判定；
+ * 设备信息 / 环境检测这类没有对应指令的项不需要提权，归入 ADB 通道（该通道本身就含
+ * "无需提权"的项）。判定统一走 [PerfChannels]，页面不自己写规则。
+ */
+private fun channelOfResult(res: InspectResult): String {
+    val item = res.perfItemId?.let { PerfItemLookup.all[it] } ?: return PerfChannels.ADB
+    return PerfChannels.of(item)
+}
+
+/**
+ * 该体检项是否"因缺提权不可用"。
+ * 三个条件同时成立才算：本机缺这条通道、该项确实需要提权、执行层判定为 FAIL。
+ * 只在满足时返回文案，其余情况返回 null（不夸大、不误标）。
+ */
+private fun missingPrivilegeNote(res: InspectResult, info: PerfRunner.PerfDeviceInfo?): String? {
+    val current = info ?: return null
+    if (res.status != "FAIL") return null
+    val item = res.perfItemId?.let { PerfItemLookup.all[it] } ?: return null
+    if (item.requiresPermission == "none") return null
+    return if (PerfChannels.missingOn(current, PerfChannels.of(item))) {
+        AppStrings.get("perf_unavailable_no_privilege")
+    } else {
+        null
+    }
+}
+
 /** PerfItem 按 id 查表，供体检结果复用指令名称/说明。 */
 private object PerfItemLookup {
     val all: Map<String, PerfItem> by lazy {
@@ -389,6 +452,8 @@ private fun InspectResultRow(
     fixResult: String?,
     contentColor: Color,
     backdrop: Backdrop,
+    /** 非空表示本机缺这条检测项需要的提权通道：显示原因，并且不再提供"执行修复"按钮。 */
+    unavailableNote: String? = null,
     onFix: (() -> Unit)?
 ) {
     val (statusText, color) = when (status) {
@@ -426,7 +491,11 @@ private fun InspectResultRow(
             Spacer(Modifier.height(5.dp))
             PerfBadge(fixResult.take(80), if (fixResult.startsWith("OK")) Color(0xFF34C759) else Color(0xFFFF3B30))
         }
-        if (onFix != null && fixResult == null) {
+        if (unavailableNote != null) {
+            Spacer(Modifier.height(5.dp))
+            PerfBadge(unavailableNote, Color(0xFFFF9500))
+        }
+        if (onFix != null && fixResult == null && unavailableNote == null) {
             Spacer(Modifier.height(8.dp))
             Box(
                 Modifier

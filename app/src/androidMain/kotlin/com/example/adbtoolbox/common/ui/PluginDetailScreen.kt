@@ -184,7 +184,8 @@ actual fun PluginDetailScreen(
             entryPath = path
             entryLoaded = true
             if (path.isNullOrBlank()) {
-                setStatus(AppStrings.get("plugin_webui_missing"))
+                // 具体到模块：点开这一刻文件已经不在磁盘上了（被删除 / 被移动）
+                setStatus(hwFormat(AppStrings.get("plugin_webui_gone"), currentPlugin.name))
             } else {
                 openWebUIUrl = path
             }
@@ -288,8 +289,13 @@ actual fun PluginDetailScreen(
                         contentColor
                     )
                     if (currentPlugin.hasWebUI) {
+                        // 列表判定有 WebUI，但这一刻解析不到入口文件：如实说明文件已不存在
                         val entryText = entryPath
-                            ?: if (entryLoaded) AppStrings.get("plugin_webui_missing") else AppStrings.get("loading")
+                            ?: if (entryLoaded) {
+                                hwFormat(AppStrings.get("plugin_webui_gone"), currentPlugin.name)
+                            } else {
+                                AppStrings.get("loading")
+                            }
                         InfoRow(
                             AppStrings.get("plugin_webui_file"),
                             entryText,

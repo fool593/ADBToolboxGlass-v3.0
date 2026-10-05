@@ -1073,17 +1073,99 @@ actual object ADBTools {
     }
 
     // 刷入临时 Root 提权包（zip 格式）
+    //
+    // 旧实现有两个真实缺陷：
+    // 1. 直接在应用私有目录里 `sh <script>`：shell uid(2000) 读不到 /data/data/<pkg>/cache，脚本必然失败；
+    // 2. 挑脚本用 walkTopDown().firstOrNull{}，顺序不确定，可能挑到 uninstall.sh 之类的非入口脚本。
+    // 现在：本机解压（不依赖设备端 unzip）→ 分块 base64 推送到 /data/local/tmp → 在设备上执行并回传真实输出。
     actual fun flashTempRootModule(zipPath: String): CommandResult {
-        val zipFile = java.io.File(zipPath)
-        if (!zipFile.exists()) {
-            return CommandResult("", "File not found: $zipPath", -1)
+        fun quote(value: String): String = "'" + value.replace("'", "'\\''") + "'"
+
+        fun fmt(template: String, vararg args: Any?): String {
+            var out = template
+            args.forEachIndexed { index, value ->
+                out = out.replace("%${index + 1}\$s", value?.toString() ?: "")
+            }
+            return out
         }
-        return try {
-            val tempDir = java.io.File(appContext.cacheDir, "temp_root_${System.currentTimeMillis()}")
-            tempDir.mkdirs()
+
+        fun reasonOf(result: CommandResult): String =
+            listOf(result.error, result.output).firstOrNull { it.isNotBlank() }?.trim().orEmpty()
+
+        // 单文件推送：分块 base64 追加写入，最后用 wc -c 校验字节数，避免"看起来成功其实写坏了"
+        fun pushFile(local: java.io.File, remotePath: String): String? {
+            val remove = execCommand("rm -f ${quote(remotePath)}", timeout = 30)
+            if (remove.exitCode != 0) {
+                return reasonOf(remove).ifBlank { "cannot create $remotePath" }
+            }
+            val bytes = local.readBytes()
+            var offset = 0
+            while (offset < bytes.size) {
+                val end = minOf(offset + 64 * 1024, bytes.size)
+                val encoded = android.util.Base64.encodeToString(
+                    bytes.copyOfRange(offset, end),
+                    android.util.Base64.NO_WRAP
+                )
+                val write = execCommand(
+                    "printf '%s' ${quote(encoded)} | base64 -d >> ${quote(remotePath)}",
+                    timeout = 60
+                )
+                if (write.exitCode != 0) {
+                    val reason = reasonOf(write)
+                    val lower = reason.lowercase()
+                    if (lower.contains("not found") || lower.contains("inaccessible") || lower.contains("no such file")) {
+                        return AppStrings.get("device_no_base64")
+                    }
+                    return reason.ifBlank { "exit=${write.exitCode}" }
+                }
+                offset = end
+            }
+            val sizeCheck = execCommand("wc -c < ${quote(remotePath)}", timeout = 30)
+            val remoteSize = sizeCheck.output.trim().toLongOrNull()
+            if (remoteSize == null || remoteSize != local.length()) {
+                return "size mismatch: local=${local.length()} remote=${sizeCheck.output.trim().ifBlank { "?" }}"
+            }
+            return null
+        }
+
+        fun pushTree(localDir: java.io.File, remoteDir: String): String? {
+            val mk = execCommand("mkdir -p ${quote(remoteDir)}", timeout = 30)
+            if (mk.exitCode != 0) return reasonOf(mk).ifBlank { "cannot create $remoteDir" }
+            val files = localDir.walkTopDown().filter { it.isFile }.toList()
+            files.forEach { source ->
+                val relative = source.relativeTo(localDir).path.replace('\\', '/')
+                val remote = "$remoteDir/$relative"
+                val parent = remote.substringBeforeLast('/', remoteDir)
+                val mkParent = execCommand("mkdir -p ${quote(parent)}", timeout = 30)
+                if (mkParent.exitCode != 0) return reasonOf(mkParent).ifBlank { "cannot create $parent" }
+                val error = pushFile(source, remote) ?: return@forEach
+                return error
+            }
+            return null
+        }
+
+        val zipFile = java.io.File(zipPath)
+        if (!zipFile.isFile) {
+            return CommandResult("", "${AppStrings.get("module_err_file_not_found")}: $zipPath", -1)
+        }
+        if (!isShizukuAvailable() && !isRooted()) {
+            return CommandResult("", AppStrings.get("temp_root_need_channel"), -1)
+        }
+
+        val tempDir = java.io.File(appContext.cacheDir, "temp_root_${System.currentTimeMillis()}")
+        try {
+            if (!tempDir.mkdirs() && !tempDir.isDirectory) {
+                return CommandResult("", fmt(AppStrings.get("module_err_stage_failed"), tempDir.absolutePath), -1)
+            }
             java.util.zip.ZipFile(zipFile).use { zip ->
-                zip.entries().asSequence().forEach { entry ->
-                    val outFile = java.io.File(tempDir, entry.name)
+                val entries = zip.entries()
+                while (entries.hasMoreElements()) {
+                    val entry = entries.nextElement()
+                    val name = entry.name.replace('\\', '/')
+                    if (name.isBlank() || name.startsWith("/") || name.split('/').any { it == ".." }) {
+                        return CommandResult("", fmt(AppStrings.get("module_err_zip_slip"), entry.name), -1)
+                    }
+                    val outFile = java.io.File(tempDir, name)
                     if (entry.isDirectory) {
                         outFile.mkdirs()
                     } else {
@@ -1094,247 +1176,320 @@ actual object ADBTools {
                     }
                 }
             }
-            val scriptFile = tempDir.walkTopDown().firstOrNull {
-                it.name == "run.sh" || it.name == "root.sh" || it.name == "install.sh" || it.name.endsWith(".sh")
-            }
+
+            // 脚本优先级：run.sh > install.sh > root.sh > 其它 *.sh（同级取路径最浅的）；卸载脚本不是入口
+            val scriptFile = tempDir.walkTopDown()
+                .filter {
+                    it.isFile && it.name.endsWith(".sh", ignoreCase = true) &&
+                        !it.name.equals("uninstall.sh", ignoreCase = true)
+                }
+                .sortedWith(
+                    compareBy<File>(
+                        {
+                            when (it.name.lowercase()) {
+                                "run.sh" -> 0
+                                "install.sh" -> 1
+                                "root.sh" -> 2
+                                else -> 3
+                            }
+                        },
+                        { it.relativeTo(tempDir).path.length }
+                    )
+                )
+                .firstOrNull()
             if (scriptFile == null) {
-                tempDir.deleteRecursively()
-                return CommandResult("", "No script found in zip package", -1)
+                return CommandResult("", AppStrings.get("temp_root_no_script"), -1)
             }
-            scriptFile.setExecutable(true)
-            val result = execCommand("sh ${scriptFile.absolutePath}", 60)
-            tempDir.deleteRecursively()
-            result
+
+            val remoteDir = "/data/local/tmp/temproot_${System.currentTimeMillis()}"
+            val pushError = pushTree(tempDir, remoteDir)
+            if (pushError != null) {
+                return CommandResult("", fmt(AppStrings.get("temp_root_push_failed"), remoteDir, pushError), -1)
+            }
+            val remoteScript = "$remoteDir/" + scriptFile.relativeTo(tempDir).path.replace('\\', '/')
+            val chmodResult = execCommand("chmod -R 755 ${quote(remoteDir)}", timeout = 60)
+            val result = execCommand("cd ${quote(remoteDir)} && sh ${quote(remoteScript)}", timeout = 300)
+            val output = buildString {
+                appendLine(fmt(AppStrings.get("temp_root_staged"), remoteDir))
+                appendLine("Exit code: ${result.exitCode}")
+                if (result.output.isNotBlank()) {
+                    appendLine("Output:")
+                    appendLine(result.output)
+                }
+                if (result.error.isNotBlank()) {
+                    appendLine("Error:")
+                    appendLine(result.error)
+                }
+                if (result.output.isBlank() && result.error.isBlank()) {
+                    appendLine(AppStrings.get("hw_no_output"))
+                }
+                if (chmodResult.exitCode != 0) {
+                    appendLine(
+                        fmt(
+                            AppStrings.get("temp_root_chmod_failed"),
+                            reasonOf(chmodResult).ifBlank { "exit=${chmodResult.exitCode}" }
+                        )
+                    )
+                }
+            }
+            val error = result.error.ifBlank {
+                if (result.exitCode == 0) "" else fmt(AppStrings.get("temp_root_exit_nonzero"), result.exitCode.toString())
+            }
+            return CommandResult(output, error, result.exitCode)
+        } catch (e: java.util.zip.ZipException) {
+            return CommandResult("", fmt(AppStrings.get("module_err_archive_invalid"), e.message.orEmpty()), -1)
         } catch (e: Exception) {
-            CommandResult("", "Error: ${e.message}", -1)
+            return CommandResult(
+                "",
+                "${AppStrings.get("module_err_exception")}: ${e.javaClass.simpleName}: ${e.message.orEmpty()}",
+                -1
+            )
+        } finally {
+            tempDir.deleteRecursively()
         }
     }
 
+    // ADB / Shizuku 模式刷入。
+    //
+    // 旧实现的三个真实问题：
+    // 1. 依赖设备端 unzip / toybox 解压 zip，很多设备根本没有 unzip，于是"刷入失败"却没有真实原因；
+    // 2. shq 缺失：路径用双引号拼进 shell，路径里带 $ / 反引号 / " 时会被 shell 展开；
+    // 3. 已经是 Root 模块包时只说"请换 Root 模式"，不告诉用户它到底是什么包。
+    // 现在：全程用本机 java.util.zip 解析（不依赖设备端 unzip），并按包的真实类型分别给出具体结论。
     actual fun installModuleViaADB(localFilePath: String): String {
-        return try {
-            val file = java.io.File(localFilePath)
-            if (!file.exists()) {
-                return "Error: File not found: $localFilePath"
+        fun quote(value: String): String = "'" + value.replace("'", "'\\''") + "'"
+
+        fun fmt(template: String, vararg args: Any?): String {
+            var out = template
+            args.forEachIndexed { index, value ->
+                out = out.replace("%${index + 1}\$s", value?.toString() ?: "")
             }
+            return out
+        }
 
-            val log = StringBuilder()
-            log.appendLine("=== ADB Mode Installation ===")
-            log.appendLine("Module: ${file.name}")
-            log.appendLine("Size: ${file.length() / 1024} KB")
-            log.appendLine()
+        fun reasonOf(result: CommandResult): String =
+            listOf(result.error, result.output).firstOrNull { it.isNotBlank() }?.trim().orEmpty()
 
-            // 检查Shizuku/ADB权限
-            val hasShizuku = isShizukuAvailable()
-            if (!hasShizuku) {
-                log.appendLine("Error: Shizuku/ADB permission not available")
-                log.appendLine("Please start Shizuku and grant permission first")
-                return log.toString()
-            }
-            log.appendLine("ADB/Shizuku: OK")
+        val log = StringBuilder()
+        log.appendLine(AppStrings.get("flash_mode_adb_title"))
 
-            // 复制到临时目录
-            val tempDir = "/data/local/tmp/adb_module_${System.currentTimeMillis()}"
-            val tempZip = "$tempDir/module.zip"
+        val file = java.io.File(localFilePath)
+        if (!file.isFile) {
+            log.appendLine("Error: " + fmt(AppStrings.get("flash_file_missing"), localFilePath))
+            return log.toString()
+        }
+        log.appendLine(fmt(AppStrings.get("flash_file_line"), file.name, file.length() / 1024))
 
-            log.appendLine("Creating temp dir: $tempDir")
-            var result = execCommand("mkdir -p \"$tempDir\"")
-            if (result.exitCode != 0) {
-                log.appendLine("Error: Failed to create temp dir")
-                log.appendLine(result.error)
-                return log.toString()
-            }
-
-            // 用cat复制文件（ADB权限下cp可能受限）
-            log.appendLine("Copying module to temp...")
-            result = execCommand("cat \"$localFilePath\" > \"$tempZip\"")
-            if (result.exitCode != 0) {
-                // 尝试用sh -c
-                result = execCommand("sh -c 'cat \"$localFilePath\" > \"$tempZip\"'")
-            }
-            if (result.exitCode != 0) {
-                log.appendLine("Error: Failed to copy file")
-                log.appendLine(result.error)
-                return log.toString()
-            }
-            log.appendLine("Copied to: $tempZip")
-
-            // 检查是否有unzip
-            val unzipCheck = execCommand("which unzip")
-            val hasUnzip = unzipCheck.exitCode == 0 && unzipCheck.output.isNotBlank()
-
-            if (hasUnzip) {
-                log.appendLine("Unzipping module...")
-                result = execCommand("unzip -o \"$tempZip\" -d \"$tempDir\"")
-                if (result.exitCode != 0) {
-                    log.appendLine("Warning: unzip failed, trying toybox")
-                    result = execCommand("toybox unzip -o \"$tempZip\" -d \"$tempDir\"")
-                }
+        // ADB/Shizuku 模式必须有 Shizuku（或 Dhizuku）授权，否则连临时目录都写不了
+        if (!isShizukuAvailable()) {
+            // 文案必须与事实一致：设备确实有 Root 时不能说"未 Root"
+            if (isRooted()) {
+                log.appendLine("Error: " + AppStrings.get("shizuku_not_connected"))
+                log.appendLine(AppStrings.get("root_mode_hint"))
             } else {
-                log.appendLine("unzip not found, trying toybox...")
-                result = execCommand("toybox unzip -o \"$tempZip\" -d \"$tempDir\"")
+                log.appendLine("Error: " + AppStrings.get("adb_mode_no_shizuku"))
             }
+            return log.toString()
+        }
 
-            if (result.exitCode != 0) {
-                log.appendLine("Error: Failed to unzip module")
-                log.appendLine(result.output)
-                log.appendLine(result.error)
-                return log.toString()
-            }
-            log.appendLine("Unzipped successfully")
-
-            // 列出解压后的文件
-            log.appendLine()
-            log.appendLine("Module contents:")
-            val lsResult = execCommand("ls -la \"$tempDir\"")
-            log.appendLine(lsResult.output)
-
-            // 检查是否是Magisk模块（有module.prop）
-            val modulePropCheck = execCommand("test -f \"$tempDir/module.prop\" && echo yes || echo no")
-            val isMagiskModule = modulePropCheck.output.trim() == "yes"
-
-            if (isMagiskModule) {
-                log.appendLine()
-                log.appendLine("Detected: Magisk/Root module format (has module.prop)")
-                log.appendLine("Module info:")
-                val propResult = execCommand("cat \"$tempDir/module.prop\"")
-                log.appendLine(propResult.output)
-                log.appendLine()
-                log.appendLine("Error: This is a Root module that requires Magisk/KernelSU.")
-                log.appendLine("Please switch to Root mode to install this module.")
-                log.appendLine("ADB mode only supports normal zip packages (APKs, files, etc.).")
-                return log.toString()
-            } else {
-                // 非Magisk模块，检查是否有APK或其他可安装文件
-                log.appendLine()
-                log.appendLine("Not a Magisk module, checking for installable files...")
-
-                // 查找APK文件
-                val apkFind = execCommand("find \"$tempDir\" -name \"*.apk\" -type f")
-                val apkFiles = apkFind.output.lines().filter { it.isNotBlank() }
-
-                if (apkFiles.isNotEmpty()) {
-                    log.appendLine("Found ${apkFiles.size} APK file(s):")
-                    apkFiles.forEach { apk ->
-                        log.appendLine("  - ${apk.substringAfterLast("/")}")
-                    }
-                    log.appendLine()
-                    log.appendLine("Installing APK(s)...")
-                    apkFiles.forEach { apk ->
-                        val apkName = apk.substringAfterLast("/")
-                        log.appendLine("Installing: $apkName")
-                        val installResult = execCommand("pm install -r \"$apk\"", timeout = 60)
-                        if (installResult.exitCode == 0) {
-                            log.appendLine("  Success: $apkName installed")
-                        } else {
-                            log.appendLine("  Failed: ${installResult.output} ${installResult.error}")
+        // 先在本机把包看清楚：module.prop 落点 / APK / Recovery 落点
+        val apkEntries = mutableListOf<String>()
+        val topLevel = mutableListOf<String>()
+        var modulePropEntry: String? = null
+        var moduleId = ""
+        var hasRecoveryBinary = false
+        try {
+            java.util.zip.ZipFile(file).use { zip ->
+                val entries = zip.entries()
+                while (entries.hasMoreElements()) {
+                    val entry = entries.nextElement()
+                    if (entry.isDirectory) continue
+                    val name = entry.name.replace('\\', '/')
+                    if (name.substringAfterLast('/').equals("module.prop", ignoreCase = true) && modulePropEntry == null) {
+                        modulePropEntry = name
+                        moduleId = try {
+                            zip.getInputStream(entry).use { it.readBytes().toString(Charsets.UTF_8) }
+                                .removePrefix("\uFEFF")
+                                .lineSequence()
+                                .firstOrNull { it.trim().startsWith("id=") }
+                                ?.substringAfter("=")?.trim().orEmpty()
+                        } catch (e: Exception) {
+                            ""
                         }
                     }
-                } else {
-                    log.appendLine("No APK files found")
-                    log.appendLine("Module files extracted to: $tempDir")
-                    log.appendLine("Please check the contents and install manually if needed")
+                    if (name.endsWith(".apk", ignoreCase = true)) apkEntries.add(name)
+                    if (name.equals("META-INF/com/google/android/update-binary", ignoreCase = true)) {
+                        hasRecoveryBinary = true
+                    }
+                    if (!name.contains('/')) topLevel.add(name)
                 }
             }
-
-            log.appendLine()
-            log.appendLine("=== Installation Complete ===")
-            log.appendLine("Temp files kept at: $tempDir")
-            log.appendLine("You can delete them later if needed")
-
-            log.toString()
         } catch (e: Exception) {
-            "Error: ${e.message}"
+            log.appendLine(
+                "Error: " + fmt(
+                    AppStrings.get("module_err_archive_invalid"),
+                    "${e.javaClass.simpleName}: ${e.message.orEmpty()}"
+                )
+            )
+            return log.toString()
         }
+
+        // Root 模块包：ADB/Shizuku 是 shell uid，写不进 /data/adb（0700 root:root），必须换 Root 模式
+        val propEntry = modulePropEntry
+        if (propEntry != null) {
+            log.appendLine("Error: " + fmt(AppStrings.get("adb_mode_requires_root"), moduleId.ifBlank { propEntry }))
+            log.appendLine(AppStrings.get("root_mode_hint"))
+            return log.toString()
+        }
+        // Recovery / Magisk 刷机包（含 update-binary）：同样只能由 Root 侧的 Magisk / KernelSU 安装
+        if (hasRecoveryBinary) {
+            log.appendLine(
+                "Error: " + fmt(
+                    AppStrings.get("adb_mode_requires_root"),
+                    "META-INF/com/google/android/update-binary"
+                )
+            )
+            log.appendLine(AppStrings.get("root_mode_hint"))
+            return log.toString()
+        }
+        if (apkEntries.isEmpty()) {
+            log.appendLine("Error: " + AppStrings.get("adb_mode_no_apk"))
+            if (topLevel.isNotEmpty()) {
+                log.appendLine(fmt(AppStrings.get("adb_mode_top_entries"), topLevel.take(20).joinToString(", ")))
+            }
+            return log.toString()
+        }
+
+        // APK 类包：解压到应用外部私有目录（安装器以 system 身份读取，路径可控，也不需要设备端 unzip）
+        val staging = java.io.File(
+            appContext.getExternalFilesDir(null) ?: appContext.cacheDir,
+            "adb_module_${System.currentTimeMillis()}"
+        )
+        if (!staging.mkdirs() && !staging.isDirectory) {
+            log.appendLine("Error: " + fmt(AppStrings.get("adb_mode_push_failed"), staging.absolutePath, "mkdirs failed"))
+            return log.toString()
+        }
+        var installed = 0
+        var failed = 0
+        try {
+            java.util.zip.ZipFile(file).use { zip ->
+                val entries = zip.entries()
+                while (entries.hasMoreElements()) {
+                    val entry = entries.nextElement()
+                    if (entry.isDirectory) continue
+                    val name = entry.name.replace('\\', '/')
+                    if (!name.endsWith(".apk", ignoreCase = true)) continue
+                    val apkName = name.substringAfterLast('/')
+                    val apkFile = java.io.File(staging, apkName)
+                    val extracted = try {
+                        zip.getInputStream(entry).use { input ->
+                            apkFile.outputStream().use { output -> input.copyTo(output) }
+                        }
+                        true
+                    } catch (e: Exception) {
+                        failed++
+                        log.appendLine(
+                            "Error: " + fmt(
+                                AppStrings.get("adb_mode_push_failed"),
+                                name,
+                                "${e.javaClass.simpleName}: ${e.message.orEmpty()}"
+                            )
+                        )
+                        false
+                    }
+                    if (!extracted) continue
+                    val installResult = execCommand("pm install -r ${quote(apkFile.absolutePath)}", timeout = 120)
+                    if (installResult.exitCode == 0 && !installResult.output.contains("Failure", ignoreCase = true)) {
+                        installed++
+                        log.appendLine(fmt(AppStrings.get("adb_mode_apk_installed"), apkName))
+                    } else {
+                        failed++
+                        log.appendLine(
+                            "Error: " + fmt(
+                                AppStrings.get("adb_mode_apk_failed"),
+                                apkName,
+                                reasonOf(installResult).ifBlank { "exit=${installResult.exitCode}" }
+                            )
+                        )
+                    }
+                }
+            }
+        } finally {
+            staging.deleteRecursively()
+        }
+
+        log.appendLine(fmt(AppStrings.get("adb_mode_summary"), installed, failed))
+        log.appendLine(if (failed == 0) AppStrings.get("flash_result_ok") else AppStrings.get("flash_result_failed"))
+        return log.toString()
     }
 
+    // Root 模式刷入。
+    //
+    // 旧实现的问题：用 isRooted()（靠 su 文件路径猜）判断权限 → "装了 Magisk 但未授权"时点亮按钮；
+    // 只试 magisk / ksud 两条命令且路径没做 shell 引用；两者都不可用时直接返回日志，没有兜底；
+    // 全程没有回读校验，装没装上用户无从确认。
+    // 现在统一交给 RootModuleManager.installModule（本机解压 + 官方安装器 + Root 复制 + 回读校验 +
+    // 区分"没 root / 未授权 / 目录不存在 / 只读"的稳定错误码），这里只负责翻译成当前语言并组织成日志。
     actual fun installModuleViaRoot(localFilePath: String): String {
-        return try {
-            val file = java.io.File(localFilePath)
-            if (!file.exists()) {
-                return "Error: File not found: $localFilePath"
+        fun fmt(template: String, vararg args: Any?): String {
+            var out = template
+            args.forEachIndexed { index, value ->
+                out = out.replace("%${index + 1}\$s", value?.toString() ?: "")
             }
-            if (!file.name.endsWith(".zip", ignoreCase = true)) {
-                return "Error: Only .zip module files are supported"
-            }
-
-            val log = StringBuilder()
-            log.appendLine("Module: ${file.name}")
-            log.appendLine("Size: ${file.length() / 1024} KB")
-            log.appendLine()
-
-            // 检查Root
-            if (!isRooted()) {
-                log.appendLine("Error: Root permission required")
-                return log.toString()
-            }
-            log.appendLine("Root: OK")
-
-            // 检查Magisk
-            val magiskAvailable = hasMagisk()
-            if (!magiskAvailable) {
-                log.appendLine("Warning: Magisk not detected")
-                log.appendLine("Trying alternative installation method...")
-                log.appendLine()
-
-                // 尝试用KernelSU或其他方式
-                val result = execCommand("ksud module install $localFilePath", timeout = 60)
-                if (result.exitCode == 0) {
-                    log.appendLine("KernelSU install output:")
-                    log.appendLine(result.output)
-                    log.appendLine()
-                    log.appendLine("Success! Module installed via KernelSU")
-                    log.appendLine("Reboot to apply changes")
-                } else {
-                    log.appendLine("Error: Neither Magisk nor KernelSU detected")
-                    log.appendLine("Please install Magisk or KernelSU first")
-                }
-                return log.toString()
-            }
-            log.appendLine("Magisk: OK")
-
-            // 复制到临时目录
-            val tempPath = "/data/local/tmp/${file.name}"
-            val copyResult = execCommand("cp \"$localFilePath\" \"$tempPath\"")
-            if (copyResult.exitCode != 0) {
-                log.appendLine("Error: Failed to copy file to temp")
-                log.appendLine(copyResult.error)
-                return log.toString()
-            }
-            log.appendLine("Copied to: $tempPath")
-
-            // 设置权限
-            execCommand("chmod 644 \"$tempPath\"")
-
-            // 用Magisk安装模块
-            log.appendLine()
-            log.appendLine("Installing module via Magisk...")
-            val installResult = execCommand("magisk --install-module \"$tempPath\"", timeout = 120)
-
-            log.appendLine("Exit code: ${installResult.exitCode}")
-            if (installResult.output.isNotBlank()) {
-                log.appendLine("Output:")
-                log.appendLine(installResult.output)
-            }
-            if (installResult.error.isNotBlank()) {
-                log.appendLine("Error:")
-                log.appendLine(installResult.error)
-            }
-
-            // 清理临时文件
-            execCommand("rm -f \"$tempPath\"")
-
-            log.appendLine()
-            if (installResult.exitCode == 0) {
-                log.appendLine("Success! Module installed")
-                log.appendLine("Reboot to apply changes")
-            } else {
-                log.appendLine("Failed! Please check the output above")
-            }
-
-            log.toString()
-        } catch (e: Exception) {
-            "Error: ${e.message}"
+            return out
         }
+
+        fun codeText(code: String): String = when (code) {
+            "E_ROOT_REQUIRED" -> AppStrings.get("module_err_root_required")
+            "E_ROOT_DENIED" -> AppStrings.get("module_err_root_denied")
+            "E_ROOT_UNAVAILABLE" -> AppStrings.get("module_err_root_unavailable")
+            "E_ADB_DIR_MISSING" -> AppStrings.get("module_err_adb_dir_missing")
+            "E_ADB_READONLY" -> AppStrings.get("module_err_adb_readonly")
+            "E_FILE_NOT_FOUND" -> AppStrings.get("module_err_file_not_found")
+            "E_NOT_ZIP" -> AppStrings.get("module_err_not_zip")
+            "E_ZIP_INVALID" -> AppStrings.get("module_err_archive_invalid")
+            "E_ZIP_SLIP" -> AppStrings.get("module_err_zip_slip")
+            "E_NO_MODULE_PROP" -> AppStrings.get("module_err_no_module_prop")
+            "E_NO_MODULE_ID" -> AppStrings.get("module_err_no_module_id")
+            "E_ID_UNSAFE" -> AppStrings.get("module_err_id_unsafe")
+            "E_STAGE_FAILED" -> AppStrings.get("module_err_stage_failed")
+            "E_COPY_FAILED" -> AppStrings.get("module_err_copy_failed")
+            "E_VERIFY_FAILED" -> AppStrings.get("module_err_verify_failed")
+            "E_EXCEPTION" -> AppStrings.get("module_err_exception")
+            "E_OK_MAGISK" -> AppStrings.get("module_ok_magisk")
+            "E_OK_KSU" -> AppStrings.get("module_ok_ksu")
+            "E_OK_MANUAL" -> AppStrings.get("module_ok_manual")
+            else -> code
+        }
+
+        val log = StringBuilder()
+        log.appendLine(AppStrings.get("flash_mode_root_title"))
+
+        val file = java.io.File(localFilePath)
+        if (!file.isFile) {
+            log.appendLine("Error: " + fmt(AppStrings.get("flash_file_missing"), localFilePath))
+            return log.toString()
+        }
+        log.appendLine(fmt(AppStrings.get("flash_file_line"), file.name, file.length() / 1024))
+        log.appendLine()
+
+        val result = RootModuleManager.installModule(localFilePath)
+        val lines = result.message.lines()
+        val code = lines.firstOrNull()?.trim().orEmpty()
+        val detail = lines.drop(1).joinToString("\n").trim()
+
+        if (result.success) {
+            log.appendLine(AppStrings.get("flash_root_ok"))
+            log.appendLine(AppStrings.get("flash_result_ok") + ": " + codeText(code))
+            if (detail.isNotBlank()) log.appendLine(detail)
+            log.appendLine(AppStrings.get("rm_reboot_hint"))
+        } else {
+            // 首行必须是 "Error: "，ADBModuleScreen 以此判定失败并显示第一条真实原因
+            log.appendLine("Error: " + codeText(code))
+            if (detail.isNotBlank()) log.appendLine(detail)
+            log.appendLine(AppStrings.get("flash_result_failed"))
+        }
+        return log.toString()
     }
 
     private fun isAdbEnabled(): Boolean {
@@ -1591,6 +1746,44 @@ actual object ADBTools {
         }
         execCommand("pkill -f com.android.systemui || killall com.android.systemui", timeout = 8)
         return CommandResult(log.toString(), if (ok) "" else "写入被拒绝：需要 Shizuku / Root 权限", if (ok) 0 else 1)
+    }
+
+    // ---------------------------------------------------------------- 游戏帧率：应用权限直写
+
+    actual fun isWriteSettingsGranted(): Boolean {
+        return try {
+            android.provider.Settings.System.canWrite(appContext)
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    actual fun writeSettingsSettingsAction(): String =
+        android.provider.Settings.ACTION_MANAGE_WRITE_SETTINGS
+
+    /**
+     * 用应用自身的「修改系统设置」权限直接写刷新率，不经过 shell。
+     *
+     * 为什么需要这条路：非华为机型上 `peak_refresh_rate` / `min_refresh_rate`（以及部分 ROM 的
+     * `user_refresh_rate`）放在 system 命名空间，拿到 WRITE_SETTINGS 后普通应用即可写；
+     * 华为 EMUI / HarmonyOS 一般不吃这条通道（键被厂商挪到 secure 或直接忽略），必须走
+     * Shizuku / Root 的 `settings put`，所以调用方要先判断品牌。
+     *
+     * 三个键全部尝试写入，只要有一个写成功就返回 true；真正的生效情况由调用方回读刷新率确认。
+     */
+    actual fun setRefreshRateDirect(target: Float): Boolean {
+        return try {
+            if (!android.provider.Settings.System.canWrite(appContext)) return false
+            val cr = appContext.contentResolver
+            var ok = false
+            ok = android.provider.Settings.System.putFloat(cr, "peak_refresh_rate", target) || ok
+            ok = android.provider.Settings.System.putFloat(cr, "min_refresh_rate", target) || ok
+            // 少数 ROM 用 user_refresh_rate 作为"用户指定刷新率"
+            ok = android.provider.Settings.System.putFloat(cr, "user_refresh_rate", target) || ok
+            ok
+        } catch (e: Exception) {
+            false
+        }
     }
 
     /**

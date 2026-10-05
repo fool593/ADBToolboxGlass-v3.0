@@ -19,6 +19,7 @@ import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -168,8 +169,13 @@ fun HomeScreen(
             QuickActionButton(backdrop, AppStrings.get("temp_root"), Color(0xFFFF9500), contentColor, Modifier.weight(1f)) { onNavigate(ADBDestination.TempRoot) }
             QuickActionButton(backdrop, AppStrings.get("huawei_boost"), AppTheme.accent, contentColor, Modifier.weight(1f)) { onNavigate(ADBDestination.HuaweiBoost) }
         }
-        // v2.8 新增：已安装 Root 模块管理（列表/启停/卸载/action.sh）
+        // v2.8 新增：机型分类优化（每个品牌独立分类入口，独占一行避免与其它入口挤在一起）
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12f.dp)) {
+            QuickActionButton(backdrop, AppStrings.get("brand_perf_entry"), Color(0xFFFF9500), contentColor, Modifier.weight(1f)) { onNavigate(ADBDestination.BrandPerf) }
+        }
+        // v2.8 新增：游戏帧率（全机型）+ 已安装 Root 模块管理
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12f.dp)) {
+            QuickActionButton(backdrop, AppStrings.get("game_frame_rate"), Color(0xFF34C759), contentColor, Modifier.weight(1f)) { onNavigate(ADBDestination.GameFrameRate) }
             QuickActionButton(backdrop, AppStrings.get("installed_root_modules"), AppTheme.accentAlt, contentColor, Modifier.weight(1f)) { onNavigate(ADBDestination.RootModules) }
         }
         // v2.8 新增：品牌自适应一键性能加速 + 手机体检（配色跟随当前主题）
@@ -284,6 +290,12 @@ fun GlassCard(
         )
     }
 
+    // 长按进度的量化快照（1/16 台阶）：effects 的读数发生在 observeReads 观察区内，
+    // 直接读动画值会让长按期间每一帧都重建整条 RenderEffect 链（全是原生对象）。
+    // 读量化后的 derivedState 只有跨台阶才算变化；1/16 的折射增强台阶看不出来。
+    val longPressStep = remember(highlight) {
+        derivedStateOf { (highlight.longPressProgress * 16f).toInt() / 16f }
+    }
     // 以下 lambda 都在绘制阶段执行并读最新状态；remember 缓存是为了避免每次重组重建 RenderEffect / Lens 造成掉帧
     val effects: BackdropEffectScope.() -> Unit = remember(
         blurRadius, enableVibrancy, intensity, refHeight, refAmount, chromatic, glowRefraction, highlight
@@ -295,7 +307,7 @@ fun GlassCard(
             if (enableVibrancy) vibrancy()
             blur((blurRadius.dp.toPx() * eff).coerceAtMost(40f.dp.toPx()))
             // 长按：按 longPressRefraction 加强边缘折射（仍有 clamp，防止渲染崩溃、内容消失）
-            val boost = 1f + 0.65f * highlight.longPressProgress * glowRefraction
+            val boost = 1f + 0.65f * longPressStep.value * glowRefraction
             lens(
                 // 折射量 clamp 到卡片尺寸的安全比例且保证最小可见效果，防止渲染崩溃、内容消失
                 refractionHeight = (refHeight * minDim * 1.0f * eff * boost).coerceIn(minDim * 0.05f, minDim * 0.25f),

@@ -103,6 +103,26 @@ expect object ADBTools {
     /** 一键恢复刷新率为系统自适应（删除 peak/min/user_refresh_rate 设置）。 */
     fun resetRefreshRateToAuto(): CommandResult
 
+    // ==================== 游戏帧率：应用权限直写通道 ====================
+
+    /**
+     * 本应用是否已被授予「修改系统设置」（`WRITE_SETTINGS`，Manifest 里已声明，需用户在系统设置里手动开）。
+     *
+     * 用途：非华为机型可以直接用这个权限写 `peak_refresh_rate` / `min_refresh_rate`，**不需要 ADB**；
+     * 华为 EMUI / HarmonyOS 通常不认这条通道，必须走 Shizuku/Root —— 这正是"华为需要 ADB 权限、
+     * 其余机型不需要"的技术原因，界面据此如实提示用户该走哪条路。
+     */
+    fun isWriteSettingsGranted(): Boolean
+
+    /** 读取"修改系统设置"授权页的 Intent action（供 Activity 拉起系统设置页）。 */
+    fun writeSettingsSettingsAction(): String
+
+    /**
+     * 不经过 shell、直接用应用自身权限写刷新率（system 命名空间的 peak/min/user_refresh_rate）。
+     * 未授权或 ROM 不支持时返回 false，调用方应回退到 [setRefreshRate]（Shizuku/Root）。
+     */
+    fun setRefreshRateDirect(target: Float): Boolean
+
     /**
      * 强制结束全部后台进程（保留前台与本应用），等效厂商"一键清理"。
      * 返回被结束的包名列表。

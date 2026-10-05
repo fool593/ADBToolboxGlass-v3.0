@@ -267,6 +267,11 @@ private class DrawBackdropNode(
         compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen
     }
 
+    // 这里**保留 neverEqualPolicy**（上游库原本的行为），不要为了省一次作废改成结构相等：
+    // neverEqualPolicy 会把每次 onGloballyPositioned 的写入都判定为"变了"，确实会多作废一次绘制；
+    // 但反过来，结构相等策略下"同一个 LayoutCoordinates 实例、位置却变了"的写入不会触发失效，
+    // 一旦某条路径没有别的失效来源，玻璃就会继续采样旧位置的背景（滚动/布局变化后显示错位）。
+    // 结论：这点重绘开销换确定性，值得；性能优化去做真正的大头（RenderEffect 链复用/量化）。
     private var layoutCoordinates: LayoutCoordinates? by mutableStateOf(null, neverEqualPolicy())
 
     private var padding by mutableFloatStateOf(0f)
@@ -373,7 +378,13 @@ private class DrawBackdropNode(
         if (!isRenderEffectSupported()) return
 
         effectScope.apply(effects)
-        graphicsLayer?.renderEffect = effectScope.renderEffect
+        val effect = effectScope.renderEffect
+        // 只在效果对象真的换了才写回图层：效果链结构不变时 effectScope 会复用同一个 RenderEffect
+        // （见 BackdropEffectStep / BackdropEffectScopeImpl.apply），每次都赋值等于白让 HWUI
+        // 重新判断一次图层属性。
+        if (graphicsLayer?.renderEffect !== effect) {
+            graphicsLayer?.renderEffect = effect
+        }
         padding = effectScope.padding
     }
 

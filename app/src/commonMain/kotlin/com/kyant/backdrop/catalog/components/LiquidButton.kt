@@ -75,11 +75,14 @@ fun LiquidButton(
                 val progress = interactiveHighlight.pressProgress
                 val scale = lerp(1f, 1f + 4f.dp.toPx() / size.height, progress)
 
+                // 与 LiquidGlassItem 同一策略：位移收敛为 ≤4dp 的弹性应变。
+                // 原来的 maxOffset * tanh(0.05 * off / maxOffset) 最大能平移一整条按钮，
+                // 玻璃/文字被整体搬走时，任何相对位置的偏差都会被放大成整块错位。
                 val maxOffset = size.minDimension
-                val initialDerivative = 0.05f
                 val offset = interactiveHighlight.offset
-                translationX = maxOffset * tanh(initialDerivative * offset.x / maxOffset)
-                translationY = maxOffset * tanh(initialDerivative * offset.y / maxOffset)
+                val maxStrain = 4f.dp.toPx()
+                translationX = maxStrain * tanh(offset.x / maxOffset)
+                translationY = maxStrain * tanh(offset.y / maxOffset)
 
                 val maxDragScale = 4f.dp.toPx() / size.height
                 val offsetAngle = atan2(offset.y, offset.x)

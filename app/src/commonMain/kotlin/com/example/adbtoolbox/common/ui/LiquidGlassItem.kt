@@ -1,6 +1,7 @@
 package com.example.adbtoolbox.common.ui
 
 import androidx.compose.foundation.clickable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
@@ -69,11 +70,19 @@ fun Modifier.liquidGlassItem(
             edgeBoost = 0.75f
         )
     }
+    // 长按进度的量化快照（1/16 台阶）。
+    // effects 里的读数发生在 observeReads 观察区内：直接读动画值，长按期间每一帧都会被判定
+    // "参数变了"，于是每帧重建整条 RenderEffect 链（ColorFilterEffect + BlurEffect +
+    // RuntimeShaderEffect + createChainEffect，全是原生对象）。改读这个 derivedState 后，
+    // 只有跨过 1/16 台阶才算变化，整段动画只重建十几次；1/16 的折射增强台阶看不出来。
+    val longPressStep = remember(highlight) {
+        derivedStateOf { (highlight.longPressProgress * 16f).toInt() / 16f }
+    }
     val effects: BackdropEffectScope.() -> Unit = remember(highlight, blurPx, lensIn, lensOut) {
         {
             // 全局渲染强度映射 0.5~1.5 倍；长按按 longPressRefraction 加强折射（带 clamp，防止渲染崩坏）
             val gEff = 0.5f + GlassEffectConfig.globalIntensity.value * 0.5f
-            val lp = highlight.longPressProgress
+            val lp = longPressStep.value
             val boost = 1f + 0.8f * lp * GlassEffectConfig.longPressRefraction.value
             vibrancy()
             blur((blurPx * gEff).coerceAtMost(40f.dp.toPx()))
@@ -137,8 +146,14 @@ fun Modifier.liquidGlassItem(
                 val off = highlight.offset
                 var sx = 1f + 0.045f * progress
                 var sy = 1f + 0.045f * progress
-                translationX = maxOffset * tanh(0.22f * off.x / maxOffset)
-                translationY = maxOffset * tanh(0.22f * off.y / maxOffset)
+                // 拖动位移收敛为 ≤4dp 的弹性应变。
+                // 原来是 maxOffset * tanh(0.22 * off / maxOffset)：最大能平移整整一块玻璃
+                // （maxOffset = 短边）。位移本身不是反馈的关键，但"把整块玻璃搬走"会让任何
+                // 相对位置/图层缓存的偏差被放大成一整块方块的错位，所以这里压到几 dp；
+                // 按下光斑、按压缩放、长按发光全部保留。
+                val maxStrain = 4f.dp.toPx()
+                translationX = maxStrain * tanh(off.x / maxOffset)
+                translationY = maxStrain * tanh(off.y / maxOffset)
                 val maxDragScale = 3f.dp.toPx() / height
                 sx += maxDragScale * abs(off.x / size.maxDimension) * (width / height)
                 sy += maxDragScale * abs(off.y / size.maxDimension) * (height / width)
@@ -157,8 +172,25 @@ fun Modifier.liquidGlassItem(
             null
         }
     }
+    // 链序很关键：drawBackdrop 内部会插入 Modifier.graphicsLayer(layerBlock)
+    // （见 backdrop/DrawBackdropModifier.kt 的 drawBackdrop 实现），只有排在它"之后"（更靠内）
+    // 的绘制节点才会跟着 layerBlock 的平移/缩放一起动。
+    // 原顺序是高光与边缘描边写在 drawBackdrop 之前 → 它们画在变换之外的坐标里：
+    // 一拖动，玻璃与文字跟着动，描边/光斑却原地不动，留下的就是"和方块一样大的方框"。
     var m: Modifier = this
         .then(highlight.gestureModifier)
+        .drawBackdrop(
+            backdrop = backdrop,
+            shape = { shape },
+            effects = effects,
+            highlight = highlightEffect,
+            shadow = shadowEffect,
+            layerBlock = layerBlock,
+            onDrawSurface = onDrawSurface
+        )
+        // 按下光斑：drawAboveContent = true ⇒ 在玻璃内容之上，且位于变换之内
+        .then(highlight.modifier)
+        // 边缘描边：最上层，同样位于变换之内
         .drawWithContent {
             // 边缘高光描边：静息就有一条很淡的亮边（玻璃本该有边缘高光），按压/长按再加强。
             // 关键：整条描边裁在形状内部，只贴在玻璃内侧，不会溢出到轮廓外面。
@@ -183,16 +215,6 @@ fun Modifier.liquidGlassItem(
                 }
             }
         }
-        .then(highlight.modifier)
-        .drawBackdrop(
-            backdrop = backdrop,
-            shape = { shape },
-            effects = effects,
-            highlight = highlightEffect,
-            shadow = shadowEffect,
-            layerBlock = layerBlock,
-            onDrawSurface = onDrawSurface
-        )
     if (onClick != null) {
         m = m.clickable(interactionSource = null, indication = null, onClick = onClick)
     }

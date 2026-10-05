@@ -58,3 +58,22 @@ data class RootModuleInstallResult(
     val success: Boolean,
     val message: String
 )
+
+/**
+ * 打开模块自带 WebUI 的准备结果。
+ *
+ * 为什么需要它：模块的 WebUI 文件通常在 `/data/adb/modules/<id>/webroot/`，普通应用进程**读不到**，
+ * 必须先以 Root 身份把 webroot 拷到应用自己的 cacheDir，再交给 WebView 加载。
+ * 这个过程有多种失败方式（没有 Root、模块没有 webroot、拷贝失败、异常），
+ * 所以不能只返回一个可空字符串——界面需要据此显示**具体原因**。
+ */
+data class ModuleWebUIResult(
+    /** 拷贝到应用私有目录后的入口 html 绝对路径；失败时为 null */
+    val localPath: String?,
+    /** 失败原因码：E_WEBUI_MISSING / E_WEBUI_ROOT_REQUIRED / E_WEBUI_COPY_FAILED / E_WEBUI_EXCEPTION */
+    val errorCode: String? = null,
+    /** 原始细节（路径、exit code、异常文本），用于如实展示 */
+    val detail: String? = null
+) {
+    val ok: Boolean get() = localPath != null
+}

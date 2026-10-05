@@ -158,6 +158,9 @@ object AppTheme {
     fun apply(themeId: String, persist: Boolean = true) {
         val p = byId(themeId)
         AppSettings.themeId = p.id
+        // 选了主题 = 从现在起以主题这套参数为准，之前的手动调整作废。
+        // 这保证了"选完主题后无论怎么重启，主题效果都在"。
+        AppSettings.themeUserOverrode = false
 
         val c = GlassEffectConfig
         c.glassColor.value = p.glassTint

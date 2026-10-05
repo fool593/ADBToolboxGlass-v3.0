@@ -172,11 +172,14 @@ object GlassEffectConfig {
     // 设置颜色
     fun setColor(color: Color) {
         glassColor.value = color
+        // 手动改过玻璃参数 = 从此刻起不再让主题强行覆盖（见 AppSettings.themeUserOverrode）
+        AppSettings.markThemeUserOverride()
     }
 
     // 设置字体颜色
     fun setFontColor(color: Color) {
         fontColor.value = color
+        AppSettings.markThemeUserOverride()
     }
 
     // 保存全局效果参数

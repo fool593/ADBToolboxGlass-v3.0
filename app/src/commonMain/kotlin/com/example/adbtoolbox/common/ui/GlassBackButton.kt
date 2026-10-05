@@ -17,7 +17,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.example.adbtoolbox.common.theme.AppLayout
 import com.example.adbtoolbox.common.theme.AppMotion
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.drawBackdrop
@@ -41,13 +41,14 @@ fun GlassBackButton(
     val isPressed by interactionSource.collectIsPressedAsState()
     // 按下轻微缩小、抬起回弹：与全局按压反馈同一套时序（AppMotion.pressSpring / releaseSpring）
     val pressScale by animateFloatAsState(
-        targetValue = if (isPressed) 0.96f else 1f,
+        targetValue = if (isPressed) AppMotion.pressScale else 1f,
         animationSpec = if (isPressed) AppMotion.pressSpring else AppMotion.releaseSpring,
         label = "glassBackButtonPressScale"
     )
     Box(
         modifier = modifier
-            .size(40f.dp)
+            // 尺寸走 AppLayout token：十个调用点靠它保证返回按钮完全一致
+            .size(AppLayout.backButtonSize)
             .graphicsLayer {
                 scaleX = pressScale
                 scaleY = pressScale
@@ -71,7 +72,11 @@ fun GlassBackButton(
     ) {
         BasicText(
             text = "‹",
-            style = TextStyle(contentColor, 24f.sp, androidx.compose.ui.text.font.FontWeight.Bold)
+            style = TextStyle(
+                contentColor,
+                AppLayout.backButtonGlyphSize,
+                androidx.compose.ui.text.font.FontWeight.Bold
+            )
         )
     }
 }

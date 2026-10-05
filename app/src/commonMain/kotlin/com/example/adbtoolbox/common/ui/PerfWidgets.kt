@@ -88,7 +88,50 @@ fun PerfBadge(text: String, color: Color, modifier: Modifier = Modifier) {
 }
 
 /**
+ * 提权通道区块的标题行：色条 + 标题 + 条数 + 缺通道警告 + 通道说明。
+ *
+ * 性能加速页与体检页共用同一个标题组件，保证「Root 一行、ADB / Shizuku 一行」
+ * 的呈现与措辞完全一致；条数由调用方从数据层算好传入，组件本身不推断任何数字。
+ */
+@Composable
+fun PerfChannelHeader(
+    title: String,
+    countText: String,
+    barColor: Color,
+    contentColor: Color,
+    warning: String? = null,
+    note: String? = null
+) {
+    Column(Modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                Modifier
+                    .width(4.dp)
+                    .height(18.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(barColor)
+            )
+            Spacer(Modifier.width(8.dp))
+            BasicText(title, style = TextStyle(contentColor, 16f.sp, FontWeight.Bold))
+            Spacer(Modifier.weight(1f))
+            BasicText(countText, style = TextStyle(contentColor.copy(alpha = 0.6f), 12f.sp))
+        }
+        if (warning != null) {
+            Spacer(Modifier.height(4.dp))
+            BasicText(warning, style = TextStyle(Color(0xFFFF9500), 11f.sp))
+        }
+        if (note != null) {
+            Spacer(Modifier.height(2.dp))
+            BasicText(note, style = TextStyle(contentColor.copy(alpha = 0.55f), 10f.sp))
+        }
+    }
+}
+
+/**
  * 一条 [PerfItem] 的选择行：左侧勾选框 + 名称 + 说明 + 徽章，右侧可展开查看真实命令。
+ *
+ * [unavailableNote] 非空表示本机缺少这条指令需要的提权通道（或 SDK / SoC / 品牌不适用）：
+ * 勾选会被禁用并在徽章里写明原因，避免用户"点了没反应"却不知道为什么不生效。
  */
 @Composable
 fun PerfItemRow(
@@ -98,9 +141,12 @@ fun PerfItemRow(
     contentColor: Color,
     backdrop: Backdrop,
     running: Boolean = false,
-    result: PerfRunResult? = null
+    result: PerfRunResult? = null,
+    unavailableNote: String? = null
 ) {
     var expanded by remember { mutableStateOf(false) }
+    // 不可用行的整体淡化（保留原本的 contentColor alpha，不覆盖调用方传入的透明度）
+    val rowAlpha = if (unavailableNote != null) 0.62f else 1f
     // 运行中的高亮：按全局动效规范淡入淡出，避免背景硬切。
     // 用 animateFloatAsState + drawBehind 在绘制阶段读取进度，逐帧只重绘、不重组整行。
     val runningHighlight by animateFloatAsState(
@@ -132,9 +178,14 @@ fun PerfItemRow(
                     .liquidGlassItem(
                         backdrop = backdrop,
                         corner = 6.dp,
-                        tint = if (selected) AppTheme.accent
-                        else contentColor.copy(alpha = (0.15f / 0.45f).coerceAtMost(1f)),
-                        onClick = onToggle
+                        tint = when {
+                            // 不可用：不给选中色，保持"灰掉的空框"
+                            unavailableNote != null -> contentColor.copy(alpha = (0.08f / 0.45f).coerceAtMost(1f))
+                            selected -> AppTheme.accent
+                            else -> contentColor.copy(alpha = (0.15f / 0.45f).coerceAtMost(1f))
+                        },
+                        // 不可用时不再响应勾选：onClick = null 让 liquidGlassItem 不挂点击手势
+                        onClick = if (unavailableNote == null) onToggle else null
                     ),
                 contentAlignment = Alignment.Center
             ) {
@@ -144,18 +195,21 @@ fun PerfItemRow(
             Column(Modifier.weight(1f)) {
                 BasicText(
                     AppStrings.get(item.nameKey),
-                    style = TextStyle(contentColor, 14f.sp, FontWeight.Medium)
+                    style = TextStyle(contentColor.copy(alpha = contentColor.alpha * rowAlpha), 14f.sp, FontWeight.Medium)
                 )
                 Spacer(Modifier.height(2.dp))
                 BasicText(
                     AppStrings.get(item.descKey),
-                    style = TextStyle(contentColor.copy(alpha = 0.6f), 11f.sp)
+                    style = TextStyle(contentColor.copy(alpha = contentColor.alpha * 0.6f * rowAlpha), 11f.sp)
                 )
                 Spacer(Modifier.height(6.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     if (item.risk != "safe") PerfBadge(riskLabel(item.risk), riskColor(item.risk))
                     permissionLabel(item.requiresPermission)?.let {
                         PerfBadge(it, AppTheme.accentAlt)
+                    }
+                    if (unavailableNote != null) {
+                        PerfBadge(unavailableNote, Color(0xFFFF9500))
                     }
                     if (result != null) {
                         // 结果徽标出现：小幅上移 + 淡入（AppMotion.fadeIn）

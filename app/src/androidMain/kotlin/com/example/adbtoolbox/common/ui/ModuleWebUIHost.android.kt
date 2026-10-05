@@ -60,6 +60,24 @@ actual fun ModuleWebUIHost(
         }
     }
 
+    // 本地入口文件可能在这一刻已经不在了（模块被卸载、文件被删、缓存被清）。
+    // 直接 loadUrl 只会得到一片空白，所以先做一次真实存在性检查，不存在就说明具体原因。
+    val localPath = remember(url) {
+        when {
+            url.startsWith("file://") -> try {
+                Uri.parse(url).path
+            } catch (e: Exception) {
+                null
+            }
+            url.contains("://") -> null // http/https/content 等交给 WebView 自己处理
+            else -> url
+        }
+    }
+    val entryMissing = remember(localPath) {
+        val path = localPath
+        path != null && !File(path).exists()
+    }
+
     // 系统返回键也关闭 WebUI：宿主打开期间不让返回键一路退到 Activity（那样会直接退出整个应用）
     BackHandler { onClose() }
 
@@ -97,34 +115,50 @@ actual fun ModuleWebUIHost(
             }
         }
 
-        AndroidView(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f),
-            factory = { context ->
-                WebView(context).apply {
-                    // 页面内的跳转全部留在 WebView 里，不外抛给系统浏览器
-                    webViewClient = WebViewClient()
-                    // 默认 WebChromeClient：console 消息走系统日志，不做额外处理
-                    webChromeClient = WebChromeClient()
-                    settings.apply {
-                        javaScriptEnabled = true
-                        domStorageEnabled = true
-                        allowFileAccess = true
-                        allowFileAccessFromFileURLs = true
-                        allowContentAccess = true
-                        loadWithOverviewMode = true
-                        useWideViewPort = true
-                    }
-                    loadUrl(fileUrl)
-                }
-            },
-            onRelease = { webView ->
-                // 必须先停止加载再 destroy，否则正在进行的加载会抛 "WebView destroyed" 警告
-                webView.stopLoading()
-                webView.loadUrl("about:blank")
-                webView.destroy()
+        if (entryMissing) {
+            // 文件确实不在了：明确说明，而不是渲染一张空白页
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .padding(24.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                BasicText(
+                    hwFormat(AppStrings.get("plugin_webui_gone"), localPath ?: url),
+                    style = TextStyle(AppTheme.onAccent.copy(alpha = 0.8f), 12.sp)
+                )
             }
-        )
+        } else {
+            AndroidView(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                factory = { context ->
+                    WebView(context).apply {
+                        // 页面内的跳转全部留在 WebView 里，不外抛给系统浏览器
+                        webViewClient = WebViewClient()
+                        // 默认 WebChromeClient：console 消息走系统日志，不做额外处理
+                        webChromeClient = WebChromeClient()
+                        settings.apply {
+                            javaScriptEnabled = true
+                            domStorageEnabled = true
+                            allowFileAccess = true
+                            allowFileAccessFromFileURLs = true
+                            allowContentAccess = true
+                            loadWithOverviewMode = true
+                            useWideViewPort = true
+                        }
+                        loadUrl(fileUrl)
+                    }
+                },
+                onRelease = { webView ->
+                    // 必须先停止加载再 destroy，否则正在进行的加载会抛 "WebView destroyed" 警告
+                    webView.stopLoading()
+                    webView.loadUrl("about:blank")
+                    webView.destroy()
+                }
+            )
+        }
     }
 }

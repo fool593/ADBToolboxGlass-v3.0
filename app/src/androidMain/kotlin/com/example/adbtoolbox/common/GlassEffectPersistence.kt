@@ -134,6 +134,7 @@ actual object GlassEffectPersistence {
         // 主题
         editor.putString("app_theme", AppSettings.themeId)
         editor.putBoolean("app_theme_chosen", AppSettings.themeChosenByUser)
+        editor.putBoolean("app_theme_user_overrode", AppSettings.themeUserOverrode)
 
         editor.apply()
     }
@@ -145,35 +146,16 @@ actual object GlassEffectPersistence {
         if (prefs.contains("app_language")) AppSettings.language = prefs.getString("app_language", "zh") ?: "zh"
         if (prefs.contains("app_dark_mode")) AppSettings.isDarkMode = prefs.getBoolean("app_dark_mode", true)
 
-        // 主题：先把已选主题的参数写进 GlassEffectConfig，再让下面逐项从 prefs 恢复。
-        // 顺序很关键：
-        //   - 用户手动调过的项，prefs 里有值 → 恢复时覆盖主题值 → 用户的手动调整优先；
-        //   - 用户没调过的项，prefs 里没有对应值 → 保留主题值。
-        // 修复的真实问题：原来只恢复 themeId，指望"prefs 里存的正好是主题那套值"。
-        // 一旦两者不一致（旧版本升级上来的配置、上一次保存的时机不对等），重启后就会
-        // 出现"主题明明选中了、界面却没变"，必须回设置页重新点一次主题才生效。
+        // 主题：这里只恢复"选了哪个主题"和两个标记，**真正的参数应用放到函数末尾**
+        // （在所有存档值恢复之后），规则因此是确定的：
+        //   选过主题 + 用户没手动改过玻璃 → 主题参数最终生效（主题不可能再"丢"）；
+        //   用户手动改过玻璃 → 存档值生效（尊重用户自己的调整）。
+        // 之前只恢复 themeId、指望"存档里正好是主题那套值"，一旦两者不一致就会出现
+        // "首页横幅还显示着主题，但玻璃颜色/高光回到了原来那套"。
         val savedTheme = prefs.getString("app_theme", null)
         AppSettings.themeChosenByUser = prefs.getBoolean("app_theme_chosen", false)
-        var autoAppliedTheme = false
-        if (savedTheme != null) {
-            AppSettings.themeId = savedTheme
-            runCatching {
-                com.example.adbtoolbox.common.theme.AppTheme.apply(savedTheme, persist = false)
-            }
-        } else if (!AppSettings.themeChosenByUser && !prefs.contains("glassColor")) {
-            // 全新安装 + 国庆档期（10 月 1 日—7 日）：自动套用国庆主题
-            val cal = java.util.Calendar.getInstance()
-            val month = cal.get(java.util.Calendar.MONTH) + 1
-            val day = cal.get(java.util.Calendar.DAY_OF_MONTH)
-            if (com.example.adbtoolbox.common.theme.AppTheme.isNationalDaySeason(month, day)) {
-                runCatching {
-                    com.example.adbtoolbox.common.theme.AppTheme.apply(
-                        com.example.adbtoolbox.common.theme.AppTheme.NATIONAL_DAY, persist = false
-                    )
-                }
-                autoAppliedTheme = true
-            }
-        }
+        AppSettings.themeUserOverrode = prefs.getBoolean("app_theme_user_overrode", false)
+        if (savedTheme != null) AppSettings.themeId = savedTheme
 
         val config = GlassEffectConfig
 
@@ -298,9 +280,27 @@ actual object GlassEffectPersistence {
             }
         }
 
-        // 自动套用的主题这次就落盘，避免"只有本次会话有效"：
-        // 落盘后下次启动走 savedTheme 分支，主题依然稳定生效。
-        if (autoAppliedTheme) {
+        // ---------------- 主题收尾：保证"选过的主题"在任何情况下都真的生效 ----------------
+        val inNationalDaySeason = run {
+            val cal = java.util.Calendar.getInstance()
+            com.example.adbtoolbox.common.theme.AppTheme.isNationalDaySeason(
+                cal.get(java.util.Calendar.MONTH) + 1,
+                cal.get(java.util.Calendar.DAY_OF_MONTH)
+            )
+        }
+        val themeToApply = when {
+            // 选过主题、且用户没有手动改过玻璃 → 以主题为准（这就是"退出再进主题不丢"的关键）
+            savedTheme != null && !AppSettings.themeUserOverrode -> savedTheme
+            // 全新安装 + 国庆档期（10 月 1 日—7 日）→ 自动套用国庆主题
+            savedTheme == null && !AppSettings.themeChosenByUser && !prefs.contains("glassColor") &&
+                    inNationalDaySeason -> com.example.adbtoolbox.common.theme.AppTheme.NATIONAL_DAY
+            else -> null
+        }
+        if (themeToApply != null) {
+            runCatching {
+                com.example.adbtoolbox.common.theme.AppTheme.apply(themeToApply, persist = false)
+            }
+            // 立刻回写一次：让存档与主题保持一致，避免下次启动再出现"主题 vs 旧值"的分歧
             runCatching { saveAll() }
         }
     }

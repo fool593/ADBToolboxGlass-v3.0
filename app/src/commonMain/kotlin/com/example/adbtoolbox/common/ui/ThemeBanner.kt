@@ -30,6 +30,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.adbtoolbox.common.AppStrings
+import com.example.adbtoolbox.common.theme.AppLayout
 import com.example.adbtoolbox.common.theme.AppTheme
 import com.kyant.backdrop.Backdrop
 import kotlin.math.PI
@@ -56,7 +57,8 @@ fun NationalDayBanner(backdrop: Backdrop, contentColor: Color) {
 
     GlassCard(backdrop = backdrop, pageType = "home") {
         Row(
-            Modifier.fillMaxWidth().padding(horizontal = 18f.dp, vertical = 16f.dp),
+            // 卡片内边距统一走 AppLayout：横幅与其它卡片保持同一内边距，不再是 18/16 的个例
+            Modifier.fillMaxWidth().padding(horizontal = AppLayout.cardPad, vertical = AppLayout.cardPad),
             verticalAlignment = Alignment.CenterVertically
         ) {
             FlagStars(

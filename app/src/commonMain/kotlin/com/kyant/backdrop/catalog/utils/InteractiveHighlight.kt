@@ -74,8 +74,30 @@ class InteractiveHighlight(
 
     val offset: Offset get() = positionAnimation.value - startPosition
 
-    private val shader =
-        if (isRuntimeShaderSupported()) {
+    /**
+     * 高光着色器与画刷：**懒创建 + 实例内复用**。
+     *
+     * `android.graphics.RuntimeShader` 的构造函数里就会编译 AGSL 程序（原生 SkRuntimeEffect），
+     * 而列表里绝大多数条目从来不会被按下。原来是 `private val shader = RuntimeShader(...)`：
+     * 每个实例一构造就编译一次 —— 一屏十几个条目、滚动时不断建/丢，
+     * 这是"每次进入列表/每次重组都新建 RuntimeShader"最集中的地方。
+     * 现在改成第一次真的要画光斑时才建，之后实例内一直复用；
+     * 没被按过的条目一个字节都不花。
+     *
+     * 没有改成进程级共享同一个实例：uniform（size / position / radius / color）是逐次绘制
+     * 写在 shader 对象上的可变状态，同一帧里多个控件顺序绘制时共用一份 uniform，
+     * 谁最后写谁说了算。HWUI 把录制与光栅化分开（且可能换线程），无法保证每个控件的
+     * uniform 在各自绘制时被快照，会出现"光斑串到别的控件上"，
+     * 风险大于"少编译几次"的收益，因此保持每实例一份。
+     */
+    private var shader: RuntimeShader? = null
+    private var shaderBrush: ShaderBrush? = null
+
+    /** 取得（必要时创建）高光画刷；API < 33 没有 AGSL 时返回 null，调用方走纯色回退。 */
+    private fun obtainShaderBrush(): ShaderBrush? {
+        shaderBrush?.let { return it }
+        if (!isRuntimeShaderSupported()) return null
+        val runtimeShader =
             RuntimeShader(
                 """
 uniform float2 size;
@@ -98,16 +120,26 @@ half4 main(float2 coord) {
     return half4(color.rgb * half(intensity), color.a * half(intensity));
 }"""
             )
-        } else {
-            null
-        }
+        shader = runtimeShader
+        return ShaderBrush(runtimeShader.asComposeShader()).also { shaderBrush = it }
+    }
+
+    /**
+     * 圆角裁剪用的路径：复用同一个 [Path]。
+     *
+     * 原实现每次绘制都 `Path()` + `addRoundRect`，即每帧每个按下中的控件
+     * 分配一个 Compose Path（内含原生 Skia 路径）。这里改成复用 + rewind()，
+     * 分配次数从"每帧一次"降到"每个实例一次"。
+     */
+    private val clipPathCache = Path()
 
     private fun DrawScope.clipShape(shape: Shape, block: DrawScope.() -> Unit) {
         when (val outline = shape.createOutline(size, LayoutDirection.Ltr, this)) {
             is Outline.Rectangle -> clipRect(block = block)
             is Outline.Rounded -> {
-                val path = Path().apply { addRoundRect(outline.roundRect) }
-                clipPath(path = path, block = block)
+                clipPathCache.rewind()
+                clipPathCache.addRoundRect(outline.roundRect)
+                clipPath(path = clipPathCache, block = block)
             }
             is Outline.Generic -> clipPath(path = outline.path, block = block)
         }
@@ -145,13 +177,15 @@ half4 main(float2 coord) {
                 if (progress > 0.001f && glow > 0.001f) {
                     val color = glowColor()
                     val alpha = (progress * glow).fastCoerceIn(0f, 1f)
-                    if (shader != null) {
+                    val brush = obtainShaderBrush()
+                    val runtimeShader = shader
+                    if (brush != null && runtimeShader != null) {
                         // 整片极淡的底色高光 + 跟随手指的径向光斑（Plus 叠加，只加亮不盖内容）
                         drawRect(
                             Color.White.copy(0.06f * alpha),
                             blendMode = BlendMode.Plus
                         )
-                        shader.apply {
+                        runtimeShader.apply {
                             val position = position(size, positionAnimation.value)
                             setFloatUniform("size", size.width, size.height)
                             setColorUniform("color", color.copy(alpha = 0.16f * alpha))
@@ -164,7 +198,7 @@ half4 main(float2 coord) {
                             )
                         }
                         drawRect(
-                            ShaderBrush(shader.asComposeShader()),
+                            brush,
                             blendMode = BlendMode.Plus
                         )
                     } else {

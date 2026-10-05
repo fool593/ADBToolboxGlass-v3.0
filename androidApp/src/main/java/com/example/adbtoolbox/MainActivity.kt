@@ -245,6 +245,36 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
+            // 观察「修改系统设置」授权页触发器：
+            // 游戏帧率页在非华为机型上靠这个权限直写刷新率（不需要 ADB），
+            // 没有它就引导用户到系统设置里授予，而不是显示一个点了没反应的按钮。
+            val writeSettingsTrigger by androidx.compose.runtime.rememberUpdatedState(AppCache.openWriteSettingsTrigger.value)
+            LaunchedEffect(writeSettingsTrigger) {
+                if (writeSettingsTrigger > 0) {
+                    AppCache.openWriteSettingsTrigger.value = 0
+                    try {
+                        startActivity(
+                            android.content.Intent(
+                                android.provider.Settings.ACTION_MANAGE_WRITE_SETTINGS,
+                                android.net.Uri.parse("package:$packageName")
+                            )
+                        )
+                    } catch (e: Exception) {
+                        // 个别 ROM 没有这个页面，退回应用详情页
+                        try {
+                            startActivity(
+                                android.content.Intent(
+                                    android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                    android.net.Uri.parse("package:$packageName")
+                                )
+                            )
+                        } catch (e2: Exception) {
+                            e2.printStackTrace()
+                        }
+                    }
+                }
+            }
+
             // 自定义开屏动画视频选择器
             val splashPicker = rememberLauncherForActivityResult(
                 contract = ActivityResultContracts.GetContent()

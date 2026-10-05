@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -121,6 +122,8 @@ fun LiquidSlider(
         // 长按边缘发光检测：按住 AppMotion.longPressDelayMs 触发
         var longPressActive by remember { mutableStateOf(false) }
         val longPressAnim = remember { Animatable(0f) }
+        // 长按进度的 1/16 量化快照，只给 effects 用（原因见 effects 里的注释）
+        val longPressStep = remember { derivedStateOf { (longPressAnim.value * 16f).toInt() / 16f } }
         LaunchedEffect(dampedDragAnimation) {
             snapshotFlow { dampedDragAnimation.pressProgress }
                 .collectLatest { progress ->
@@ -196,7 +199,10 @@ fun LiquidSlider(
                     shape = { Capsule() },
                     effects = {
                         val progress = dampedDragAnimation.pressProgress
-                        val lp = longPressAnim.value
+                        // 量化快照：直接读 longPressAnim.value 会让长按期间每帧重建整条
+                        // RenderEffect 链（BlurEffect/RuntimeShaderEffect 都是原生对象）。
+                        // 1/16 台阶的折射增强在屏幕上看不出来，但重建次数从"每帧"降到"十几次"。
+                        val lp = longPressStep.value
                         val edgeRef = GlassEffectConfig.longPressRefraction.value
                         // 长按时大幅增强折射，边缘文字/背景会产生明显扭曲；全局渲染强度实时放大（映射0.5~1.5且clamp）
                         val gI = GlassEffectConfig.globalIntensity.value

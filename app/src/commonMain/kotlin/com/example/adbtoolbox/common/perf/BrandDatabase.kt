@@ -94,6 +94,27 @@ object BrandDatabase {
     /** 该品牌是否被识别（非 generic）。 */
     fun isRecognized(brandId: String) = brandId != BRAND_GENERIC
 
+    /**
+     * 「全机型通用」在界面上的品牌 id：空串。
+     *
+     * 与 [BRAND_GENERIC] 等价但语义不同：空串用于 [BrandPerfScreen] 的入口回调与
+     * [itemsFor] 的查询入参（`itemsFor("")` 返回全部通用项），[BRAND_GENERIC] 用于
+     * 品牌识别结果。两者都能被本对象的取数函数正确处理。
+     */
+    const val BRAND_ALL = ""
+
+    /**
+     * 品牌显示名文案 key。
+     * 空串（全机型通用）与 generic 都会返回 `brand_generic`，避免界面拿到不存在的 key。
+     */
+    fun nameKeyOf(brandId: String): String = "brand_" + brandId.ifBlank { BRAND_GENERIC }
+
+    /** 品牌对应的系统 UI 名（HyperOS / OriginOS / ColorOS ...）；未识别品牌返回通用 ROM 名。 */
+    fun romNameFor(brandId: String): String = romNameOf(brandId)
+
+    /** 该品牌专属优化条数（真实数据，界面不得写死数字）。 */
+    fun brandSpecificCount(brandId: String): Int = brandSpecificItems(brandId).size
+
     // ---------------------------------------------------------- 通用指令集
 
     /**

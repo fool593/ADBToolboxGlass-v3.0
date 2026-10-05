@@ -38,10 +38,13 @@ import com.example.adbtoolbox.common.ADBTools
 import com.example.adbtoolbox.common.ADBDestination
 import com.example.adbtoolbox.common.AppStrings
 import com.example.adbtoolbox.common.perf.BrandDatabase
+import com.example.adbtoolbox.common.perf.PerfCategory
+import com.example.adbtoolbox.common.perf.PerfChannels
 import com.example.adbtoolbox.common.perf.PerfItem
 import com.example.adbtoolbox.common.perf.PerfRunReport
 import com.example.adbtoolbox.common.perf.PerfRunResult
 import com.example.adbtoolbox.common.perf.PerfRunner
+import com.example.adbtoolbox.common.perf.UniversalTuning
 import com.example.adbtoolbox.common.theme.AppTheme
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.catalog.components.LiquidButton
@@ -56,13 +59,23 @@ import kotlinx.coroutines.withContext
  * - 先识别本机品牌/ROM，再匹配该品牌真实存在的 settings/cmd 接口；
  * - 每条指令都能展开看到原文，执行结果逐条回显 stdout/stderr，失败不静默；
  * - "一键关闭后台"是单独的真实实现（ActivityManager + am force-stop + trim-caches）。
+ *
+ * 列表结构（v2.8 用户要求）：
+ * - 按**提权通道**分成两个区块：`Root 专属` 与 `ADB / Shizuku 可用`，各自标题、条数、
+ *   全选/清空按钮，绝不混在一段里（判定统一走 [PerfChannels]）；
+ * - 每个通道区块内部再按原有的 [BrandDatabase.categories] 分类分段，既有分类与条目一条都没删。
+ *
+ * [brandFilter] 为 null 表示"全机型"（通用项 + 本机品牌专属项，即原有行为）；
+ * 传具体品牌 id（[BrandDatabase.BRAND_ALL] 空串表示全机型通用）时只显示该品牌的
+ * 专属项 + 通用项，并在顶部显示"当前分类"与"看全部机型"的切换入口。
  */
 @Composable
 fun PerformanceBoostScreen(
     backdrop: Backdrop,
     contentColor: Color,
     onBack: () -> Unit,
-    onOpenInspector: () -> Unit
+    onOpenInspector: () -> Unit,
+    brandFilter: String? = null
 ) {
     val scope = rememberCoroutineScope()
     var deviceInfo by remember { mutableStateOf<PerfRunner.PerfDeviceInfo?>(null) }
@@ -71,6 +84,8 @@ fun PerformanceBoostScreen(
     // 选中状态：用 id 的集合保存，切换品牌后依然可用
     val selected = remember { mutableStateListOf<String>() }
     var includeBrandSpecific by remember { mutableStateOf(true) }
+    // 机型分类：由外部 brandFilter 初始化，页内"看全部机型"可切回全机型（null）
+    var localFilter by remember(brandFilter) { mutableStateOf(brandFilter) }
 
     // 运行状态
     var running by remember { mutableStateOf(false) }
@@ -90,24 +105,72 @@ fun PerformanceBoostScreen(
         loading = true
         val info = PerfRunner.loadDeviceInfo()
         deviceInfo = info
-        // 默认勾选：按 PerfItem.defaultSelected，且默认包含品牌专属项
-        val defaults = BrandDatabase.itemsFor(info.brandId, includeBrandSpecific = true)
-            .filter { it.defaultSelected }
-            .map { it.id }
+        // 默认勾选：按 PerfItem.defaultSelected，并且只勾本机真正可执行的项
+        // （权限 / SDK / SoC / 品牌四条都由数据层判定），避免默认选中一堆跑不了的项。
+        val all = BrandDatabase.itemsFor(info.brandId, includeBrandSpecific = true)
+        val runnableIds = UniversalTuning.applicability(info, all)
+            .filter { it.itemId != null && it.state == UniversalTuning.STATE_APPLICABLE }
+            .mapNotNull { it.itemId }
+            .toSet()
+        val defaults = all.filter { it.defaultSelected && it.id in runnableIds }.map { it.id }
         selected.clear()
         selected.addAll(defaults)
         loading = false
     }
 
     val info = deviceInfo
-    val items: List<PerfItem> = remember(info?.brandId, includeBrandSpecific, loading) {
+    val filter = localFilter
+    val items: List<PerfItem> = remember(info?.brandId, filter, includeBrandSpecific, loading) {
         if (info == null) emptyList()
+        else if (filter != null) BrandDatabase.itemsFor(filter, includeBrandSpecific = true)
         else BrandDatabase.itemsFor(info.brandId, includeBrandSpecific)
     }
-    val grouped = remember(items) {
-        BrandDatabase.categories.mapNotNull { cat ->
-            val ofCat = items.filter { it.category == cat.id }
-            if (ofCat.isEmpty()) null else cat to ofCat
+
+    // 逐项适用性结论：权限、SDK、SoC、品牌四条都由数据层给，界面不自己猜。
+    val noteById: Map<String, UniversalTuning.ApplicabilityNote> = remember(info, items) {
+        val current = info
+        if (current == null) emptyMap()
+        else UniversalTuning.applicability(current, items)
+            .filter { it.itemId != null }
+            .associateBy { it.itemId ?: "" }
+    }
+
+    /** 本机执行不了这条指令的原因；null = 可执行。 */
+    fun unavailableNoteOf(item: PerfItem): String? {
+        val note = noteById[item.id] ?: return null
+        return when (note.state) {
+            UniversalTuning.STATE_APPLICABLE -> null
+            UniversalTuning.STATE_NEEDS_ROOT, UniversalTuning.STATE_NEEDS_SHIZUKU ->
+                AppStrings.get("perf_unavailable_no_privilege") + " · " + AppStrings.get(note.reasonKey)
+            else -> AppStrings.get(note.reasonKey)
+        }
+    }
+
+    // 真正可执行的项（用于默认值、全选与执行，避免选中了却什么都不发生）
+    val runnableItems = remember(items, noteById) {
+        items.filter { unavailableNoteOf(it) == null }
+    }
+
+    // 提权状态变化（例如 Shizuku 掉线后重新读取设备信息）后，把已经跑不了的项从选中集合移除，
+    // 避免出现"勾着却标明因缺提权不可用"的矛盾状态。
+    LaunchedEffect(noteById) {
+        val unavailableIds = items.filter { unavailableNoteOf(it) != null }.map { it.id }
+        if (unavailableIds.isNotEmpty()) selected.removeAll(unavailableIds)
+    }
+
+    // 按提权通道分行：Root 一组，ADB / Shizuku 一组；组内按分类分段。
+    val channelBlocks = remember(items, noteById) {
+        listOf(PerfChannels.ROOT, PerfChannels.ADB).mapNotNull { channel ->
+            val ofChannel = items.filter { PerfChannels.of(it) == channel }
+            if (ofChannel.isEmpty()) null
+            else ChannelBlock(
+                channel = channel,
+                items = ofChannel,
+                categories = BrandDatabase.categories.mapNotNull { cat ->
+                    val ofCat = ofChannel.filter { it.category == cat.id }
+                    if (ofCat.isEmpty()) null else cat to ofCat
+                }
+            )
         }
     }
 
@@ -173,6 +236,51 @@ fun PerformanceBoostScreen(
             style = TextStyle(contentColor.copy(alpha = 0.6f), 12f.sp)
         )
         Spacer(Modifier.height(16.dp))
+
+        // ---------------- 当前机型分类（由 BrandPerfScreen 传入 brandFilter 时显示） ----------------
+        if (filter != null) {
+            GlassCard(backdrop = backdrop, pageType = "home") {
+                Column(Modifier.padding(18.dp)) {
+                    BasicText(
+                        String.format(
+                            AppStrings.get("perf_current_category"),
+                            AppStrings.get(BrandDatabase.nameKeyOf(filter))
+                        ),
+                        style = TextStyle(contentColor, 15f.sp, FontWeight.Bold)
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    BasicText(
+                        AppStrings.get("perf_filter_applied"),
+                        style = TextStyle(contentColor.copy(alpha = 0.6f), 11f.sp)
+                    )
+                    // 诚实提示：看的不是本机品牌时，不能让人以为这些厂商接口在本机一定存在
+                    val foreignBrand = info != null &&
+                            filter != BrandDatabase.BRAND_ALL &&
+                            filter != info.brandId
+                    if (foreignBrand) {
+                        Spacer(Modifier.height(4.dp))
+                        BasicText(
+                            AppStrings.get("perf_filter_foreign_brand"),
+                            style = TextStyle(Color(0xFFFF9500), 11f.sp)
+                        )
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    LiquidButton(
+                        onClick = { localFilter = null },
+                        backdrop = backdrop,
+                        modifier = Modifier.fillMaxWidth().height(44.dp),
+                        tint = Color(0xFF8E8E93)
+                    ) {
+                        BasicText(
+                            AppStrings.get("perf_show_all_devices"),
+                            Modifier.padding(horizontal = 8.dp),
+                            style = TextStyle(Color.White, 13f.sp, FontWeight.Medium)
+                        )
+                    }
+                }
+            }
+            Spacer(Modifier.height(14.dp))
+        }
 
         // ---------------- 设备与品牌识别 ----------------
         GlassCard(backdrop = backdrop, pageType = "home") {
@@ -291,17 +399,19 @@ fun PerformanceBoostScreen(
         // ---------------- 一键操作区 ----------------
         GlassCard(backdrop = backdrop, pageType = "home") {
             Column(Modifier.padding(18.dp)) {
+                // 已选条数按"当前列表里真实存在且本机可执行"的项统计
+                val selectedCount = items.count { it.id in selected && unavailableNoteOf(it) == null }
                 val runningText = if (running) {
                     "${AppStrings.get("run_progress")}: $progressIndex / $progressTotal"
                 } else {
-                    "${AppStrings.get("selected_count")}: ${selected.size}"
+                    String.format(AppStrings.get("selected_count"), selectedCount)
                 }
                 BasicText(runningText, style = TextStyle(contentColor, 13f.sp, FontWeight.Medium))
                 Spacer(Modifier.height(10.dp))
 
                 LiquidButton(
                     onClick = {
-                        val toRun = items.filter { it.id in selected }
+                        val toRun = runnableItems.filter { it.id in selected }
                         if (toRun.any { it.risk == "risky" }) {
                             requestConfirm(AppStrings.get("confirm_run_risky")) { runItems(toRun) }
                         } else {
@@ -326,7 +436,8 @@ fun PerformanceBoostScreen(
                     leftTint = AppTheme.accentAlt,
                     onLeft = {
                         selected.clear()
-                        selected.addAll(items.map { it.id })
+                        // 只全选本机真正可执行的项：缺提权的项在各自区块里已标明原因
+                        selected.addAll(runnableItems.map { it.id })
                     },
                     rightLabel = AppStrings.get("select_none"),
                     rightTint = Color(0xFF8E8E93),
@@ -341,7 +452,7 @@ fun PerformanceBoostScreen(
                     leftLabel = AppStrings.get("run_selected"),
                     leftTint = Color(0xFF34C759),
                     onLeft = {
-                        val toRun = items.filter { it.id in selected }
+                        val toRun = runnableItems.filter { it.id in selected }
                         if (toRun.any { it.risk == "risky" }) {
                             requestConfirm(AppStrings.get("confirm_run_risky")) { runItems(toRun) }
                         } else {
@@ -351,10 +462,10 @@ fun PerformanceBoostScreen(
                     rightLabel = AppStrings.get("run_all"),
                     rightTint = Color(0xFFFF3B30),
                     onRight = {
-                        requestConfirm(AppStrings.get("confirm_run_risky")) { runItems(items) }
+                        requestConfirm(AppStrings.get("confirm_run_risky")) { runItems(runnableItems) }
                     },
-                    leftEnabled = !running && selected.isNotEmpty(),
-                    rightEnabled = !running
+                    leftEnabled = !running && selectedCount > 0,
+                    rightEnabled = !running && runnableItems.isNotEmpty()
                 )
 
                 Spacer(Modifier.height(10.dp))
@@ -389,13 +500,16 @@ fun PerformanceBoostScreen(
                 }
 
                 Spacer(Modifier.height(12.dp))
-                PerfToggleRow(
-                    label = AppStrings.get("perf_cat_brand"),
-                    checked = includeBrandSpecific,
-                    onCheckedChange = { includeBrandSpecific = it },
-                    backdrop = backdrop,
-                    contentColor = contentColor
-                )
+                // 指定了机型分类时，不再提供"包含品牌专属项"开关：该分类下品牌项本来就属于本区
+                if (filter == null) {
+                    PerfToggleRow(
+                        label = AppStrings.get("perf_cat_brand"),
+                        checked = includeBrandSpecific,
+                        onCheckedChange = { includeBrandSpecific = it },
+                        backdrop = backdrop,
+                        contentColor = contentColor
+                    )
+                }
             }
         }
 
@@ -446,45 +560,82 @@ fun PerformanceBoostScreen(
             }
         }
 
-        // ---------------- 指令清单 ----------------
-        grouped.forEach { (cat, catItems) ->
+        // ---------------- 指令清单：先按提权通道分行，组内再按分类分段 ----------------
+        channelBlocks.forEach { block ->
             Spacer(Modifier.height(14.dp))
+            val channelMissing = info != null && PerfChannels.missingOn(info, block.channel)
             GlassCard(backdrop = backdrop, pageType = "home") {
                 Column(Modifier.padding(18.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            Modifier
-                                .width(4.dp)
-                                .height(18.dp)
-                                .clip(RoundedCornerShape(2.dp))
-                                .background(Color(cat.color))
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        BasicText(
-                            AppStrings.get(cat.nameKey),
-                            style = TextStyle(contentColor, 16f.sp, FontWeight.Bold)
-                        )
-                        Spacer(Modifier.weight(1f))
-                        BasicText(
-                            "${catItems.count { it.id in selected }} / ${catItems.size}",
-                            style = TextStyle(contentColor.copy(alpha = 0.6f), 12f.sp)
-                        )
-                    }
+                    PerfChannelHeader(
+                        title = AppStrings.get(PerfChannels.titleKey(block.channel)),
+                        countText = String.format(AppStrings.get("perf_group_count"), block.items.size),
+                        barColor = if (block.channel == PerfChannels.ROOT) Color(0xFFFF3B30) else AppTheme.accent,
+                        contentColor = contentColor,
+                        warning = when {
+                            !channelMissing -> null
+                            block.channel == PerfChannels.ROOT -> AppStrings.get("perf_group_root_missing")
+                            else -> AppStrings.get("perf_group_adb_missing")
+                        },
+                        note = when {
+                            block.channel == PerfChannels.ROOT -> AppStrings.get("perf_group_root_note")
+                            // 只有 Root 没有 Shizuku 时必须说明回退行为，不能让人以为本组全废
+                            info != null && !info.hasShizuku -> AppStrings.get("perf_group_adb_note")
+                            else -> null
+                        }
+                    )
                     Spacer(Modifier.height(10.dp))
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        catItems.forEach { item ->
-                            PerfItemRow(
-                                item = item,
-                                selected = item.id in selected,
-                                onToggle = {
-                                    if (item.id in selected) selected.remove(item.id)
-                                    else selected.add(item.id)
-                                },
-                                contentColor = contentColor,
-                                backdrop = backdrop,
-                                running = runningItemId == item.id,
-                                result = resultById[item.id]
+                    PerfButtonRow(
+                        backdrop = backdrop,
+                        leftLabel = AppStrings.get("perf_select_group"),
+                        leftTint = AppTheme.accentAlt,
+                        onLeft = {
+                            selected.addAll(block.items.filter { unavailableNoteOf(it) == null }.map { it.id })
+                        },
+                        rightLabel = AppStrings.get("perf_clear_group"),
+                        rightTint = Color(0xFF8E8E93),
+                        onRight = { selected.removeAll(block.items.map { it.id }) },
+                        leftEnabled = !running,
+                        rightEnabled = !running
+                    )
+
+                    block.categories.forEach { (cat, catItems) ->
+                        Spacer(Modifier.height(14.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                Modifier
+                                    .width(4.dp)
+                                    .height(14.dp)
+                                    .clip(RoundedCornerShape(2.dp))
+                                    .background(Color(cat.color))
                             )
+                            Spacer(Modifier.width(8.dp))
+                            BasicText(
+                                AppStrings.get(cat.nameKey),
+                                style = TextStyle(contentColor, 14f.sp, FontWeight.Bold)
+                            )
+                            Spacer(Modifier.weight(1f))
+                            BasicText(
+                                "${catItems.count { it.id in selected }} / ${catItems.size}",
+                                style = TextStyle(contentColor.copy(alpha = 0.6f), 12f.sp)
+                            )
+                        }
+                        Spacer(Modifier.height(8.dp))
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            catItems.forEach { item ->
+                                PerfItemRow(
+                                    item = item,
+                                    selected = item.id in selected,
+                                    onToggle = {
+                                        if (item.id in selected) selected.remove(item.id)
+                                        else selected.add(item.id)
+                                    },
+                                    contentColor = contentColor,
+                                    backdrop = backdrop,
+                                    running = runningItemId == item.id,
+                                    result = resultById[item.id],
+                                    unavailableNote = unavailableNoteOf(item)
+                                )
+                            }
                         }
                     }
                 }
@@ -537,3 +688,14 @@ fun PerformanceBoostScreen(
         }
     }
 }
+
+/**
+ * 一条提权通道下的指令区块：通道 id + 该通道的全部项 + 组内按分类分段后的项。
+ * 分类顺序沿用 [BrandDatabase.categories]，因此原有分类一个都没少，只是各自归入了
+ * Root 或 ADB 通道的区块里。
+ */
+private data class ChannelBlock(
+    val channel: String,
+    val items: List<PerfItem>,
+    val categories: List<Pair<PerfCategory, List<PerfItem>>>
+)

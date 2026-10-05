@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.adbtoolbox.common.ADBTools
 import com.example.adbtoolbox.common.AppStrings
+import com.example.adbtoolbox.common.ModuleWebUIResult
 import com.example.adbtoolbox.common.RootModuleData
 import com.example.adbtoolbox.common.RootModuleError
 import com.example.adbtoolbox.common.RootModuleInstallResult
@@ -113,6 +114,13 @@ fun RootModuleScreen(
     var clipboardFeedback by remember { mutableStateOf<String?>(null) }
     var clipboardFailed by remember { mutableStateOf(false) }
 
+    // ---------------- 模块自带 UI（WebUI）----------------
+    // 只有真的带 webroot/webui 入口 html 的模块才显示"打开界面"按钮（用户明确要求：没有就不显示）
+    var webUiIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var openingWebUiFor by remember { mutableStateOf<String?>(null) }
+    var webUiUrl by remember { mutableStateOf<String?>(null) }
+    var webUiMessage by remember { mutableStateOf<String?>(null) }
+
     /** 重新检测权限 + 重新读取模块列表。所有 shell 调用都在 Dispatchers.Default。 */
     suspend fun refresh() {
         loading = true
@@ -122,11 +130,51 @@ fun RootModuleScreen(
         val detail = RootModuleData.lastErrorDetail
         val rootOk = withContext(Dispatchers.Default) { RootModuleManager.canUseRoot() }
         val magiskOk = withContext(Dispatchers.Default) { ADBTools.hasMagisk() }
+        // 哪些模块自带 UI：真实扫描 webroot/webui 目录，扫不到就是空集合（按钮不显示）
+        val uiIds = withContext(Dispatchers.Default) {
+            try {
+                RootModuleManager.getWebUIModuleIds()
+            } catch (e: Exception) {
+                emptySet()
+            }
+        }
         modules = list
         loadError = error
         loadErrorDetail = detail
         capability = RootModuleCapability(rootChecked = true, rootUsable = rootOk, magisk = magiskOk)
+        webUiIds = uiIds
         loading = false
+    }
+
+    /**
+     * 打开模块自带的界面：模块的 webroot 在 /data/adb 下（普通应用读不到），
+     * 需要先以 Root 身份拷到应用私有目录，再把本地入口 html 交给 WebView。
+     */
+    fun openModuleWebUI(module: RootModuleData) {
+        if (openingWebUiFor != null) return
+        openingWebUiFor = module.id
+        webUiMessage = null
+        scope.launch {
+            val result = withContext(Dispatchers.Default) {
+                try {
+                    RootModuleManager.prepareModuleWebUI(module.id)
+                } catch (e: Exception) {
+                    ModuleWebUIResult(null, "E_WEBUI_EXCEPTION", e.message.orEmpty())
+                }
+            }
+            openingWebUiFor = null
+            val path = result.localPath
+            if (path != null) {
+                webUiUrl = path
+            } else {
+                webUiMessage = when (result.errorCode) {
+                    "E_WEBUI_MISSING" -> AppStrings.get("module_webui_missing")
+                    "E_WEBUI_ROOT_REQUIRED" -> AppStrings.get("module_webui_root_required")
+                    "E_WEBUI_COPY_FAILED" -> AppStrings.get("module_webui_copy_failed")
+                    else -> AppStrings.get("module_webui_exception")
+                } + (result.detail?.takeIf { it.isNotBlank() }?.let { "（$it）" } ?: "")
+            }
+        }
     }
 
     // 进入页面即检测并列出，不做"点了才知道没权限"的假按钮
@@ -465,7 +513,11 @@ fun RootModuleScreen(
                             onToggleEnabled = { launchOp(it, if (it.isEnabled) RootOps.DISABLE else RootOps.ENABLE) },
                             onUninstall = { pendingUninstall = it },
                             onRunAction = { launchOp(it, RootOps.ACTION) },
-                            onCopyPath = { copyPath(it.moduleDir) }
+                            onCopyPath = { copyPath(it.moduleDir) },
+                            // 只有确实自带 UI 的模块才给入口（没有 UI 就完全不显示这个按钮）
+                            hasWebUI = module.id in webUiIds,
+                            webUIOpening = openingWebUiFor == module.id,
+                            onOpenWebUI = { openModuleWebUI(module) }
                         )
                     }
                 }
@@ -483,6 +535,30 @@ fun RootModuleScreen(
             contentColor = contentColor,
             onConfirm = { launchOp(module, RootOps.UNINSTALL) },
             onDismiss = { pendingUninstall = null }
+        )
+    }
+
+    // ---------------- 模块自带 UI：整屏覆盖层 ----------------
+    // 本地入口 html 已由 RootModuleManager.prepareModuleWebUI() 拷到应用私有目录，
+    // 这里只负责展示；关闭后回到列表。
+    val activeWebUiUrl = webUiUrl
+    if (activeWebUiUrl != null) {
+        ModuleWebUIHost(
+            url = activeWebUiUrl,
+            onClose = { webUiUrl = null }
+        )
+    }
+
+    // 打开失败时如实显示具体原因（没有 UI / 需要 Root / 拷贝失败 / 异常），不静默
+    webUiMessage?.let { message ->
+        PerfConfirmDialog(
+            title = AppStrings.get("module_open_webui"),
+            message = message,
+            confirmLabel = AppStrings.get("close"),
+            cancelLabel = AppStrings.get("back"),
+            contentColor = contentColor,
+            onConfirm = { webUiMessage = null },
+            onDismiss = { webUiMessage = null }
         )
     }
 
@@ -548,7 +624,12 @@ private fun RootModuleCard(
     onToggleEnabled: (RootModuleData) -> Unit,
     onUninstall: (RootModuleData) -> Unit,
     onRunAction: (RootModuleData) -> Unit,
-    onCopyPath: (RootModuleData) -> Unit
+    onCopyPath: (RootModuleData) -> Unit,
+    /** 该模块是否真的自带 UI（由 RootModuleManager.getWebUIModuleIds() 真实扫描得出） */
+    hasWebUI: Boolean,
+    /** 正在准备该模块的界面（拷贝 webroot 中） */
+    webUIOpening: Boolean,
+    onOpenWebUI: (RootModuleData) -> Unit
 ) {
     // 其他模块有操作进行时整体降透明度，避免用户连点造成并发写 /data/adb
     val alpha = if (otherBusy) 0.55f else 1f
@@ -574,6 +655,12 @@ private fun RootModuleCard(
                     if (module.isEnabled) AppStrings.get("enabled") else AppStrings.get("disabled"),
                     if (module.isEnabled) Color(0xFF34C759) else Color(0xFFFF9500)
                 )
+                // 能力徽标只在真的具备时出现：没有 webroot/webui 就不显示"含 WebUI"，
+                // 与"有 UI 才显示按钮"保持一致（不显示灰徽标占位）。
+                if (hasWebUI) {
+                    Spacer(Modifier.width(6.dp))
+                    PerfBadge(AppStrings.get("plugin_has_webui"), AppTheme.accent)
+                }
                 if (module.hasAction) {
                     Spacer(Modifier.width(6.dp))
                     PerfBadge(AppStrings.get("module_has_action"), AppTheme.accent)
@@ -633,21 +720,52 @@ private fun RootModuleCard(
                 rightEnabled = !otherBusy
             )
             Spacer(Modifier.height(8.dp))
-            PerfButtonRow(
-                backdrop = backdrop,
-                leftLabel = if (busy && op == RootOps.ACTION) {
-                    AppStrings.get("module_op_action")
-                } else {
-                    AppStrings.get("module_run_action")
-                },
-                leftTint = if (module.hasAction) AppTheme.accent else Color(0xFF8E8E93),
-                onLeft = { if (module.hasAction) onRunAction(module) },
-                rightLabel = AppStrings.get("copy_path"),
-                rightTint = AppTheme.accentAlt,
-                onRight = { onCopyPath(module) },
-                leftEnabled = !otherBusy && module.hasAction,
-                rightEnabled = !otherBusy
-            )
+            // 「执行 action.sh」只在模块**真的带 action.sh** 时才出现：没有就完全不显示这个按钮
+            // （不显示灰色禁用按钮，也不显示一个点了报错的按钮）。「复制路径」任何模块都有。
+            val copyPathAction: () -> Unit = { onCopyPath(module) }
+            if (module.hasAction) {
+                PerfButtonRow(
+                    backdrop = backdrop,
+                    leftLabel = if (busy && op == RootOps.ACTION) {
+                        AppStrings.get("module_op_action")
+                    } else {
+                        AppStrings.get("module_run_action")
+                    },
+                    leftTint = if (busy && op == RootOps.ACTION) Color(0xFF8E8E93) else AppTheme.accent,
+                    onLeft = { onRunAction(module) },
+                    rightLabel = AppStrings.get("copy_path"),
+                    rightTint = AppTheme.accentAlt,
+                    onRight = copyPathAction,
+                    leftEnabled = !otherBusy,
+                    rightEnabled = !otherBusy
+                )
+            } else {
+                PerfButtonRow(
+                    backdrop = backdrop,
+                    leftLabel = AppStrings.get("copy_path"),
+                    leftTint = AppTheme.accentAlt,
+                    onLeft = copyPathAction,
+                    leftEnabled = !otherBusy
+                )
+            }
+
+            // 「打开界面」只在模块**真的自带 UI** 时出现（没有 webroot/webui 就完全不显示，
+            // 而不是显示一个点了报错的按钮）。判定来自 RootModuleManager.getWebUIModuleIds() 的真实扫描。
+            if (hasWebUI) {
+                Spacer(Modifier.height(8.dp))
+                LiquidButton(
+                    onClick = { if (!otherBusy && !webUIOpening) onOpenWebUI(module) },
+                    backdrop = backdrop,
+                    modifier = Modifier.height(42.dp).fillMaxWidth(),
+                    tint = if (webUIOpening) Color(0xFF8E8E93) else AppTheme.accent
+                ) {
+                    BasicText(
+                        if (webUIOpening) AppStrings.get("module_webui_preparing") else AppStrings.get("module_open_webui"),
+                        Modifier.padding(horizontal = 8.dp),
+                        style = TextStyle(AppTheme.onAccent, 13.sp)
+                    )
+                }
+            }
 
             // 执行中 / 执行结果：真实回显，不伪造
             if (busy && op != null) {
@@ -738,17 +856,32 @@ private fun moduleActionErrorMessage(code: String): String = when (code) {
     else -> AppStrings.get("operation_failed")
 }
 
-/** 安装结果文案：首行可能是稳定错误码 / 成功码，逐行翻译后拼接。 */
+/**
+ * 安装结果文案：首行是稳定错误码 / 成功码，其余行是真实原因（异常文本、命令输出、路径）。
+ *
+ * 失败原因必须一项一项区分开，不能都落回"安装失败"：没 root / su 拒绝授权 / /data/adb 不存在 /
+ * 只读 / 不是有效 zip / module.prop 缺失 / id 非法 / 解压失败 / 复制失败 / 回读校验失败。
+ */
 private fun localizeMessage(raw: String): String = raw.lines().joinToString("\n") { line ->
     val code = line.trim()
     when (code) {
         "E_ROOT_REQUIRED" -> AppStrings.get("module_err_root_required")
+        "E_ROOT_DENIED" -> AppStrings.get("module_err_root_denied")
+        "E_ROOT_UNAVAILABLE" -> AppStrings.get("module_err_root_unavailable")
+        "E_ADB_DIR_MISSING" -> AppStrings.get("module_err_adb_dir_missing")
+        "E_ADB_READONLY" -> AppStrings.get("module_err_adb_readonly")
         "E_FILE_NOT_FOUND" -> AppStrings.get("module_err_file_not_found")
         "E_NOT_ZIP" -> AppStrings.get("module_err_not_zip")
+        "E_ZIP_INVALID" -> AppStrings.get("module_err_archive_invalid")
+        "E_ZIP_SLIP" -> AppStrings.get("module_err_zip_slip")
+        // 保留旧码映射：历史版本的安装结果里可能还带着它
         "E_NO_INSTALLER_AND_UNZIP_FAILED" -> AppStrings.get("module_err_no_installer")
         "E_NO_MODULE_PROP" -> AppStrings.get("module_err_no_module_prop")
         "E_NO_MODULE_ID" -> AppStrings.get("module_err_no_module_id")
+        "E_ID_UNSAFE" -> AppStrings.get("module_err_id_unsafe")
+        "E_STAGE_FAILED" -> AppStrings.get("module_err_stage_failed")
         "E_COPY_FAILED" -> AppStrings.get("module_err_copy_failed")
+        "E_VERIFY_FAILED" -> AppStrings.get("module_err_verify_failed")
         "E_EXCEPTION" -> AppStrings.get("module_err_exception")
         "E_OK_MAGISK" -> AppStrings.get("module_ok_magisk")
         "E_OK_KSU" -> AppStrings.get("module_ok_ksu")

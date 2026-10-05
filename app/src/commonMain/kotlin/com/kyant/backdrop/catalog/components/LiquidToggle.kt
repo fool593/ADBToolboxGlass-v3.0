@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
@@ -111,6 +112,13 @@ fun LiquidToggle(
 
     val trackBackdrop = rememberLayerBackdrop()
 
+    // 按下进度的 1/16 量化快照，只给 effects 用：直接读 pressProgress 会让按压/回弹的
+    // 每一帧都判定"参数变了"，从而每帧重建整条 RenderEffect 链（BlurEffect/RuntimeShaderEffect
+    // 都是原生对象）。1/16 台阶的模糊/折射变化看不出来，重建次数从"每帧"降到"十几次"。
+    val pressStep = remember(dampedDragAnimation) {
+        derivedStateOf { (dampedDragAnimation.pressProgress * 16f).toInt() / 16f }
+    }
+
     Box(
         modifier,
         contentAlignment = Alignment.CenterStart
@@ -154,7 +162,7 @@ fun LiquidToggle(
                     ),
                     shape = { Capsule() },
                     effects = {
-                        val progress = dampedDragAnimation.pressProgress
+                        val progress = pressStep.value
                         blur(8f.dp.toPx() * (1f - progress))
                         lens(
                             5f.dp.toPx() * progress,

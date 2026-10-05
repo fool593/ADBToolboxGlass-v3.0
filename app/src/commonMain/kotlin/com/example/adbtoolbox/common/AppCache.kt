@@ -11,12 +11,32 @@ object AppCache {
 
     // 应用图标解码缓存（packageName -> ImageBitmap）。
     // 列表来回滚动时不必反复走 PackageManager 取图标 + 解码。
-    private val appIconCache = mutableMapOf<String, ImageBitmap>()
+    //
+    // 上界：每个 ImageBitmap 背后是一整块原生位图（当前按 96px 降采样，单张约 36KB；
+    // 但装 300+ 应用、来回滚几轮后会一直累积）。原来是无上界的 mutableMapOf，
+    // 这些位图只在 clearAppIcons() 或进程结束时才释放 —— 属于"越用越大"的那类内存增长。
+    // 现在用插入序 LinkedHashMap 做 LRU：访问即刷新到队尾，超过 MAX_ICON_CACHE 淘汰最久未用的。
+    // 只在主线程访问（getAppIcon 在组合期、putAppIcon 在主线程协程里），因此不加锁。
+    private val appIconCache = LinkedHashMap<String, ImageBitmap>()
 
-    fun getAppIcon(packageName: String): ImageBitmap? = appIconCache[packageName]
+    /** 图标缓存上界：64 张足够覆盖一屏可见项 + 来回滚动的回看，超出即淘汰最久未用的。 */
+    private const val MAX_ICON_CACHE = 64
+
+    fun getAppIcon(packageName: String): ImageBitmap? {
+        val icon = appIconCache[packageName] ?: return null
+        // 访问即刷新"最近使用"顺序
+        appIconCache.remove(packageName)
+        appIconCache[packageName] = icon
+        return icon
+    }
 
     fun putAppIcon(packageName: String, icon: ImageBitmap) {
+        appIconCache.remove(packageName)
         appIconCache[packageName] = icon
+        while (appIconCache.size > MAX_ICON_CACHE) {
+            val oldest = appIconCache.keys.firstOrNull() ?: break
+            appIconCache.remove(oldest)
+        }
     }
 
     fun clearAppIcons() = appIconCache.clear()
@@ -60,6 +80,9 @@ object AppCache {
 
     // Dhizuku 使用开关（默认开启，激活后自动使用 Dhizuku 权限执行命令）
     val useDhizuku = mutableStateOf(true)
+
+    // 「修改系统设置」授权页触发（游戏帧率页在非华为机型上需要该权限才能直写刷新率）
+    val openWriteSettingsTrigger = mutableStateOf(0)
 
     // ---------------- Shizuku 连接状态（全局唯一数据源） ----------------
     // 以前每个页面各自在 LaunchedEffect(Unit) 里查一次 isShizukuAvailable()，只查一次：

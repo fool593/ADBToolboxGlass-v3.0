@@ -144,15 +144,19 @@ fun PluginsScreen(
             runResult = null
             try {
                 val result = withContext(Dispatchers.Default) { PluginManager.runAction(plugin.id) }
-                // 未安装 action.sh 等"逻辑失败"是从返回值里回来的，不是异常，以前只在插件卡片里显示，
-                // 这里补一条统一提示，界面其他位置也能看到。
-                if (result.contains("Error", ignoreCase = true) || result.contains("failed", ignoreCase = true)) {
-                    errorMessage = "${plugin.name}: ${result.lineSequence().first().trim()}"
+                // 约定：真的跑起来了首行一定是 `Exit code: N`；首行不是它，说明脚本根本没执行
+                // （没有 action.sh / 插件已停用 / 执行异常），首行就是本地化的真实原因。
+                val firstLine = result.lineSequence().firstOrNull()?.trim().orEmpty()
+                val exitCode = firstLine.removePrefix("Exit code: ").trim().toIntOrNull()
+                if (!firstLine.startsWith("Exit code: ")) {
+                    errorMessage = "${plugin.name}: $firstLine"
+                } else if (exitCode != null && exitCode != 0) {
+                    errorMessage = "${plugin.name}: ${AppStrings.get("run_failed_reason")} (exit=$exitCode)"
                 }
                 runResult = Pair(plugin.id, result)
             } catch (e: Exception) {
                 errorMessage = "${AppStrings.get("operation_failed")}: ${e.message ?: e.javaClass.simpleName}"
-                runResult = Pair(plugin.id, "Error: ${e.message}")
+                runResult = Pair(plugin.id, "${AppStrings.get("module_err_action_exception")}: ${e.message.orEmpty()}")
             }
             runningPluginId = null
         }
@@ -187,7 +191,8 @@ fun PluginsScreen(
                 null
             }
             if (path.isNullOrBlank()) {
-                errorMessage = "${plugin.name}: ${AppStrings.get("plugin_webui_missing")}"
+                // 列表里判定有 UI，点开时磁盘上却没有了：给出具体到模块的提示，而不是笼统失败
+                errorMessage = hwFormat(AppStrings.get("plugin_webui_gone"), plugin.name)
             } else {
                 webUIUrl = path
             }
@@ -241,20 +246,24 @@ fun PluginsScreen(
                 Spacer(Modifier.height(8f.dp))
             }
 
-            installResult?.let { result ->
-                if (result != shownInstallResult) {
+            installResult?.let { rawResult ->
+                if (rawResult != shownInstallResult) {
+                    // PluginManager.installPlugin 返回的是「稳定错误码 + 真实原因」，
+                    // 这里翻成当前语言；首行是成功码才用绿色，其余一律按失败展示。
+                    val resultText = localizePluginInstallMessage(rawResult)
+                    val failed = isPluginInstallFailure(rawResult)
                     GlassCard(backdrop = backdrop, pageType = "plugins") {
                         Column(Modifier.padding(16f.dp).fillMaxWidth()) {
                             BasicText(
-                                result,
+                                resultText,
                                 style = TextStyle(
-                                    if (result.contains("success", ignoreCase = true) || result.contains("成功")) OkGreen else DangerRed,
+                                    if (failed) DangerRed else OkGreen,
                                     12f.sp
                                 )
                             )
                             Spacer(Modifier.height(8f.dp))
                             LiquidButton(
-                                onClick = { shownInstallResult = result },
+                                onClick = { shownInstallResult = rawResult },
                                 backdrop = backdrop,
                                 modifier = Modifier.height(32f.dp),
                                 tint = MutedGray
@@ -563,4 +572,84 @@ fun PluginListItem(
             }
         }
     }
+}
+
+/**
+ * 插件安装结果是否失败。
+ *
+ * 约定（与 PluginManager.installPlugin 一致）：首行是稳定码 —— `E_OK_PLUGIN` 表示成功，
+ * 其余 `E_xxx` 表示失败；不是稳定码的（例如 MainActivity 兜底产生的
+ * "Plugin installation failed: ..."）按失败处理。
+ */
+private fun isPluginInstallFailure(raw: String): Boolean {
+    val first = raw.lineSequence().firstOrNull()?.trim().orEmpty()
+    if (first == "E_OK_PLUGIN") return false
+    if (first.startsWith("E_")) return true
+    return first.contains("fail", ignoreCase = true) || first.contains("失败")
+}
+
+/**
+ * 安装结果 → 当前语言。
+ *
+ * 首行是稳定码，第二行起是真实原因（异常文本 / 命令输出 / 路径）。带 `%1$s` 的文案
+ * 会把紧随其后的那行原因填进占位符，其余行原样保留 —— 用户看到的既有结论也有原始信息。
+ */
+private fun localizePluginInstallMessage(raw: String): String {
+    val lines = raw.lines()
+    val first = lines.firstOrNull()?.trim().orEmpty()
+    val rest = lines.drop(1).map { it.trimEnd() }.toMutableList()
+    while (rest.isNotEmpty() && rest.first().isBlank()) rest.removeAt(0)
+
+    if (first == "E_OK_PLUGIN") {
+        val name = rest.firstOrNull()?.trim().orEmpty()
+        if (rest.isNotEmpty()) rest.removeAt(0)
+        return buildString {
+            append(hwFormat(AppStrings.get("plugin_ok_installed"), name))
+            rest.forEach { line ->
+                append('\n')
+                append(
+                    if (line.trim() == "W_CUSTOMIZE_FAILED") {
+                        AppStrings.get("plugin_warn_customize_failed")
+                    } else {
+                        line
+                    }
+                )
+            }
+        }
+    }
+
+    val template = pluginInstallErrorMessage(first) ?: return raw
+    val filled = if (template.contains("%1\$s") && rest.isNotEmpty()) {
+        hwFormat(template, rest.removeAt(0).trim())
+    } else {
+        template
+    }
+    return buildString {
+        append(filled)
+        rest.forEach { line ->
+            append('\n')
+            append(line)
+        }
+    }
+}
+
+/**
+ * 插件安装失败的稳定码 → 当前语言文案；未识别返回 null（调用方原样展示）。
+ *
+ * 这里直接返回翻译结果而不是 key：key 必须字面出现在 AppStrings.get(...) 里，
+ * 才能被"扫描源码收集文案 key"的工具发现并插入到 AppSettings，避免漏插导致界面显示 key 本身。
+ */
+private fun pluginInstallErrorMessage(code: String): String? = when (code) {
+    "E_FILE_NOT_FOUND" -> AppStrings.get("module_err_file_not_found")
+    "E_NOT_ZIP" -> AppStrings.get("module_err_not_zip")
+    "E_ZIP_INVALID" -> AppStrings.get("plugin_err_zip_invalid")
+    "E_ZIP_SLIP" -> AppStrings.get("plugin_err_zip_slip")
+    "E_NO_MODULE_PROP" -> AppStrings.get("module_err_no_module_prop")
+    "E_NO_MODULE_ID" -> AppStrings.get("module_err_no_module_id")
+    "E_ID_UNSAFE" -> AppStrings.get("plugin_err_id_unsafe")
+    "E_EXTRACT_FAILED" -> AppStrings.get("plugin_err_extract_failed")
+    "E_COPY_FAILED" -> AppStrings.get("plugin_err_copy_failed")
+    "E_VERIFY_FAILED" -> AppStrings.get("plugin_err_verify_failed")
+    "E_EXCEPTION" -> AppStrings.get("module_err_exception")
+    else -> null
 }
