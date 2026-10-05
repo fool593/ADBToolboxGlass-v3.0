@@ -45,6 +45,7 @@ import com.example.adbtoolbox.common.perf.PerfRunReport
 import com.example.adbtoolbox.common.perf.PerfRunResult
 import com.example.adbtoolbox.common.perf.PerfRunner
 import com.example.adbtoolbox.common.perf.UniversalTuning
+import com.example.adbtoolbox.common.theme.AppLayout
 import com.example.adbtoolbox.common.theme.AppTheme
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.catalog.components.LiquidButton
@@ -207,14 +208,14 @@ fun PerformanceBoostScreen(
         Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16f.dp)
+            .padding(horizontal = AppLayout.screenH)
     ) {
-        Spacer(Modifier.height(24f.dp))
+        Spacer(Modifier.height(AppLayout.screenTop))
 
         Row(verticalAlignment = Alignment.CenterVertically) {
             BasicText(
                 AppStrings.get("performance_boost"),
-                style = TextStyle(contentColor, 24f.sp, FontWeight.Bold)
+                style = TextStyle(contentColor, AppLayout.titleSize, FontWeight.Bold)
             )
             Spacer(Modifier.weight(1f))
             LiquidButton(
@@ -235,23 +236,23 @@ fun PerformanceBoostScreen(
             AppStrings.get("performance_boost_hint"),
             style = TextStyle(contentColor.copy(alpha = 0.6f), 12f.sp)
         )
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(AppLayout.sectionGap))
 
         // ---------------- 当前机型分类（由 BrandPerfScreen 传入 brandFilter 时显示） ----------------
         if (filter != null) {
             GlassCard(backdrop = backdrop, pageType = "home") {
-                Column(Modifier.padding(18.dp)) {
+                Column(Modifier.padding(AppLayout.cardPad)) {
                     BasicText(
                         String.format(
                             AppStrings.get("perf_current_category"),
                             AppStrings.get(BrandDatabase.nameKeyOf(filter))
                         ),
-                        style = TextStyle(contentColor, 15f.sp, FontWeight.Bold)
+                        style = TextStyle(contentColor, AppLayout.sectionTitleSize, FontWeight.Bold)
                     )
                     Spacer(Modifier.height(4.dp))
                     BasicText(
                         AppStrings.get("perf_filter_applied"),
-                        style = TextStyle(contentColor.copy(alpha = 0.6f), 11f.sp)
+                        style = TextStyle(contentColor.copy(alpha = 0.6f), AppLayout.captionSize)
                     )
                     // 诚实提示：看的不是本机品牌时，不能让人以为这些厂商接口在本机一定存在
                     val foreignBrand = info != null &&
@@ -261,7 +262,7 @@ fun PerformanceBoostScreen(
                         Spacer(Modifier.height(4.dp))
                         BasicText(
                             AppStrings.get("perf_filter_foreign_brand"),
-                            style = TextStyle(Color(0xFFFF9500), 11f.sp)
+                            style = TextStyle(Color(0xFFFF9500), AppLayout.captionSize)
                         )
                     }
                     Spacer(Modifier.height(10.dp))
@@ -279,21 +280,21 @@ fun PerformanceBoostScreen(
                     }
                 }
             }
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(AppLayout.sectionGap))
         }
 
         // ---------------- 设备与品牌识别 ----------------
         GlassCard(backdrop = backdrop, pageType = "home") {
-            Column(Modifier.padding(18.dp)) {
+            Column(Modifier.padding(AppLayout.cardPad)) {
                 if (loading || info == null) {
                     BasicText(
                         AppStrings.get("loading"),
-                        style = TextStyle(contentColor.copy(alpha = 0.6f), 14f.sp)
+                        style = TextStyle(contentColor.copy(alpha = 0.6f), AppLayout.bodySize)
                     )
                 } else {
                     BasicText(
                         AppStrings.get(info.brandKey),
-                        style = TextStyle(contentColor, 18f.sp, FontWeight.Bold)
+                        style = TextStyle(contentColor, AppLayout.sectionTitleSize, FontWeight.Bold)
                     )
                     Spacer(Modifier.height(2.dp))
                     BasicText(
@@ -333,7 +334,7 @@ fun PerformanceBoostScreen(
                     Spacer(Modifier.height(2.dp))
                     BasicText(
                         PerfRunner.applicabilitySummary(info),
-                        style = TextStyle(contentColor.copy(alpha = 0.65f), 11f.sp)
+                        style = TextStyle(contentColor.copy(alpha = 0.65f), AppLayout.captionSize)
                     )
                     // 因缺少提权而跑不了的项如实列出来，避免用户点了没反应却不知道为什么
                     val blocked = remember(info) { PerfRunner.blockedByPermission(info) }
@@ -341,7 +342,7 @@ fun PerformanceBoostScreen(
                         Spacer(Modifier.height(6.dp))
                         BasicText(
                             "${AppStrings.get("apply_blocked")}：${blocked.size}",
-                            style = TextStyle(Color(0xFFFF9500), 11f.sp)
+                            style = TextStyle(Color(0xFFFF9500), AppLayout.captionSize)
                         )
                         blocked.take(4).forEach { (blockedItem, note) ->
                             BasicText(
@@ -373,7 +374,7 @@ fun PerformanceBoostScreen(
                             PerfBadge(AppStrings.get("no_permission_hint").take(14), Color(0xFFFF9500))
                         }
                     }
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(AppLayout.innerGap))
                     PerfButtonRow(
                         backdrop = backdrop,
                         leftLabel = AppStrings.get("phone_inspector"),
@@ -394,11 +395,11 @@ fun PerformanceBoostScreen(
             }
         }
 
-        Spacer(Modifier.height(14.dp))
+        Spacer(Modifier.height(AppLayout.sectionGap))
 
         // ---------------- 一键操作区 ----------------
         GlassCard(backdrop = backdrop, pageType = "home") {
-            Column(Modifier.padding(18.dp)) {
+            Column(Modifier.padding(AppLayout.cardPad)) {
                 // 已选条数按"当前列表里真实存在且本机可执行"的项统计
                 val selectedCount = items.count { it.id in selected && unavailableNoteOf(it) == null }
                 val runningText = if (running) {
@@ -495,11 +496,11 @@ fun PerformanceBoostScreen(
                     BasicText(
                         AppStrings.get("perf_item_kill_bg"),
                         Modifier.padding(horizontal = 10.dp),
-                        style = TextStyle(Color.White, 14f.sp, FontWeight.Medium)
+                        style = TextStyle(Color.White, AppLayout.bodySize, FontWeight.Medium)
                     )
                 }
 
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(AppLayout.innerGap))
                 // 指定了机型分类时，不再提供"包含品牌专属项"开关：该分类下品牌项本来就属于本区
                 if (filter == null) {
                     PerfToggleRow(
@@ -515,12 +516,12 @@ fun PerformanceBoostScreen(
 
         // ---------------- 执行结果 ----------------
         report?.let { r ->
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(AppLayout.sectionGap))
             GlassCard(backdrop = backdrop, pageType = "home") {
-                Column(Modifier.padding(18.dp)) {
+                Column(Modifier.padding(AppLayout.cardPad)) {
                     BasicText(
                         AppStrings.get("boost_done_title"),
-                        style = TextStyle(contentColor, 17f.sp, FontWeight.Bold)
+                        style = TextStyle(contentColor, AppLayout.sectionTitleSize, FontWeight.Bold)
                     )
                     Spacer(Modifier.height(10.dp))
                     PerfInfoRow(
@@ -562,10 +563,10 @@ fun PerformanceBoostScreen(
 
         // ---------------- 指令清单：先按提权通道分行，组内再按分类分段 ----------------
         channelBlocks.forEach { block ->
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(AppLayout.sectionGap))
             val channelMissing = info != null && PerfChannels.missingOn(info, block.channel)
             GlassCard(backdrop = backdrop, pageType = "home") {
-                Column(Modifier.padding(18.dp)) {
+                Column(Modifier.padding(AppLayout.cardPad)) {
                     PerfChannelHeader(
                         title = AppStrings.get(PerfChannels.titleKey(block.channel)),
                         countText = String.format(AppStrings.get("perf_group_count"), block.items.size),
@@ -611,7 +612,7 @@ fun PerformanceBoostScreen(
                             Spacer(Modifier.width(8.dp))
                             BasicText(
                                 AppStrings.get(cat.nameKey),
-                                style = TextStyle(contentColor, 14f.sp, FontWeight.Bold)
+                                style = TextStyle(contentColor, AppLayout.bodySize, FontWeight.Bold)
                             )
                             Spacer(Modifier.weight(1f))
                             BasicText(

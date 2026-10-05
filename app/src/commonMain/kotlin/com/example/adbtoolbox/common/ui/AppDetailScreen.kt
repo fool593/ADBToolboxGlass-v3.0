@@ -35,6 +35,7 @@ import com.example.adbtoolbox.common.AppCache
 import com.example.adbtoolbox.common.AppInfoData
 import com.example.adbtoolbox.common.AppStrings
 import com.example.adbtoolbox.common.PermissionInfoData
+import com.example.adbtoolbox.common.theme.AppLayout
 import com.example.adbtoolbox.common.theme.AppTheme
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.catalog.components.LiquidButton
@@ -242,33 +243,33 @@ fun AppDetailScreen(
         Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16f.dp)
+            .padding(horizontal = AppLayout.screenH)
     ) {
-        Spacer(Modifier.height(24f.dp))
+        Spacer(Modifier.height(AppLayout.screenTop))
 
         // 顶部返回和标题
         Row(verticalAlignment = Alignment.CenterVertically) {
             GlassBackButton(backdrop = backdrop, contentColor = contentColor, onBack = onBack)
         }
 
-        Spacer(Modifier.height(16f.dp))
+        Spacer(Modifier.height(AppLayout.sectionGap))
 
         // 读取失败/应用不存在时给出明确提示，避免出现空白页面
         if (loadFinished && appInfo == null) {
             GlassCard(backdrop = backdrop, pageType = "apps") {
-                Column(Modifier.padding(20f.dp)) {
-                    BasicText(packageName.ifEmpty { AppStrings.get("unknown") }, style = TextStyle(contentColor, 14f.sp))
+                Column(Modifier.padding(AppLayout.cardPad)) {
+                    BasicText(packageName.ifEmpty { AppStrings.get("unknown") }, style = TextStyle(contentColor, AppLayout.bodySize))
                     Spacer(Modifier.height(6f.dp))
                     BasicText(AppStrings.get("operation_failed"), style = TextStyle(Color(0xFFFF3B30), 12f.sp))
                 }
             }
-            Spacer(Modifier.height(16f.dp))
+            Spacer(Modifier.height(AppLayout.sectionGap))
         }
 
         // 应用信息卡片
         appInfo?.let { app ->
             GlassCard(backdrop = backdrop, pageType = "apps") {
-                Column(Modifier.padding(20f.dp)) {
+                Column(Modifier.padding(AppLayout.cardPad)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         // 真实应用图标，取不到时内部回退首字母占位
                         AppIconView(
@@ -282,24 +283,24 @@ fun AppDetailScreen(
                         )
                         Spacer(Modifier.width(14f.dp))
                         Column(Modifier.weight(1f)) {
-                            BasicText(app.appName, style = TextStyle(contentColor, 18f.sp, androidx.compose.ui.text.font.FontWeight.Bold))
-                            BasicText(app.packageName, style = TextStyle(contentColor.copy(alpha = 0.5f), 11f.sp))
-                            BasicText("${AppStrings.get("version")} ${app.versionName}", style = TextStyle(contentColor.copy(alpha = 0.5f), 11f.sp))
+                            BasicText(app.appName, style = TextStyle(contentColor, AppLayout.sectionTitleSize, androidx.compose.ui.text.font.FontWeight.Bold))
+                            BasicText(app.packageName, style = TextStyle(contentColor.copy(alpha = 0.5f), AppLayout.captionSize))
+                            BasicText("${AppStrings.get("version")} ${app.versionName}", style = TextStyle(contentColor.copy(alpha = 0.5f), AppLayout.captionSize))
                         }
                     }
-                    Spacer(Modifier.height(12f.dp))
+                    Spacer(Modifier.height(AppLayout.innerGap))
                     InfoRow(AppStrings.get("type"), if (app.isSystem) AppStrings.get("system_app") else AppStrings.get("user_app"), contentColor)
                     InfoRow(AppStrings.get("status"), if (app.isFrozen) AppStrings.get("frozen") else AppStrings.get("normal"), contentColor)
                 }
             }
         }
 
-        Spacer(Modifier.height(16f.dp))
+        Spacer(Modifier.height(AppLayout.sectionGap))
 
         // 权限不可用提示 + 一键请求 Shizuku
         if (privileged == false) {
             GlassCard(backdrop = backdrop, pageType = "apps") {
-                Column(Modifier.padding(20f.dp)) {
+                Column(Modifier.padding(AppLayout.cardPad)) {
                     BasicText(
                         "${AppStrings.get("need_root_or_shizuku")} · ${AppStrings.get("authorization_required")}",
                         style = TextStyle(Color(0xFFFF9500), 12f.sp)
@@ -328,7 +329,7 @@ fun AppDetailScreen(
                     }
                 }
             }
-            Spacer(Modifier.height(16f.dp))
+            Spacer(Modifier.height(AppLayout.sectionGap))
         }
 
         // 操作按钮
@@ -401,7 +402,7 @@ fun AppDetailScreen(
             }
         }
 
-        Spacer(Modifier.height(16f.dp))
+        Spacer(Modifier.height(AppLayout.sectionGap))
 
         // 权限列表（点击一次切换授权状态；撤销需二次确认）
         GlassCard(backdrop = backdrop, pageType = "apps") {
@@ -440,7 +441,7 @@ fun AppDetailScreen(
                                 BasicText(
                                     "${AppStrings.get("revoke")} ${perm.name}?",
                                     Modifier.weight(1f),
-                                    style = TextStyle(Color(0xFFFF9500), 11f.sp)
+                                    style = TextStyle(Color(0xFFFF9500), AppLayout.captionSize)
                                 )
                                 AppDetailSmallButton(backdrop, AppStrings.get("execute"), Color(0xFFFF3B30)) { confirmRevokePermission(perm) }
                                 AppDetailSmallButton(backdrop, AppStrings.get("back"), Color(0xFF8E8E93)) { pendingRevokePermission = null }
@@ -450,17 +451,17 @@ fun AppDetailScreen(
                 }
                 if (permissions.size > 30) {
                     Spacer(Modifier.height(8f.dp))
-                    BasicText("...${AppStrings.get("more_items")} ${permissions.size - 30}", style = TextStyle(contentColor.copy(alpha = 0.4f), 11f.sp))
+                    BasicText("...${AppStrings.get("more_items")} ${permissions.size - 30}", style = TextStyle(contentColor.copy(alpha = 0.4f), AppLayout.captionSize))
                 }
             }
         }
 
-        Spacer(Modifier.height(16f.dp))
+        Spacer(Modifier.height(AppLayout.sectionGap))
 
         // 操作结果
         if (actionResult.isNotEmpty()) {
             GlassCard(backdrop = backdrop, pageType = "apps") {
-                Column(Modifier.padding(20f.dp)) {
+                Column(Modifier.padding(AppLayout.cardPad)) {
                     BasicText(
                         actionResult,
                         style = TextStyle(if (actionOk) contentColor else Color(0xFFFF3B30), 13f.sp)
@@ -493,6 +494,6 @@ fun AppDetailSmallButton(backdrop: Backdrop, label: String, tint: Color, onClick
         modifier = Modifier.height(30f.dp),
         tint = tint
     ) {
-        BasicText(label, Modifier.padding(horizontal = 10f.dp), style = TextStyle(Color.White, 11f.sp))
+        BasicText(label, Modifier.padding(horizontal = 10f.dp), style = TextStyle(Color.White, AppLayout.captionSize))
     }
 }

@@ -17,6 +17,7 @@ import androidx.compose.ui.node.requireGraphicsContext
 import androidx.compose.ui.platform.InspectorInfo
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
+import com.kyant.backdrop.BackdropDiagnostics
 import com.kyant.backdrop.internal.ShapeProvider
 import com.kyant.backdrop.internal.blur
 import com.kyant.backdrop.internal.blurNeedsUpdate
@@ -126,6 +127,7 @@ internal class ShadowNode(
             graphicsContext.createGraphicsLayer().apply {
                 compositingStrategy = CompositingStrategy.Offscreen
             }
+        BackdropDiagnostics.onGraphicsLayerCreated()
     }
 
     override fun onDetach() {
@@ -133,6 +135,7 @@ internal class ShadowNode(
         shadowLayer?.let { layer ->
             graphicsContext.releaseGraphicsLayer(layer)
             shadowLayer = null
+            BackdropDiagnostics.onGraphicsLayerReleased()
         }
         prevBlurRadius = Float.NaN
     }

@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -33,6 +34,7 @@ import com.example.adbtoolbox.common.AppSettings
 import com.example.adbtoolbox.common.AppStrings
 import com.example.adbtoolbox.common.GlassEffectConfig
 import com.example.adbtoolbox.common.GlassEffectPersistence
+import com.example.adbtoolbox.common.theme.AppLayout
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.catalog.components.LiquidButton
 import com.kyant.backdrop.catalog.components.LiquidSlider
@@ -69,7 +71,9 @@ fun GlassPlaygroundScreen(
         // 标题
         Row(verticalAlignment = Alignment.CenterVertically) {
             GlassBackButton(backdrop = backdrop, contentColor = contentColor, onBack = onBack)
-            Spacer(Modifier.height(12f.dp))
+            // 这里是水平方向间距：原来写成 Modifier.height(...)，在 Row 里等于没有水平间距，
+            // 标题会贴死返回按钮（同一类 bug 在另外 4 个页面已修）。
+            Spacer(Modifier.width(AppLayout.headerGap))
             BasicText(
                 AppStrings.get("glass_playground"),
                 style = TextStyle(contentColor, 24f.sp, androidx.compose.ui.text.font.FontWeight.Bold)

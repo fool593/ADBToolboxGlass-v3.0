@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.adbtoolbox.common.AppStrings
 import com.example.adbtoolbox.common.perf.HuaweiPerf
+import com.example.adbtoolbox.common.theme.AppLayout
 import com.example.adbtoolbox.common.theme.AppTheme
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.catalog.components.LiquidButton
@@ -176,7 +177,7 @@ fun HwSmallButton(
         BasicText(
             label,
             Modifier.padding(horizontal = 2.dp),
-            style = TextStyle(HwTheme.onAccent, 11.sp, FontWeight.Medium)
+            style = TextStyle(HwTheme.onAccent, AppLayout.captionSize, FontWeight.Medium)
         )
     }
 }
@@ -207,11 +208,11 @@ fun HwGroupHeader(
                 .background(HwTheme.accent)
         )
         Spacer(Modifier.width(8.dp))
-        BasicText(title, style = TextStyle(contentColor, 15.sp, FontWeight.Bold))
+        BasicText(title, style = TextStyle(contentColor, AppLayout.sectionTitleSize, FontWeight.Bold))
         Spacer(Modifier.weight(1f))
         BasicText(
             hwFormat(AppStrings.get("hw_group_count"), selectedCount, total),
-            style = TextStyle(contentColor.copy(alpha = 0.55f), 11.sp)
+            style = TextStyle(contentColor.copy(alpha = 0.55f), AppLayout.captionSize)
         )
         Spacer(Modifier.width(8.dp))
         BasicText(
@@ -262,7 +263,7 @@ fun HwMethodCard(
                 Spacer(Modifier.height(2.dp))
                 BasicText(
                     AppStrings.get(method.gainKey),
-                    style = TextStyle(contentColor.copy(alpha = 0.62f), 11.sp)
+                    style = TextStyle(contentColor.copy(alpha = 0.62f), AppLayout.captionSize)
                 )
             }
         }
@@ -352,7 +353,7 @@ fun HwMethodCard(
             Spacer(Modifier.height(2.dp))
             BasicText(
                 AppStrings.get(method.principleKey),
-                style = TextStyle(contentColor.copy(alpha = 0.8f), 11.sp)
+                style = TextStyle(contentColor.copy(alpha = 0.8f), AppLayout.captionSize)
             )
 
             Spacer(Modifier.height(6.dp))

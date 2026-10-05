@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.verticalScroll
@@ -27,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.adbtoolbox.common.ADBTools
 import com.example.adbtoolbox.common.AppStrings
+import com.example.adbtoolbox.common.theme.AppLayout
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.catalog.components.LiquidButton
 import kotlinx.coroutines.Dispatchers
@@ -119,15 +121,16 @@ fun RootManagerScreen(
         Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16f.dp)
+            .padding(horizontal = AppLayout.screenH)
     ) {
-        Spacer(Modifier.height(24f.dp))
+        Spacer(Modifier.height(AppLayout.screenTop))
         Row(verticalAlignment = Alignment.CenterVertically) {
             GlassBackButton(backdrop = backdrop, contentColor = contentColor, onBack = onBack)
-            Spacer(Modifier.height(12f.dp))
-            BasicText(AppStrings.get("root_manager"), style = TextStyle(contentColor, 24f.sp, FontWeight.Bold))
+            // 返回按钮与标题之间是水平间距：以前误用 height，标题会贴死按钮
+            Spacer(Modifier.width(AppLayout.headerGap))
+            BasicText(AppStrings.get("root_manager"), style = TextStyle(contentColor, AppLayout.titleSize, FontWeight.Bold))
         }
-        Spacer(Modifier.height(16f.dp))
+        Spacer(Modifier.height(AppLayout.sectionGap))
 
         GlassCard(backdrop = backdrop, pageType = "plugins") {
             Column(Modifier.padding(20f.dp)) {
@@ -135,7 +138,7 @@ fun RootManagerScreen(
                 InfoRow(AppStrings.get("root_permission"), if (isRooted) AppStrings.get("root_obtained") else AppStrings.get("root_not_obtained"), contentColor)
                 InfoRow(AppStrings.get("su_version"), suVersion, contentColor)
                 InfoRow(AppStrings.get("busybox_version"), busyboxVersion, contentColor)
-                Spacer(Modifier.height(12f.dp))
+                Spacer(Modifier.height(AppLayout.innerGap))
                 LiquidButton(
                     onClick = {
                         if (!running) {
@@ -155,20 +158,20 @@ fun RootManagerScreen(
                     modifier = Modifier.height(44f.dp),
                     tint = Color(0xFFAF52DE)
                 ) {
-                    BasicText(AppStrings.get("verify_root"), Modifier.padding(horizontal = 8f.dp), style = TextStyle(Color.White, 14f.sp))
+                    BasicText(AppStrings.get("verify_root"), Modifier.padding(horizontal = 8f.dp), style = TextStyle(Color.White, AppLayout.bodySize))
                 }
             }
         }
 
-        Spacer(Modifier.height(16f.dp))
+        Spacer(Modifier.height(AppLayout.sectionGap))
 
         // 破坏性命令二次确认
         pendingCmd?.let { cmd ->
             GlassCard(backdrop = backdrop, pageType = "plugins") {
-                Column(Modifier.padding(20f.dp)) {
+                Column(Modifier.padding(AppLayout.cardPad)) {
                     BasicText(
                         adbPanelStr("danger_operation_title", "⚠️ 危险操作，请确认", "⚠️ Dangerous operation"),
-                        style = TextStyle(Color(0xFFFF3B30), 16f.sp, FontWeight.Bold)
+                        style = TextStyle(Color(0xFFFF3B30), AppLayout.sectionTitleSize, FontWeight.Bold)
                     )
                     Spacer(Modifier.height(8f.dp))
                     BasicText(
@@ -181,14 +184,14 @@ fun RootManagerScreen(
                         }",
                         style = TextStyle(contentColor.copy(alpha = 0.85f), 13f.sp)
                     )
-                    Spacer(Modifier.height(12f.dp))
+                    Spacer(Modifier.height(AppLayout.innerGap))
                     Row(horizontalArrangement = Arrangement.spacedBy(8f.dp)) {
                         ActionButton(backdrop, adbPanelStr("cancel", "取消", "Cancel"), Color(0xFF8E8E93)) { pendingCmd = null }
                         ActionButton(backdrop, adbPanelStr("confirm_execute", "确认执行", "Confirm"), Color(0xFFFF3B30)) { runRootCommand(cmd) }
                     }
                 }
             }
-            Spacer(Modifier.height(16f.dp))
+            Spacer(Modifier.height(AppLayout.sectionGap))
         }
 
         GlassCard(backdrop = backdrop, pageType = "plugins") {
@@ -209,11 +212,11 @@ fun RootManagerScreen(
             }
         }
 
-        Spacer(Modifier.height(16f.dp))
+        Spacer(Modifier.height(AppLayout.sectionGap))
 
         if (resultOutput.isNotEmpty()) {
             GlassCard(backdrop = backdrop, pageType = "plugins") {
-                Column(Modifier.padding(20.dp)) {
+                Column(Modifier.padding(AppLayout.cardPad)) {
                     SectionTitle(AppStrings.get("execution_result"), contentColor)
                     BasicText(
                         resultOutput,
@@ -276,6 +279,6 @@ fun RowScope.ActionButton(backdrop: Backdrop, label: String, tint: Color, onClic
         modifier = Modifier.height(40f.dp).weight(1f),
         tint = tint
     ) {
-        BasicText(label, Modifier.padding(horizontal = 4f.dp), style = TextStyle(Color.White, 11f.sp))
+        BasicText(label, Modifier.padding(horizontal = 4f.dp), style = TextStyle(Color.White, AppLayout.captionSize))
     }
 }

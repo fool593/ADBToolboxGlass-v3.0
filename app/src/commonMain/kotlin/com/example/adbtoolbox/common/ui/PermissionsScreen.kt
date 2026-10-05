@@ -39,6 +39,7 @@ import com.example.adbtoolbox.common.AppCache
 import com.example.adbtoolbox.common.AppInfoData
 import com.example.adbtoolbox.common.AppStrings
 import com.example.adbtoolbox.common.PermissionInfoData
+import com.example.adbtoolbox.common.theme.AppLayout
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.catalog.components.LiquidButton
 import com.kyant.backdrop.drawBackdrop
@@ -181,19 +182,19 @@ fun PermissionsScreen(
         applyPermission(true, perm)
     }
 
-    Column(Modifier.fillMaxSize().padding(horizontal = 16f.dp)) {
-        Spacer(Modifier.height(24f.dp))
+    Column(Modifier.fillMaxSize().padding(horizontal = AppLayout.screenH)) {
+        Spacer(Modifier.height(AppLayout.screenTop))
         Row(verticalAlignment = Alignment.CenterVertically) {
             GlassBackButton(backdrop = backdrop, contentColor = contentColor, onBack = onBack)
-            Spacer(Modifier.width(12f.dp))
-            BasicText(AppStrings.get("permission_manager"), style = TextStyle(contentColor, 24f.sp, androidx.compose.ui.text.font.FontWeight.Bold))
+            Spacer(Modifier.width(AppLayout.headerGap))
+            BasicText(AppStrings.get("permission_manager"), style = TextStyle(contentColor, AppLayout.titleSize, androidx.compose.ui.text.font.FontWeight.Bold))
         }
-        Spacer(Modifier.height(12f.dp))
+        Spacer(Modifier.height(AppLayout.sectionGap))
 
         // 权限能力提示：不可用时给出可操作入口，而不是让点击静默失败
         if (privileged == false) {
             GlassCard(backdrop = backdrop, pageType = "apps") {
-                Column(Modifier.padding(16f.dp)) {
+                Column(Modifier.padding(AppLayout.cardPadCompact)) {
                     BasicText(
                         "${AppStrings.get("need_root_or_shizuku")} · ${AppStrings.get("authorization_required")}",
                         style = TextStyle(Color(0xFFFF9500), 12f.sp)
@@ -217,7 +218,7 @@ fun PermissionsScreen(
                         modifier = Modifier.height(34.dp),
                         tint = Color(0xFF0088FF)
                     ) {
-                        BasicText(AppStrings.get("request_shizuku"), Modifier.padding(horizontal = 10f.dp), style = TextStyle(Color.White, 11f.sp))
+                        BasicText(AppStrings.get("request_shizuku"), Modifier.padding(horizontal = 10f.dp), style = TextStyle(Color.White, AppLayout.captionSize))
                     }
                 }
             }
@@ -227,7 +228,7 @@ fun PermissionsScreen(
         // 操作结果 / 进行中提示
         if (resultMessage.isNotEmpty()) {
             GlassCard(backdrop = backdrop, pageType = "apps") {
-                Column(Modifier.padding(16f.dp)) {
+                Column(Modifier.padding(AppLayout.cardPadCompact)) {
                     BasicText(
                         resultMessage,
                         style = TextStyle(if (resultOk) contentColor else Color(0xFFFF3B30), 12f.sp)
@@ -238,7 +239,7 @@ fun PermissionsScreen(
         }
 
         if (selectedApp == null) {
-            BasicText("${AppStrings.get("app_manager")} - ${AppStrings.get("app_permissions")}", style = TextStyle(contentColor.copy(alpha = 0.5f), 14f.sp))
+            BasicText("${AppStrings.get("app_manager")} - ${AppStrings.get("app_permissions")}", style = TextStyle(contentColor.copy(alpha = 0.5f), AppLayout.bodySize))
             Spacer(Modifier.height(8f.dp))
             if (isLoading) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -250,11 +251,11 @@ fun PermissionsScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     if (loadFailed) {
-                        BasicText(AppStrings.get("operation_failed"), style = TextStyle(Color(0xFFFF3B30), 14f.sp))
+                        BasicText(AppStrings.get("operation_failed"), style = TextStyle(Color(0xFFFF3B30), AppLayout.bodySize))
                         Spacer(Modifier.height(6f.dp))
                     }
                     BasicText("${AppStrings.get("app_manager")} (0)", style = TextStyle(contentColor.copy(alpha = 0.5f), 13f.sp))
-                    Spacer(Modifier.height(12f.dp))
+                    Spacer(Modifier.height(AppLayout.innerGap))
                     LiquidButton(
                         onClick = { reloadTick++ },
                         backdrop = backdrop,
@@ -283,10 +284,10 @@ fun PermissionsScreen(
                 ) {
                     BasicText(AppStrings.get("back"), Modifier.padding(horizontal = 10f.dp), style = TextStyle(Color.White, 12f.sp))
                 }
-                Spacer(Modifier.width(12f.dp))
+                Spacer(Modifier.width(AppLayout.headerGap))
                 BasicText(selectedApp!!.appName, style = TextStyle(contentColor, 16f.sp, androidx.compose.ui.text.font.FontWeight.Medium))
             }
-            Spacer(Modifier.height(12f.dp))
+            Spacer(Modifier.height(AppLayout.innerGap))
             BasicText(
                 if (permsLoading) AppStrings.get("loading") else "${AppStrings.get("app_permissions")}: ${permissions.size}",
                 style = TextStyle(contentColor.copy(alpha = 0.5f), 12f.sp)
@@ -341,7 +342,7 @@ fun PermissionItem(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(Modifier.weight(1f)) {
-            BasicText(perm.name, style = TextStyle(contentColor, 14f.sp, androidx.compose.ui.text.font.FontWeight.Medium), maxLines = 1)
+            BasicText(perm.name, style = TextStyle(contentColor, AppLayout.bodySize, androidx.compose.ui.text.font.FontWeight.Medium), maxLines = 1)
             BasicText(perm.permission, style = TextStyle(contentColor.copy(alpha = 0.4f), 10f.sp), maxLines = 1)
         }
         Spacer(Modifier.width(8f.dp))

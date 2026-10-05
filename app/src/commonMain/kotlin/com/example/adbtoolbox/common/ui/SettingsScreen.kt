@@ -40,6 +40,7 @@ import com.example.adbtoolbox.common.AppCache
 import com.example.adbtoolbox.common.AppSettings
 import com.example.adbtoolbox.common.AppStrings
 import com.example.adbtoolbox.common.GlassEffectPersistence
+import com.example.adbtoolbox.common.theme.AppLayout
 import com.example.adbtoolbox.common.theme.AppTheme
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.catalog.components.LiquidButton
@@ -76,24 +77,24 @@ fun SettingsScreen(
         Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16f.dp)
+            .padding(horizontal = AppLayout.screenH)
     ) {
-        Spacer(Modifier.height(24f.dp))
-        BasicText(AppStrings.get("settings"), style = TextStyle(contentColor, 24f.sp, androidx.compose.ui.text.font.FontWeight.Bold))
-        Spacer(Modifier.height(16f.dp))
+        Spacer(Modifier.height(AppLayout.screenTop))
+        BasicText(AppStrings.get("settings"), style = TextStyle(contentColor, AppLayout.titleSize, androidx.compose.ui.text.font.FontWeight.Bold))
+        Spacer(Modifier.height(AppLayout.sectionGap))
 
         // 壁纸设置
         GlassCard(backdrop = backdrop, pageType = "settings") {
-            Column(Modifier.padding(20f.dp)) {
-                BasicText(AppStrings.get("wallpaper"), style = TextStyle(contentColor, 18f.sp, androidx.compose.ui.text.font.FontWeight.Medium))
-                Spacer(Modifier.height(12f.dp))
+            Column(Modifier.padding(AppLayout.cardPad)) {
+                BasicText(AppStrings.get("wallpaper"), style = TextStyle(contentColor, AppLayout.sectionTitleSize, androidx.compose.ui.text.font.FontWeight.Medium))
+                Spacer(Modifier.height(AppLayout.innerGap))
                 LiquidButton(
                     onClick = onPickWallpaper,
                     backdrop = backdrop,
                     modifier = Modifier.height(44f.dp).fillMaxWidth(),
                     tint = Color(0xFF0088FF)
                 ) {
-                    BasicText(AppStrings.get("set_wallpaper"), Modifier.padding(horizontal = 8f.dp), style = TextStyle(Color.White, 14f.sp))
+                    BasicText(AppStrings.get("set_wallpaper"), Modifier.padding(horizontal = 8f.dp), style = TextStyle(Color.White, AppLayout.bodySize))
                 }
                 Spacer(Modifier.height(8f.dp))
                 LiquidButton(
@@ -102,21 +103,21 @@ fun SettingsScreen(
                     modifier = Modifier.height(44f.dp).fillMaxWidth(),
                     tint = Color(0xFFFF3B30)
                 ) {
-                    BasicText(AppStrings.get("clear_wallpaper"), Modifier.padding(horizontal = 8f.dp), style = TextStyle(Color.White, 14f.sp))
+                    BasicText(AppStrings.get("clear_wallpaper"), Modifier.padding(horizontal = 8f.dp), style = TextStyle(Color.White, AppLayout.bodySize))
                 }
             }
         }
 
-        Spacer(Modifier.height(16f.dp))
+        Spacer(Modifier.height(AppLayout.sectionGap))
 
         // 动态壁纸设置
         GlassCard(backdrop = backdrop, pageType = "settings") {
-            Column(Modifier.padding(20f.dp), verticalArrangement = Arrangement.spacedBy(12f.dp)) {
-                BasicText(AppStrings.get("dynamic_wallpaper"), style = TextStyle(contentColor, 18f.sp, androidx.compose.ui.text.font.FontWeight.Medium))
+            Column(Modifier.padding(AppLayout.cardPad), verticalArrangement = Arrangement.spacedBy(AppLayout.innerGap)) {
+                BasicText(AppStrings.get("dynamic_wallpaper"), style = TextStyle(contentColor, AppLayout.sectionTitleSize, androidx.compose.ui.text.font.FontWeight.Medium))
 
                 // 动态壁纸开关
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    BasicText(AppStrings.get("enable_dynamic_wallpaper"), style = TextStyle(contentColor, 14f.sp), modifier = Modifier.weight(1f))
+                    BasicText(AppStrings.get("enable_dynamic_wallpaper"), style = TextStyle(contentColor, AppLayout.bodySize), modifier = Modifier.weight(1f))
                     BasicText(
                         if (AppCache.dynamicWallpaperEnabled.value) AppStrings.get("enabled") else AppStrings.get("disabled"),
                         style = TextStyle(if (AppCache.dynamicWallpaperEnabled.value) Color(0xFF34C759) else Color(0xFF8E8E93), 12f.sp)
@@ -138,7 +139,7 @@ fun SettingsScreen(
 
                 // 视频动态壁纸选择
                 if (AppCache.dynamicWallpaperEnabled.value) {
-                    BasicText(AppStrings.get("video_file"), style = TextStyle(contentColor, 14f.sp))
+                    BasicText(AppStrings.get("video_file"), style = TextStyle(contentColor, AppLayout.bodySize))
                     LiquidButton(
                         onClick = { AppCache.pickDynamicVideoTrigger.value++ },
                         backdrop = backdrop,
@@ -148,7 +149,7 @@ fun SettingsScreen(
                         BasicText(
                             if (AppCache.dynamicWallpaperVideoPath.value != null) AppStrings.get("video_selected") else AppStrings.get("select_video"),
                             Modifier.padding(horizontal = 8f.dp),
-                            style = TextStyle(Color.White, 14f.sp)
+                            style = TextStyle(Color.White, AppLayout.bodySize)
                         )
                     }
                     if (AppCache.dynamicWallpaperVideoPath.value != null) {
@@ -167,20 +168,20 @@ fun SettingsScreen(
                             modifier = Modifier.height(40f.dp).fillMaxWidth(),
                             tint = Color(0xFFFF3B30)
                         ) {
-                            BasicText(AppStrings.get("delete_video"), style = TextStyle(Color.White, 14f.sp))
+                            BasicText(AppStrings.get("delete_video"), style = TextStyle(Color.White, AppLayout.bodySize))
                         }
                     }
-                    BasicText(AppStrings.get("video_hint"), style = TextStyle(contentColor.copy(alpha = 0.5f), 11f.sp))
+                    BasicText(AppStrings.get("video_hint"), style = TextStyle(contentColor.copy(alpha = 0.5f), AppLayout.captionSize))
                 }
             }
         }
 
-        Spacer(Modifier.height(16f.dp))
+        Spacer(Modifier.height(AppLayout.sectionGap))
 
         // 开屏动画设置
         GlassCard(backdrop = backdrop, pageType = "settings") {
-            Column(Modifier.padding(20f.dp), verticalArrangement = Arrangement.spacedBy(12f.dp)) {
-                BasicText(AppStrings.get("splash_animation"), style = TextStyle(contentColor, 18f.sp, androidx.compose.ui.text.font.FontWeight.Medium))
+            Column(Modifier.padding(AppLayout.cardPad), verticalArrangement = Arrangement.spacedBy(AppLayout.innerGap)) {
+                BasicText(AppStrings.get("splash_animation"), style = TextStyle(contentColor, AppLayout.sectionTitleSize, androidx.compose.ui.text.font.FontWeight.Medium))
                 BasicText(AppStrings.get("splash_video_hint"), style = TextStyle(contentColor.copy(alpha = 0.6f), 12f.sp))
 
                 LiquidButton(
@@ -192,7 +193,7 @@ fun SettingsScreen(
                     BasicText(
                         if (AppCache.splashVideoPath.value != null) AppStrings.get("splash_video_selected") else AppStrings.get("splash_select_video"),
                         Modifier.padding(horizontal = 8f.dp),
-                        style = TextStyle(Color.White, 14f.sp)
+                        style = TextStyle(Color.White, AppLayout.bodySize)
                     )
                 }
 
@@ -207,38 +208,38 @@ fun SettingsScreen(
                         modifier = Modifier.height(40f.dp).fillMaxWidth(),
                         tint = Color(0xFFFF3B30)
                     ) {
-                        BasicText(AppStrings.get("splash_clear"), style = TextStyle(Color.White, 14f.sp))
+                        BasicText(AppStrings.get("splash_clear"), style = TextStyle(Color.White, AppLayout.bodySize))
                     }
                 }
             }
         }
 
-        Spacer(Modifier.height(16f.dp))
+        Spacer(Modifier.height(AppLayout.sectionGap))
 
         // 液态玻璃调节
         GlassCard(backdrop = backdrop, pageType = "settings") {
-            Column(Modifier.padding(20f.dp)) {
-                BasicText(AppStrings.get("glass_effect"), style = TextStyle(contentColor, 18f.sp, androidx.compose.ui.text.font.FontWeight.Medium))
-                Spacer(Modifier.height(12f.dp))
+            Column(Modifier.padding(AppLayout.cardPad)) {
+                BasicText(AppStrings.get("glass_effect"), style = TextStyle(contentColor, AppLayout.sectionTitleSize, androidx.compose.ui.text.font.FontWeight.Medium))
+                Spacer(Modifier.height(AppLayout.innerGap))
                 LiquidButton(
                     onClick = onGlassPlayground,
                     backdrop = backdrop,
                     modifier = Modifier.height(44f.dp).fillMaxWidth(),
                     tint = Color(0xFF0088FF)
                 ) {
-                    BasicText(AppStrings.get("glass_playground"), Modifier.padding(horizontal = 8f.dp), style = TextStyle(Color.White, 14f.sp))
+                    BasicText(AppStrings.get("glass_playground"), Modifier.padding(horizontal = 8f.dp), style = TextStyle(Color.White, AppLayout.bodySize))
                 }
             }
         }
 
-        Spacer(Modifier.height(16f.dp))
+        Spacer(Modifier.height(AppLayout.sectionGap))
 
         // 主题（配色方案）
         GlassCard(backdrop = backdrop, pageType = "settings") {
-            Column(Modifier.padding(20f.dp)) {
-                BasicText(AppStrings.get("theme"), style = TextStyle(contentColor, 18f.sp, androidx.compose.ui.text.font.FontWeight.Medium))
+            Column(Modifier.padding(AppLayout.cardPad)) {
+                BasicText(AppStrings.get("theme"), style = TextStyle(contentColor, AppLayout.sectionTitleSize, androidx.compose.ui.text.font.FontWeight.Medium))
                 Spacer(Modifier.height(4f.dp))
-                BasicText(AppStrings.get("theme_hint"), style = TextStyle(contentColor.copy(alpha = 0.55f), 11f.sp))
+                BasicText(AppStrings.get("theme_hint"), style = TextStyle(contentColor.copy(alpha = 0.55f), AppLayout.captionSize))
                 Spacer(Modifier.height(14f.dp))
 
                 AppTheme.all.forEach { palette ->
@@ -266,26 +267,26 @@ fun SettingsScreen(
                             colors = palette.preview,
                             modifier = Modifier.size(46f.dp, 26f.dp).clip(RoundedCornerShape(13f.dp))
                         )
-                        Spacer(Modifier.width(12f.dp))
+                        Spacer(Modifier.width(AppLayout.innerGap))
                         Column(Modifier.weight(1f)) {
                             BasicText(
                                 AppStrings.get(palette.nameKey),
                                 style = TextStyle(
                                     if (selected) palette.accent else contentColor,
-                                    14f.sp,
+                                    AppLayout.bodySize,
                                     androidx.compose.ui.text.font.FontWeight.Medium
                                 )
                             )
                             Spacer(Modifier.height(2f.dp))
                             BasicText(
                                 AppStrings.get(palette.descKey),
-                                style = TextStyle(contentColor.copy(alpha = 0.55f), 11f.sp)
+                                style = TextStyle(contentColor.copy(alpha = 0.55f), AppLayout.captionSize)
                             )
                         }
                         if (selected) {
                             BasicText(
                                 AppStrings.get("theme_current"),
-                                style = TextStyle(palette.accent, 11f.sp)
+                                style = TextStyle(palette.accent, AppLayout.captionSize)
                             )
                         }
                     }
@@ -294,17 +295,17 @@ fun SettingsScreen(
             }
         }
 
-        Spacer(Modifier.height(16f.dp))
+        Spacer(Modifier.height(AppLayout.sectionGap))
 
         // 主题设置
         GlassCard(backdrop = backdrop, pageType = "settings") {
-            Column(Modifier.padding(20f.dp)) {
-                BasicText(AppStrings.get("display_settings"), style = TextStyle(contentColor, 18f.sp, androidx.compose.ui.text.font.FontWeight.Medium))
+            Column(Modifier.padding(AppLayout.cardPad)) {
+                BasicText(AppStrings.get("display_settings"), style = TextStyle(contentColor, AppLayout.sectionTitleSize, androidx.compose.ui.text.font.FontWeight.Medium))
                 Spacer(Modifier.height(16f.dp))
 
                 // 深色/浅色模式切换
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    BasicText(if (AppSettings.isDarkMode) AppStrings.get("dark_mode") else AppStrings.get("light_mode"), style = TextStyle(contentColor, 14f.sp))
+                    BasicText(if (AppSettings.isDarkMode) AppStrings.get("dark_mode") else AppStrings.get("light_mode"), style = TextStyle(contentColor, AppLayout.bodySize))
                     Spacer(Modifier.weight(1f))
                     LiquidToggle(
                         selected = { AppSettings.isDarkMode },
@@ -317,7 +318,7 @@ fun SettingsScreen(
                 Spacer(Modifier.height(16f.dp))
 
                 // 语言切换
-                BasicText(AppStrings.get("language"), style = TextStyle(contentColor, 14f.sp))
+                BasicText(AppStrings.get("language"), style = TextStyle(contentColor, AppLayout.bodySize))
                 Spacer(Modifier.height(8f.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8f.dp)) {
                     val langs = listOf("zh" to AppStrings.get("chinese"), "en" to AppStrings.get("english"), "hi" to AppStrings.get("hindi"))
@@ -336,12 +337,12 @@ fun SettingsScreen(
             }
         }
 
-        Spacer(Modifier.height(16f.dp))
+        Spacer(Modifier.height(AppLayout.sectionGap))
 
         // Shizuku 状态
         GlassCard(backdrop = backdrop, pageType = "settings") {
-            Column(Modifier.padding(20f.dp)) {
-                BasicText(AppStrings.get("shizuku_service"), style = TextStyle(contentColor, 18f.sp, androidx.compose.ui.text.font.FontWeight.Medium))
+            Column(Modifier.padding(AppLayout.cardPad)) {
+                BasicText(AppStrings.get("shizuku_service"), style = TextStyle(contentColor, AppLayout.sectionTitleSize, androidx.compose.ui.text.font.FontWeight.Medium))
                 Spacer(Modifier.height(8f.dp))
                 BasicText(
                     // 三态如实显示：服务在跑但没授权时提示去授权，而不是笼统说"未连接"
@@ -352,10 +353,10 @@ fun SettingsScreen(
                     },
                     style = TextStyle(
                         if (AppCache.shizukuState.value == "granted") Color(0xFF34C759) else Color(0xFFFF9500),
-                        14f.sp
+                        AppLayout.bodySize
                     )
                 )
-                Spacer(Modifier.height(12f.dp))
+                Spacer(Modifier.height(AppLayout.innerGap))
                 LiquidButton(
                     onClick = {
                         ADBTools.requestShizukuPermission()
@@ -370,25 +371,25 @@ fun SettingsScreen(
                     modifier = Modifier.height(44f.dp),
                     tint = Color(0xFF0088FF)
                 ) {
-                    BasicText(AppStrings.get("request_shizuku"), Modifier.padding(horizontal = 8f.dp), style = TextStyle(Color.White, 14f.sp))
+                    BasicText(AppStrings.get("request_shizuku"), Modifier.padding(horizontal = 8f.dp), style = TextStyle(Color.White, AppLayout.bodySize))
                 }
             }
         }
 
-        Spacer(Modifier.height(16f.dp))
+        Spacer(Modifier.height(AppLayout.sectionGap))
 
         // Dhizuku 设备所有者
         GlassCard(backdrop = backdrop, pageType = "settings") {
-            Column(Modifier.padding(20f.dp)) {
-                BasicText("Dhizuku (Device Owner)", style = TextStyle(contentColor, 18f.sp, androidx.compose.ui.text.font.FontWeight.Medium))
+            Column(Modifier.padding(AppLayout.cardPad)) {
+                BasicText("Dhizuku (Device Owner)", style = TextStyle(contentColor, AppLayout.sectionTitleSize, androidx.compose.ui.text.font.FontWeight.Medium))
                 Spacer(Modifier.height(8f.dp))
                 BasicText(
                     if (!dhizukuInstalled) AppStrings.get("dhizuku_not_installed") else if (dhizukuActive) AppStrings.get("dhizuku_active") else AppStrings.get("dhizuku_inactive"),
-                    style = TextStyle(if (dhizukuActive) Color(0xFF34C759) else if (dhizukuInstalled) Color(0xFFFF9500) else Color(0xFFFF3B30), 14f.sp)
+                    style = TextStyle(if (dhizukuActive) Color(0xFF34C759) else if (dhizukuInstalled) Color(0xFFFF9500) else Color(0xFFFF3B30), AppLayout.bodySize)
                 )
                 Spacer(Modifier.height(8f.dp))
                 BasicText(AppStrings.get("dhizuku_hint"), style = TextStyle(contentColor.copy(alpha = 0.6f), 12f.sp))
-                Spacer(Modifier.height(12f.dp))
+                Spacer(Modifier.height(AppLayout.innerGap))
                 if (dhizukuMessage.isNotEmpty()) {
                     BasicText(dhizukuMessage, style = TextStyle(contentColor.copy(alpha = 0.8f), 12f.sp))
                     Spacer(Modifier.height(8f.dp))
@@ -440,16 +441,16 @@ fun SettingsScreen(
                     BasicText(AppStrings.get("dhizuku_install_hint"), style = TextStyle(contentColor.copy(alpha = 0.6f), 12f.sp))
                 }
                 Spacer(Modifier.height(8f.dp))
-                BasicText(AppStrings.get("dhizuku_notice"), style = TextStyle(contentColor.copy(alpha = 0.5f), 11f.sp))
+                BasicText(AppStrings.get("dhizuku_notice"), style = TextStyle(contentColor.copy(alpha = 0.5f), AppLayout.captionSize))
             }
         }
 
-        Spacer(Modifier.height(16f.dp))
+        Spacer(Modifier.height(AppLayout.sectionGap))
 
         // 显示设置
         GlassCard(backdrop = backdrop, pageType = "settings") {
-            Column(Modifier.padding(20f.dp)) {
-                BasicText("${AppStrings.get("screen_brightness")}: ${brightness.toInt()}", style = TextStyle(contentColor, 14f.sp))
+            Column(Modifier.padding(AppLayout.cardPad)) {
+                BasicText("${AppStrings.get("screen_brightness")}: ${brightness.toInt()}", style = TextStyle(contentColor, AppLayout.bodySize))
                 Spacer(Modifier.height(8f.dp))
                 LiquidSlider(
                     value = { brightness / 255f },
@@ -461,7 +462,7 @@ fun SettingsScreen(
                 )
 
                 Spacer(Modifier.height(16f.dp))
-                BasicText("${AppStrings.get("screen_timeout")}: ${screenTimeout}s", style = TextStyle(contentColor, 14f.sp))
+                BasicText("${AppStrings.get("screen_timeout")}: ${screenTimeout}s", style = TextStyle(contentColor, AppLayout.bodySize))
                 Spacer(Modifier.height(8f.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8f.dp)) {
                     listOf(15, 30, 60, 120, 300).forEach { sec ->
@@ -482,13 +483,13 @@ fun SettingsScreen(
             }
         }
 
-        Spacer(Modifier.height(16f.dp))
+        Spacer(Modifier.height(AppLayout.sectionGap))
 
         // 系统操作
         GlassCard(backdrop = backdrop, pageType = "settings") {
-            Column(Modifier.padding(20f.dp)) {
-                BasicText(AppStrings.get("system_actions"), style = TextStyle(contentColor, 18f.sp, androidx.compose.ui.text.font.FontWeight.Medium))
-                Spacer(Modifier.height(12f.dp))
+            Column(Modifier.padding(AppLayout.cardPad)) {
+                BasicText(AppStrings.get("system_actions"), style = TextStyle(contentColor, AppLayout.sectionTitleSize, androidx.compose.ui.text.font.FontWeight.Medium))
+                Spacer(Modifier.height(AppLayout.innerGap))
                 Row(horizontalArrangement = Arrangement.SpaceEvenly, modifier = Modifier.fillMaxWidth()) {
                     LiquidButton(
                         onClick = { ADBTools.rebootDevice() },
@@ -496,7 +497,7 @@ fun SettingsScreen(
                         modifier = Modifier.height(44f.dp),
                         tint = Color(0xFFFF9500)
                     ) {
-                        BasicText(AppStrings.get("reboot"), Modifier.padding(horizontal = 4f.dp), style = TextStyle(Color.White, 14f.sp))
+                        BasicText(AppStrings.get("reboot"), Modifier.padding(horizontal = 4f.dp), style = TextStyle(Color.White, AppLayout.bodySize))
                     }
                     LiquidButton(
                         onClick = { ADBTools.rebootRecovery() },
@@ -504,7 +505,7 @@ fun SettingsScreen(
                         modifier = Modifier.height(44f.dp),
                         tint = Color(0xFFFF3B30)
                     ) {
-                        BasicText(AppStrings.get("recovery"), Modifier.padding(horizontal = 4f.dp), style = TextStyle(Color.White, 14f.sp))
+                        BasicText(AppStrings.get("recovery"), Modifier.padding(horizontal = 4f.dp), style = TextStyle(Color.White, AppLayout.bodySize))
                     }
                     LiquidButton(
                         onClick = { ADBTools.rebootBootloader() },
@@ -512,7 +513,7 @@ fun SettingsScreen(
                         modifier = Modifier.height(44f.dp),
                         tint = Color(0xFFAF52DE)
                     ) {
-                        BasicText(AppStrings.get("bootloader"), Modifier.padding(horizontal = 4f.dp), style = TextStyle(Color.White, 14f.sp))
+                        BasicText(AppStrings.get("bootloader"), Modifier.padding(horizontal = 4f.dp), style = TextStyle(Color.White, AppLayout.bodySize))
                     }
                 }
             }

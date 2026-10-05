@@ -62,25 +62,9 @@ actual object PluginManager {
 
     // ==================== zip 解析 ====================
 
-    /** zip 内的一个候选落点（module.prop 所在目录）。 */
-    private class ZipCandidate(
-        val entry: ZipEntry,
-        val prefix: String,
-        val magiskMarker: Boolean,
-        val customizeSh: Boolean
-    ) {
-        /** 打分：带安装器落点标记的目录优先，其次路径更浅。 */
-        val score: Int get() = (if (magiskMarker) 2 else 0) + (if (customizeSh) 1 else 0)
-    }
-
-    /** 一个插件包在 zip 内的真实落点。 */
-    private class ZipLayout(
-        val modulePropEntry: String,
-        val rootPrefix: String,
-        val modulePropText: String,
-        val magiskMarker: Boolean,
-        val customizeSh: Boolean
-    )
+    // zip 结构探测统一交给本文件末尾的 ModuleZipInspector：插件安装（这里）、
+    // Root 模块安装（RootModuleManager）、ADB / Shizuku 刷入（ADBTools）三条路径共用一份规则。
+    // 否则同一个包在插件页能装、在 Root 页却说"没找到 module.prop"，判据会各自漂移。
 
     /** zip 条目名是否可以直接落到文件系统上：拒绝绝对路径、`..`、Windows 盘符（zip slip）。 */
     private fun isUnsafeEntryName(rawName: String): Boolean {
@@ -88,50 +72,6 @@ actual object PluginManager {
         if (name.isBlank() || name.startsWith("/")) return true
         if (name.length >= 2 && name[1] == ':') return true
         return name.split('/').any { it == ".." }
-    }
-
-    /** 整包递归查找 module.prop，并按安装器落点标记 / 路径深度选出真正的那一份。 */
-    private fun inspectZip(zip: ZipFile): ZipLayout {
-        val names = LinkedHashSet<String>()
-        val propEntries = mutableListOf<ZipEntry>()
-        val entries = zip.entries()
-        while (entries.hasMoreElements()) {
-            val entry = entries.nextElement()
-            val name = entry.name.replace('\\', '/')
-            if (isUnsafeEntryName(name)) throw InstallFailure("E_ZIP_SLIP", entry.name)
-            if (entry.isDirectory) continue
-            names.add(name)
-            if (name.substringAfterLast('/') == "module.prop") propEntries.add(entry)
-        }
-        if (propEntries.isEmpty()) throw InstallFailure("E_NO_MODULE_PROP")
-
-        val candidates = propEntries.map { entry ->
-            val name = entry.name.replace('\\', '/')
-            val dir = name.substringBeforeLast('/', "")
-            val prefix = if (dir.isEmpty()) "" else "$dir/"
-            ZipCandidate(
-                entry = entry,
-                prefix = prefix,
-                magiskMarker = names.contains("${prefix}META-INF/com/google/android/update-binary") ||
-                    names.contains("META-INF/com/google/android/update-binary"),
-                customizeSh = names.contains("${prefix}customize.sh")
-            )
-        }.sortedWith(compareByDescending<ZipCandidate> { it.score }.thenBy { it.prefix.length })
-
-        val best = candidates.first()
-        val text = try {
-            zip.getInputStream(best.entry).use { it.readBytes().toString(Charsets.UTF_8) }
-        } catch (e: Exception) {
-            throw InstallFailure("E_EXTRACT_FAILED", "${best.entry.name}: ${e.message ?: e.javaClass.simpleName}")
-        }
-        return ZipLayout(
-            modulePropEntry = best.entry.name.replace('\\', '/'),
-            rootPrefix = best.prefix,
-            // 有些包是 Windows 下打的，module.prop 带 BOM；不剥掉会解析不出 id
-            modulePropText = text.removePrefix("\uFEFF"),
-            magiskMarker = best.magiskMarker,
-            customizeSh = best.customizeSh
-        )
     }
 
     /** 解压整个 zip 到临时目录；写文件前逐条检查真实路径，防止 ../ 逃逸。 */
@@ -313,6 +253,10 @@ actual object PluginManager {
         var stagingDir: File? = null
         var targetDir: File? = null
         var moved = false
+        // 失败时必须能回答"哪一步失败、包到底长什么样"：
+        // layout 是结构探测结果，step 是当前失败步骤，两者一起拼进错误详情。
+        var layout: ModuleZipInspector.Layout? = null
+        var step = "module_step_scan"
 
         return try {
             val archive = try {
@@ -324,29 +268,62 @@ actual object PluginManager {
             }
 
             archive.use { zip ->
-                val layout = inspectZip(zip)
-                val props = parseModuleProp(layout.modulePropText)
-                val pluginId = props["id"]?.trim().orEmpty()
-                if (pluginId.isEmpty()) throw InstallFailure("E_NO_MODULE_ID")
+                // 结构探测：module.prop 允许在任意一层；没有 module.prop 时，
+                // 只要包里还有确定的安装落点（安装脚本 / ap_patch / 自带 APK），一样当成可安装的包。
+                val inspected = ModuleZipInspector.inspect(zip, zipFile.nameWithoutExtension)
+                layout = inspected
+                if (inspected.unsafeEntry != null) {
+                    // 越界路径（../ 或绝对路径）一律拒绝：宁可装不上，也不能写到 plugins 目录之外
+                    throw InstallFailure("E_ZIP_SLIP", inspected.unsafeEntry)
+                }
+
+                // 包里没有 module.prop 时：落点确定就合成一份，而不是直接放弃
+                val syntheticProp = !inspected.hasModuleProp
+                var pluginId = inspected.id
+                if (pluginId.isEmpty()) {
+                    if (!syntheticProp) {
+                        throw InstallFailure("E_NO_MODULE_ID", inspected.diagnostics(step, ""))
+                    }
+                    if (!inspected.hasInstallTarget || inspected.suggestedId.isBlank()) {
+                        throw InstallFailure("E_NO_INSTALL_TARGET", inspected.diagnostics(step, ""))
+                    }
+                    pluginId = inspected.suggestedId
+                }
                 if (!ID_PATTERN.matches(pluginId)) throw InstallFailure("E_ID_UNSAFE", pluginId)
 
+                step = "module_step_extract"
                 val temp = File(getPluginsDir(), "temp_${System.currentTimeMillis()}")
                 tempDir = temp
                 if (!temp.exists() && !temp.mkdirs()) throw InstallFailure("E_EXTRACT_FAILED", temp.absolutePath)
                 extractZip(zip, temp)
 
-                val rootDir = if (layout.rootPrefix.isEmpty()) temp else File(temp, layout.rootPrefix.removeSuffix("/"))
-                if (!File(rootDir, "module.prop").isFile) {
-                    throw InstallFailure("E_NO_MODULE_PROP", layout.modulePropEntry)
+                val rootDir = if (inspected.rootPrefix.isEmpty()) temp else File(temp, inspected.rootPrefix.removeSuffix("/"))
+                if (!File(rootDir, "module.prop").isFile && !syntheticProp) {
+                    throw InstallFailure("E_NO_MODULE_PROP", inspected.modulePropEntry.orEmpty())
                 }
 
                 // 先在临时目录里拷好再整体换名，避免把半成品直接写进正式目录
+                step = "module_step_stage"
                 val staging = File(getPluginsDir(), "temp_install_${pluginId}_${System.currentTimeMillis()}")
                 stagingDir = staging
                 if (!rootDir.copyRecursively(staging, overwrite = true)) {
                     throw InstallFailure("E_COPY_FAILED", "${rootDir.absolutePath} -> ${staging.absolutePath}")
                 }
+                if (syntheticProp && !File(staging, "module.prop").isFile) {
+                    // 没有 module.prop 的目录对插件列表来说等于不存在（readPlugin 直接返回 null），
+                    // 必须补一份最小可用的，否则"装好了但列表里什么都没有"。
+                    try {
+                        File(staging, "module.prop")
+                            .writeText(synthModulePropText(pluginId, zipFile.nameWithoutExtension), Charsets.UTF_8)
+                    } catch (e: Exception) {
+                        throw InstallFailure(
+                            "E_COPY_FAILED",
+                            "cannot write module.prop: ${e.javaClass.simpleName}: ${e.message.orEmpty()}"
+                        )
+                    }
+                }
 
+                step = "module_step_copy"
                 val target = File(getPluginsDir(), pluginId)
                 targetDir = target
                 if (target.exists() && !target.deleteRecursively()) {
@@ -362,6 +339,7 @@ actual object PluginManager {
                 moved = true
 
                 // 回读校验：必须真的出现在已安装列表里，否则不算装好
+                step = "module_step_verify"
                 val verified = try {
                     getInstalledPlugins().any { it.id == pluginId }
                 } catch (e: Exception) {
@@ -382,20 +360,23 @@ actual object PluginManager {
                 }
 
                 // customize.sh（KernelSU / 部分 AxManager 包靠它初始化）：失败必须如实回传，不能静默吞掉
+                step = "module_step_script"
                 val customizeError = runCustomizeIfPresent(target)
 
+                // 合成过 module.prop 的话，元信息以真正落盘的那一份为准
+                val finalProps = if (syntheticProp) parseModuleProp(File(target, "module.prop")) else inspected.props
                 val plugin = PluginData(
                     id = pluginId,
-                    name = props["name"]?.ifBlank { pluginId } ?: pluginId,
-                    version = props["version"]?.ifBlank { "1.0" } ?: "1.0",
-                    versionCode = props["versionCode"]?.trim()?.toIntOrNull() ?: 1,
-                    author = props["author"]?.ifBlank { "Unknown" } ?: "Unknown",
-                    description = props["description"].orEmpty(),
-                    axeronPlugin = props["axeronPlugin"]?.trim()?.toIntOrNull() ?: 0,
+                    name = finalProps["name"]?.ifBlank { pluginId } ?: pluginId,
+                    version = finalProps["version"]?.ifBlank { "1.0" } ?: "1.0",
+                    versionCode = finalProps["versionCode"]?.trim()?.toIntOrNull() ?: 1,
+                    author = finalProps["author"]?.ifBlank { "Unknown" } ?: "Unknown",
+                    description = finalProps["description"].orEmpty(),
+                    axeronPlugin = finalProps["axeronPlugin"]?.trim()?.toIntOrNull() ?: 0,
                     isEnabled = !File(target, "disable").exists(),
                     isInstalled = true,
                     pluginDir = target.absolutePath,
-                    hasWebUI = findWebUIEntry(target, props) != null,
+                    hasWebUI = findWebUIEntry(target, finalProps) != null,
                     hasAction = File(target, "action.sh").isFile,
                     updateTime = System.currentTimeMillis(),
                     size = formatDirSize(target)
@@ -405,6 +386,11 @@ actual object PluginManager {
                     append("E_OK_PLUGIN")
                     append('\n')
                     append(plugin.name)
+                    if (syntheticProp) {
+                        // 如实说明"这份 module.prop 是补出来的"，用户才知道 id 是从哪来的
+                        append('\n')
+                        append(moduleDiagFmt(AppStrings.get("plugin_warn_synth_prop"), pluginId))
+                    }
                     if (customizeError.isNotBlank()) {
                         append('\n')
                         append("W_CUSTOMIZE_FAILED")
@@ -416,10 +402,10 @@ actual object PluginManager {
             }
         } catch (f: InstallFailure) {
             if (moved) targetDir?.deleteRecursively()
-            failure(f.code, f.detail)
+            failure(f.code, diagnoseWith(f.detail, layout, step))
         } catch (e: Exception) {
             if (moved) targetDir?.deleteRecursively()
-            failure("E_EXCEPTION", "${e.javaClass.simpleName}: ${e.message.orEmpty()}")
+            failure("E_EXCEPTION", diagnoseWith("${e.javaClass.simpleName}: ${e.message.orEmpty()}", layout, step))
         } finally {
             tempDir?.deleteRecursively()
             stagingDir?.deleteRecursively()
@@ -626,5 +612,352 @@ actual object PluginManager {
         val props = propFile?.let { parseModuleProp(it) } ?: emptyMap()
         val moduleDir = propFile?.parentFile ?: pluginDir
         return findWebUIEntry(moduleDir, props)?.absolutePath
+    }
+}
+
+// ==================== 三条安装路径共用的 zip 结构探测 ====================
+
+/** 诊断行格式化：替换 %1$s 这类占位符（与界面层 hwFormat 的约定一致）。 */
+private fun moduleDiagFmt(template: String, vararg args: Any?): String {
+    var out = template
+    args.forEachIndexed { index, value ->
+        out = out.replace("%${index + 1}\$s", value?.toString() ?: "")
+    }
+    return out
+}
+
+/** 失败详情 = 原始原因 + 结构化诊断块；两者都可能为空。 */
+private fun diagnoseWith(detail: String, layout: ModuleZipInspector.Layout?, step: String): String {
+    val block = layout?.diagnostics(step, "") ?: ""
+    val reason = detail.trim()
+    return when {
+        reason.isEmpty() -> block
+        block.isEmpty() -> reason
+        else -> reason + "\n" + block
+    }
+}
+
+/**
+ * 合成一份最小可用的 module.prop。
+ *
+ * 什么时候需要它：zip 里只有安装脚本（service.sh / post-fs-data.sh / customize.sh）、
+ * 只有 ap_patch，或者只有自带 APK —— 安装落点是确定的，但包里没有 module.prop。
+ * Magisk / KernelSU / 插件列表都靠 module.prop 认模块，不补这一份就等于"装进去了但没人看得见"。
+ */
+internal fun synthModulePropText(id: String, displayName: String): String = buildString {
+    append("id=").append(id).append('\n')
+    append("name=").append(displayName.ifBlank { id }).append('\n')
+    append("version=1.0").append('\n')
+    append("versionCode=1").append('\n')
+    append("author=ADBToolbox").append('\n')
+    append("description=").append(AppStrings.get("module_synth_prop_desc")).append('\n')
+}
+
+/**
+ * zip 结构探测器（PluginManager / RootModuleManager / ADBTools 三条安装路径共用）。
+ *
+ * 为什么必须共用一份：过去三处各自实现了一套"找 module.prop"的规则，
+ * 同一个包在插件页能装、在 Root 页却报"没有 module.prop"，用户完全无从判断谁对。
+ *
+ * 覆盖的包结构（都是真实存在的玩法）：
+ * 1. module.prop 在 zip 内任意一层（包经常多套一层目录）；
+ * 2. Magisk / Recovery 风格：META-INF/com/google/android/update-binary；
+ * 3. KernelSU / APatch 风格：customize.sh（可与 module.prop 同时存在）；
+ * 4. 只有脚本的模块：service.sh / post-fs-data.sh（没有 module.prop 也认）；
+ * 5. APatch 风格：ap_patch（以及自带的 APK）；
+ * 6. 只有自带 APK 的包：按 APK 安装，落点同样由这里给出。
+ *
+ * 安全边界不在这里放松：越界条目（绝对路径、盘符、`..`）不改名、不丢弃，
+ * 原样回传 [Layout.unsafeEntry]，由调用方按自己的错误码拒绝。
+ */
+internal object ModuleZipInspector {
+
+    /** 安装落点标记：命中哪一个，就说明这个前缀目录是真正的模块根。 */
+    private val MARKER_WEIGHTS = linkedMapOf(
+        // Magisk / Recovery 的安装器落点
+        "META-INF/com/google/android/update-binary" to 6,
+        // KernelSU / APatch 的安装脚本
+        "customize.sh" to 4,
+        // 只有脚本的模块（没有 module.prop 也很常见）
+        "service.sh" to 3,
+        "post-fs-data.sh" to 3,
+        // APatch 的补丁文件
+        "ap_patch" to 3,
+        "action.sh" to 1,
+        "uninstall.sh" to 1,
+        "system.prop" to 1
+    )
+
+    /** 诊断里最多列出多少条顶层条目。 */
+    private const val MAX_TOP_ENTRIES = 30
+
+    /** 诊断里最多列出多少个 APK。 */
+    private const val MAX_APK_ENTRIES = 20
+
+    /** 连续短横线压缩用；提到外面避免每次探测都重新编译正则。 */
+    private val REPEATED_DASH = Regex("-{2,}")
+
+    /**
+     * 一次结构探测的完整结果。
+     *
+     * @param rootPrefix module.prop 所在目录在 zip 内的前缀（形如 "sub/dir/"），根目录是空串
+     * @param modulePropEntry 探测到的 module.prop 条目名；包里确实没有时为 null
+     * @param props module.prop 的解析结果（没有就是空表）
+     * @param markers 命中 [MARKER_WEIGHTS] 的标记（相对 rootPrefix）
+     * @param topEntries 顶层条目（已截断）
+     * @param topEntryTotal 顶层条目总数（用于说明截断了多少）
+     * @param entryCount 文件条目总数
+     * @param apkEntries 包内 APK 条目（已截断）
+     * @param unsafeEntry 第一个越界条目名；非 null 表示这个包必须被拒绝
+     * @param suggestedId 依据 zip 文件名推导出的合法 id（没有 module.prop 时使用）
+     */
+    class Layout(
+        val rootPrefix: String,
+        val modulePropEntry: String?,
+        val props: Map<String, String>,
+        val markers: List<String>,
+        val topEntries: List<String>,
+        val topEntryTotal: Int,
+        val entryCount: Int,
+        val apkEntries: List<String>,
+        val unsafeEntry: String?,
+        val suggestedId: String
+    ) {
+        val id: String get() = props["id"]?.trim().orEmpty()
+        val name: String get() = props["name"]?.trim().orEmpty()
+        val version: String get() = props["version"]?.trim().orEmpty()
+        val hasModuleProp: Boolean get() = modulePropEntry != null
+        val hasUpdateBinary: Boolean get() = markers.contains("META-INF/com/google/android/update-binary")
+
+        /** 除 module.prop 之外，包里还有没有能确定安装落点的东西。 */
+        val hasInstallTarget: Boolean
+            get() = hasModuleProp || markers.isNotEmpty() || apkEntries.isNotEmpty()
+
+        /**
+         * 结构化诊断块：失败时原样拼进错误详情。
+         *
+         * 为什么必须带上这些：用户报"装不进去"时，只回一句"安装失败"谁都查不出来。
+         * 顶层条目 + module.prop 落点 + id / 名称 / 版本 + rootPrefix + 命中的标记 +
+         * 失败步骤 + 原始输出，才够区分"包的结构不认识"和"设备侧失败（权限 / 空间 / 脚本报错）"。
+         */
+        fun diagnostics(stepKey: String, raw: String): String {
+            val lines = mutableListOf<String>()
+            lines.add(
+                moduleDiagFmt(
+                    AppStrings.get("module_diag_module"),
+                    id.ifBlank { "-" },
+                    name.ifBlank { "-" },
+                    version.ifBlank { "-" }
+                )
+            )
+            lines.add(
+                moduleDiagFmt(
+                    AppStrings.get("module_diag_module_prop"),
+                    modulePropEntry ?: AppStrings.get("module_diag_none")
+                )
+            )
+            lines.add(
+                moduleDiagFmt(
+                    AppStrings.get("module_diag_root_prefix"),
+                    rootPrefix.ifEmpty { "/" }
+                )
+            )
+            if (markers.isNotEmpty()) {
+                lines.add(moduleDiagFmt(AppStrings.get("module_diag_markers"), markers.joinToString(", ")))
+            }
+            if (apkEntries.isNotEmpty()) {
+                lines.add(moduleDiagFmt(AppStrings.get("module_diag_apk"), apkEntries.joinToString(", ")))
+            }
+            lines.add(
+                moduleDiagFmt(
+                    AppStrings.get("module_diag_top_entries"),
+                    entryCount.toString(),
+                    topEntries.joinToString(", ").ifBlank { AppStrings.get("module_diag_none") }
+                )
+            )
+            if (topEntryTotal > topEntries.size) {
+                lines.add(
+                    moduleDiagFmt(
+                        AppStrings.get("module_diag_truncated"),
+                        (topEntryTotal - topEntries.size).toString()
+                    )
+                )
+            }
+            if (stepKey.isNotBlank()) {
+                lines.add(moduleDiagFmt(AppStrings.get("module_diag_step"), AppStrings.get(stepKey)))
+            }
+            if (raw.isNotBlank()) {
+                lines.add(moduleDiagFmt(AppStrings.get("module_diag_raw"), raw))
+            }
+            return lines.joinToString("\n")
+        }
+    }
+
+    /**
+     * 探测一个 zip 的安装落点。
+     *
+     * 判据：
+     * 1. 有 module.prop：落点就是它所在的那一层（多个时按标记打分，同样得分取更浅的）；
+     * 2. 没有 module.prop：落点由安装标记 / 自带 APK 推导；
+     * 3. 顶层条目、越界条目、APK 清单一并回传，供失败时原样展示。
+     *
+     * 这里不抛异常：越界条目回传 [Layout.unsafeEntry]，由调用方按自己的错误码拒绝。
+     */
+    fun inspect(zip: ZipFile, fallbackName: String): Layout {
+        val names = LinkedHashSet<String>()
+        val entriesByName = HashMap<String, ZipEntry>()
+        val topLevel = LinkedHashSet<String>()
+        val propEntries = mutableListOf<String>()
+        val apkEntries = mutableListOf<String>()
+        var unsafe: String? = null
+        var fileCount = 0
+
+        val entries = zip.entries()
+        while (entries.hasMoreElements()) {
+            val entry = entries.nextElement()
+            if (entry.isDirectory) continue
+            val name = entry.name.replace('\\', '/')
+            fileCount++
+            if (!name.contains('/')) topLevel.add(name)
+            if (isUnsafeName(name)) {
+                if (unsafe == null) unsafe = entry.name
+                continue
+            }
+            if (!names.add(name)) continue
+            entriesByName[name] = entry
+            val base = name.substringAfterLast('/')
+            if (base == "module.prop") propEntries.add(name)
+            if (base.endsWith(".apk", ignoreCase = true)) apkEntries.add(name)
+        }
+
+        // 候选落点：有 module.prop 就以它所在目录为准，否则由标记 / APK 推导
+        val candidates = LinkedHashSet<String>()
+        if (propEntries.isNotEmpty()) {
+            propEntries.forEach { candidates.add(prefixOf(it)) }
+        } else {
+            candidates.add("")
+            names.forEach { name ->
+                MARKER_WEIGHTS.keys.forEach { marker ->
+                    if (name == marker) {
+                        candidates.add("")
+                    } else if (name.endsWith("/$marker")) {
+                        // 落点 = 去掉标记本身后剩下的目录。不能直接用父目录：
+                        // update-binary 这种多段标记的父目录是 META-INF 的内部路径，不是模块根。
+                        val root = name.removeSuffix("/$marker")
+                        candidates.add(if (root.isEmpty()) "" else "$root/")
+                    }
+                }
+            }
+            apkEntries.forEach { candidates.add(prefixOf(it)) }
+        }
+
+        fun scoreOf(prefix: String): Int {
+            var score = if (names.contains("${prefix}module.prop")) 8 else 0
+            MARKER_WEIGHTS.forEach { (marker, weight) ->
+                if (names.contains("$prefix$marker")) score += weight
+            }
+            if (names.any { it.startsWith("${prefix}system/") }) score += 2
+            if (names.any { it.startsWith("${prefix}webroot/") || it.startsWith("${prefix}webui/") }) score += 1
+            if (apkEntries.any { prefixOf(it) == prefix }) score += 1
+            // 路径越浅越可能是真正的模块根
+            return score - minOf(depthOf(prefix), 3)
+        }
+
+        val best = candidates.sortedWith(
+            compareByDescending<String> { scoreOf(it) }
+                .thenBy { depthOf(it) }
+                .thenBy { it }
+        ).firstOrNull() ?: ""
+
+        val propEntry = propEntries.firstOrNull { it == "${best}module.prop" }
+        // 显式标注类型：emptyMap() 的类型推断会让后面的 Layout 构造变得不确定
+        val props: Map<String, String> = try {
+            val entry = propEntry?.let { entriesByName[it] }
+            if (entry == null) {
+                emptyMap()
+            } else {
+                zip.getInputStream(entry).use { stream ->
+                    parseProps(stream.readBytes().toString(Charsets.UTF_8))
+                }
+            }
+        } catch (e: Exception) {
+            emptyMap()
+        }
+        val markers = MARKER_WEIGHTS.keys.filter { names.contains("$best$it") }.toList()
+
+        return Layout(
+            rootPrefix = best,
+            modulePropEntry = propEntry,
+            props = props,
+            markers = markers,
+            topEntries = topLevel.take(MAX_TOP_ENTRIES).toList(),
+            topEntryTotal = topLevel.size,
+            entryCount = fileCount,
+            apkEntries = apkEntries.take(MAX_APK_ENTRIES).toList(),
+            unsafeEntry = unsafe,
+            suggestedId = suggestId(fallbackName)
+        )
+    }
+
+    /** 目录前缀：取到最后一个斜杠（含），根目录返回空串。 */
+    private fun prefixOf(name: String): String {
+        val index = name.lastIndexOf('/')
+        return if (index < 0) "" else name.substring(0, index + 1)
+    }
+
+    /** 前缀深度 = 斜杠个数，用于"同样得分时取更浅的那一层"。 */
+    private fun depthOf(prefix: String): Int = prefix.count { it == '/' }
+
+    /** 越界判断，与调用方的规则保持一致：绝对路径 / 盘符 / `..` 一律不接受。 */
+    private fun isUnsafeName(rawName: String): Boolean {
+        val name = rawName.replace('\\', '/')
+        if (name.isBlank() || name.startsWith("/")) return true
+        if (name.length >= 2 && name[1] == ':') return true
+        return name.split('/').any { it == ".." }
+    }
+
+    /**
+     * 按 zip 文件名推导一个合法 id（包里没有 module.prop 时用）。
+     *
+     * 规则与 PluginManager.ID_PATTERN 对齐：首字符必须是字母或数字，只允许字母数字与 . _ + -，
+     * 长度不超过 64。文件名全是中文或符号时退化成 module-<时间戳>，仍然是合法 id。
+     */
+    private fun suggestId(rawName: String): String {
+        val cleaned = rawName.lowercase()
+            .map { ch ->
+                if ((ch.isLetterOrDigit() && ch.code < 128) || ch == '.' || ch == '_' || ch == '+' || ch == '-') {
+                    ch
+                } else {
+                    '-'
+                }
+            }
+            .joinToString("")
+            .replace(REPEATED_DASH, "-")
+            .trim('.', '-', '_', '+')
+            .take(48)
+        return if (cleaned.length >= 2 && cleaned.first().isLetterOrDigit()) {
+            cleaned
+        } else {
+            "module-" + (System.currentTimeMillis() / 1000L).toString()
+        }
+    }
+
+    /**
+     * 解析 module.prop 文本，规则与 PluginManager.parseModuleProp 一致
+     * （兼容 BOM、CRLF、空行、以 # 开头的注释行）。
+     *
+     * 单独放一份的原因：探测器是独立对象，不能让"探测"依赖调用方的私有成员；
+     * 从磁盘读 module.prop 的路径（插件列表 / WebUI 入口）仍然用调用方自己的解析。
+     */
+    private fun parseProps(text: String): Map<String, String> {
+        val props = LinkedHashMap<String, String>()
+        text.removePrefix("\uFEFF").lineSequence().forEach { raw ->
+            val line = raw.trim()
+            if (line.isEmpty() || line.startsWith("#") || !line.contains("=")) return@forEach
+            val key = line.substringBefore("=").trim()
+            val value = line.substringAfter("=").trim()
+            if (key.isNotEmpty()) props[key] = value
+        }
+        return props
     }
 }

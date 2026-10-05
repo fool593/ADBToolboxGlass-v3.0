@@ -20,6 +20,7 @@ import androidx.compose.ui.platform.InspectorInfo
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.util.fastCoerceAtMost
+import com.kyant.backdrop.BackdropDiagnostics
 import com.kyant.backdrop.RuntimeShaderCacheImpl
 import com.kyant.backdrop.internal.ShapeProvider
 import com.kyant.backdrop.internal.blur
@@ -161,6 +162,9 @@ internal class HighlightNode(
             graphicsContext.createGraphicsLayer().apply {
                 compositingStrategy = CompositingStrategy.Offscreen
             }
+        // 诊断计数：见 BackdropDiagnostics，用来确认 layer 的创建/释放真的成对
+        BackdropDiagnostics.onHighlightNodeAttached()
+        BackdropDiagnostics.onGraphicsLayerCreated()
     }
 
     override fun onDetach() {
@@ -168,7 +172,9 @@ internal class HighlightNode(
         highlightLayer?.let { layer ->
             graphicsContext.releaseGraphicsLayer(layer)
             highlightLayer = null
+            BackdropDiagnostics.onGraphicsLayerReleased()
         }
+        BackdropDiagnostics.onHighlightNodeDetached()
         clipPath = null
         runtimeShaderCache.clear()
         prevBlurRadius = Float.NaN

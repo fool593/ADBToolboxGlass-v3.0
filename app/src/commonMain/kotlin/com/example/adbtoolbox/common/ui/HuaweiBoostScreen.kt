@@ -37,6 +37,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.adbtoolbox.common.AppStrings
 import com.example.adbtoolbox.common.perf.HuaweiPerf
+import com.example.adbtoolbox.common.theme.AppLayout
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.catalog.components.LiquidButton
 import kotlinx.coroutines.Dispatchers
@@ -196,35 +197,35 @@ fun HuaweiBoostScreen(
         Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp)
+            .padding(horizontal = AppLayout.screenH)
     ) {
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(AppLayout.screenTop))
 
         // ---------------- 标题 ----------------
         Row(verticalAlignment = Alignment.CenterVertically) {
             GlassBackButton(backdrop = backdrop, contentColor = contentColor, onBack = onBack)
-            Spacer(Modifier.width(12.dp))
+            Spacer(Modifier.width(AppLayout.headerGap))
             Column(Modifier.weight(1f)) {
                 BasicText(
                     AppStrings.get("hw_boost_title"),
-                    style = TextStyle(contentColor, 22.sp, FontWeight.Bold)
+                    style = TextStyle(contentColor, AppLayout.titleSize, FontWeight.Bold)
                 )
                 Spacer(Modifier.height(2.dp))
                 BasicText(
                     AppStrings.get("hw_boost_subtitle"),
-                    style = TextStyle(contentColor.copy(alpha = 0.6f), 11.sp)
+                    style = TextStyle(contentColor.copy(alpha = 0.6f), AppLayout.captionSize)
                 )
             }
         }
 
-        Spacer(Modifier.height(14.dp))
+        Spacer(Modifier.height(AppLayout.sectionGap))
 
         // ---------------- 设备卡 ----------------
         GlassCard(backdrop = backdrop, pageType = "default") {
-            Column(Modifier.padding(16.dp)) {
+            Column(Modifier.padding(AppLayout.cardPadCompact)) {
                 BasicText(
                     AppStrings.get("hw_device_card"),
-                    style = TextStyle(contentColor, 15.sp, FontWeight.Bold)
+                    style = TextStyle(contentColor, AppLayout.sectionTitleSize, FontWeight.Bold)
                 )
                 Spacer(Modifier.height(8.dp))
                 val dev = info
@@ -274,7 +275,7 @@ fun HuaweiBoostScreen(
                     Spacer(Modifier.height(8.dp))
                     BasicText(
                         AppStrings.get("hw_label_permission"),
-                        style = TextStyle(contentColor.copy(alpha = 0.6f), 11.sp)
+                        style = TextStyle(contentColor.copy(alpha = 0.6f), AppLayout.captionSize)
                     )
                     Spacer(Modifier.height(4.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -287,7 +288,7 @@ fun HuaweiBoostScreen(
                         Spacer(Modifier.height(8.dp))
                         BasicText(
                             AppStrings.get("no_permission_hint"),
-                            style = TextStyle(HwTheme.warn, 11.sp)
+                            style = TextStyle(HwTheme.warn, AppLayout.captionSize)
                         )
                     }
                 }
@@ -312,14 +313,14 @@ fun HuaweiBoostScreen(
             }
         }
 
-        Spacer(Modifier.height(14.dp))
+        Spacer(Modifier.height(AppLayout.sectionGap))
 
         // ---------------- 操作区 ----------------
         GlassCard(backdrop = backdrop, pageType = "default") {
-            Column(Modifier.padding(16.dp)) {
+            Column(Modifier.padding(AppLayout.cardPadCompact)) {
                 BasicText(
                     AppStrings.get("hw_actions"),
-                    style = TextStyle(contentColor, 15.sp, FontWeight.Bold)
+                    style = TextStyle(contentColor, AppLayout.sectionTitleSize, FontWeight.Bold)
                 )
                 Spacer(Modifier.height(8.dp))
                 BasicText(
@@ -341,7 +342,7 @@ fun HuaweiBoostScreen(
                         Spacer(Modifier.height(2.dp))
                         BasicText(
                             AppStrings.get("running_item") + ": " + AppStrings.get(current.titleKey),
-                            style = TextStyle(HwTheme.accent, 11.sp)
+                            style = TextStyle(HwTheme.accent, AppLayout.captionSize)
                         )
                     }
                 }
@@ -415,12 +416,12 @@ fun HuaweiBoostScreen(
 
         // ---------------- 执行报告 ----------------
         if (report != null || rollbackLog != null || resultById.isNotEmpty()) {
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(AppLayout.sectionGap))
             GlassCard(backdrop = backdrop, pageType = "default") {
-                Column(Modifier.padding(16.dp)) {
+                Column(Modifier.padding(AppLayout.cardPadCompact)) {
                     BasicText(
                         AppStrings.get("hw_report_title"),
-                        style = TextStyle(contentColor, 15.sp, FontWeight.Bold)
+                        style = TextStyle(contentColor, AppLayout.sectionTitleSize, FontWeight.Bold)
                     )
                     Spacer(Modifier.height(8.dp))
                     report?.let { r ->
@@ -461,7 +462,7 @@ fun HuaweiBoostScreen(
                         Spacer(Modifier.height(10.dp))
                         BasicText(
                             AppStrings.get("hw_raw_log"),
-                            style = TextStyle(contentColor.copy(alpha = 0.6f), 11.sp)
+                            style = TextStyle(contentColor.copy(alpha = 0.6f), AppLayout.captionSize)
                         )
                         Spacer(Modifier.height(4.dp))
                         PerfTextBox(text = rawLog, contentColor = contentColor)
@@ -487,7 +488,7 @@ fun HuaweiBoostScreen(
         HuaweiPerf.groups.forEach { group ->
             val groupMethods = methods.filter { it.group == group.id }
             if (groupMethods.isNotEmpty()) {
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(AppLayout.sectionGap))
                 GlassCard(backdrop = backdrop, pageType = "default") {
                     Column(Modifier.padding(14.dp)) {
                         HwGroupHeader(

@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.sp
 import com.example.adbtoolbox.common.ADBTools
 import com.example.adbtoolbox.common.AppCache
 import com.example.adbtoolbox.common.AppStrings
+import com.example.adbtoolbox.common.theme.AppLayout
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.catalog.components.LiquidButton
 import kotlinx.coroutines.Dispatchers
@@ -65,14 +66,14 @@ fun TempRootScreen(backdrop: Backdrop) {
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(AppLayout.sectionGap)
     ) {
-        BasicText(AppStrings.get("temp_root_title"), style = TextStyle(Color.White, 24.sp, FontWeight.Bold))
+        BasicText(AppStrings.get("temp_root_title"), style = TextStyle(Color.White, AppLayout.titleSize, FontWeight.Bold))
 
         // 处理器信息
         GlassCard(backdrop = backdrop, pageType = "plugins") {
-            Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                BasicText(AppStrings.get("cpu_info"), style = TextStyle(Color.White, 18.sp, FontWeight.Medium))
+            Column(Modifier.padding(AppLayout.cardPad), verticalArrangement = Arrangement.spacedBy(AppLayout.innerGap)) {
+                BasicText(AppStrings.get("cpu_info"), style = TextStyle(Color.White, AppLayout.sectionTitleSize, FontWeight.Medium))
                 InfoRow(AppStrings.get("model"), cpuModel, Color.White)
                 InfoRow(
                     AppStrings.get("temp_root_vendor"),
@@ -92,17 +93,17 @@ fun TempRootScreen(backdrop: Backdrop) {
 
         // 选择提权包
         GlassCard(backdrop = backdrop, pageType = "plugins") {
-            Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                BasicText(AppStrings.get("temp_root_package"), style = TextStyle(Color.White, 18.sp, FontWeight.Medium))
+            Column(Modifier.padding(AppLayout.cardPad), verticalArrangement = Arrangement.spacedBy(AppLayout.innerGap)) {
+                BasicText(AppStrings.get("temp_root_package"), style = TextStyle(Color.White, AppLayout.sectionTitleSize, FontWeight.Medium))
                 // 取到局部 val 再判空：委托属性（by remember）无法智能转换，用局部变量即可彻底去掉 !!
                 val currentFile = selectedFile
                 if (currentFile != null) {
                     BasicText(
                         String.format(AppStrings.get("temp_root_selected"), currentFile.substringAfterLast('/')),
-                        style = TextStyle(Color(0xFF34C759), 14.sp)
+                        style = TextStyle(Color(0xFF34C759), AppLayout.bodySize)
                     )
                 } else {
-                    BasicText(AppStrings.get("no_file_selected"), style = TextStyle(Color.White.copy(alpha = 0.6f), 14.sp))
+                    BasicText(AppStrings.get("no_file_selected"), style = TextStyle(Color.White.copy(alpha = 0.6f), AppLayout.bodySize))
                 }
                 LiquidButton(
                     onClick = { AppCache.pickTempRootFileTrigger.value++ },
@@ -110,7 +111,7 @@ fun TempRootScreen(backdrop: Backdrop) {
                     modifier = Modifier.height(44.dp).fillMaxWidth(),
                     tint = Color(0xFF007AFF)
                 ) {
-                    BasicText(AppStrings.get("temp_root_pick_zip"), style = TextStyle(Color.White, 14.sp))
+                    BasicText(AppStrings.get("temp_root_pick_zip"), style = TextStyle(Color.White, AppLayout.bodySize))
                 }
                 if (permissionWarning) {
                     BasicText(
@@ -124,8 +125,8 @@ fun TempRootScreen(backdrop: Backdrop) {
         // 执行提权
         if (selectedFile != null) {
             GlassCard(backdrop = backdrop, pageType = "plugins") {
-                Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    BasicText(AppStrings.get("temp_root_flash"), style = TextStyle(Color.White, 18.sp, FontWeight.Medium))
+                Column(Modifier.padding(AppLayout.cardPad), verticalArrangement = Arrangement.spacedBy(AppLayout.innerGap)) {
+                    BasicText(AppStrings.get("temp_root_flash"), style = TextStyle(Color.White, AppLayout.sectionTitleSize, FontWeight.Medium))
                     BasicText(
                         AppStrings.get("temp_root_warn"),
                         style = TextStyle(Color(0xFFFF9500), 12.sp)
@@ -166,7 +167,7 @@ fun TempRootScreen(backdrop: Backdrop) {
                     ) {
                         BasicText(
                             if (isFlashing) AppStrings.get("temp_root_running") else AppStrings.get("temp_root_start"),
-                            style = TextStyle(Color.White, 14.sp)
+                            style = TextStyle(Color.White, AppLayout.bodySize)
                         )
                     }
                     if (flashResult.isNotEmpty()) {

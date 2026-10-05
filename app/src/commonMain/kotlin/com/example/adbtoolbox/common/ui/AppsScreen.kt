@@ -32,6 +32,7 @@ import com.example.adbtoolbox.common.ADBTools
 import com.example.adbtoolbox.common.AppCache
 import com.example.adbtoolbox.common.AppInfoData
 import com.example.adbtoolbox.common.AppStrings
+import com.example.adbtoolbox.common.theme.AppLayout
 import com.example.adbtoolbox.common.theme.AppTheme
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.catalog.components.LiquidButton
@@ -90,14 +91,14 @@ fun AppsScreen(
         isLoading = false
     }
 
-    Column(Modifier.fillMaxSize().padding(horizontal = 16f.dp)) {
-        Spacer(Modifier.height(24f.dp))
-        BasicText(AppStrings.get("app_manager"), style = TextStyle(contentColor, 24f.sp, androidx.compose.ui.text.font.FontWeight.Bold))
-        Spacer(Modifier.height(12f.dp))
+    Column(Modifier.fillMaxSize().padding(horizontal = AppLayout.screenH)) {
+        Spacer(Modifier.height(AppLayout.screenTop))
+        BasicText(AppStrings.get("app_manager"), style = TextStyle(contentColor, AppLayout.titleSize, androidx.compose.ui.text.font.FontWeight.Bold))
+        Spacer(Modifier.height(AppLayout.sectionGap))
 
         Row(verticalAlignment = Alignment.CenterVertically) {
-            BasicText(AppStrings.get("show_system_apps"), style = TextStyle(contentColor, 14f.sp))
-            Spacer(Modifier.width(12f.dp))
+            BasicText(AppStrings.get("show_system_apps"), style = TextStyle(contentColor, AppLayout.bodySize))
+            Spacer(Modifier.width(AppLayout.innerGap))
             LiquidToggle(
                 selected = { showSystemApps },
                 onSelect = { showSystemApps = it },
@@ -106,7 +107,7 @@ fun AppsScreen(
             )
         }
 
-        Spacer(Modifier.height(12f.dp))
+        Spacer(Modifier.height(AppLayout.sectionGap))
 
         if (isLoading) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -119,11 +120,11 @@ fun AppsScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 if (loadFailed) {
-                    BasicText(AppStrings.get("operation_failed"), style = TextStyle(Color(0xFFFF3B30), 14f.sp))
+                    BasicText(AppStrings.get("operation_failed"), style = TextStyle(Color(0xFFFF3B30), AppLayout.bodySize))
                     Spacer(Modifier.height(6f.dp))
                 }
                 BasicText("${AppStrings.get("app_manager")} (0)", style = TextStyle(contentColor.copy(alpha = 0.5f), 13f.sp))
-                Spacer(Modifier.height(12f.dp))
+                Spacer(Modifier.height(AppLayout.innerGap))
                 LiquidButton(
                     onClick = { reloadTick++ },
                     backdrop = backdrop,
@@ -169,17 +170,17 @@ fun AppListItem(
             isSystem = app.isSystem,
             tint = if (app.isSystem) Color(0xFFFF9500).copy(alpha = 0.3f) else AppTheme.accent.copy(alpha = 0.3f)
         )
-        Spacer(Modifier.width(12f.dp))
+        Spacer(Modifier.width(AppLayout.innerGap))
         Column(Modifier.weight(1f)) {
             BasicText(app.appName, style = TextStyle(contentColor, 15f.sp, androidx.compose.ui.text.font.FontWeight.Medium), maxLines = 1)
             BasicText(
                 app.packageName,
-                style = TextStyle(contentColor.copy(alpha = 0.5f), 11f.sp),
+                style = TextStyle(contentColor.copy(alpha = 0.5f), AppLayout.captionSize),
                 maxLines = 1
             )
         }
         if (app.isFrozen) {
-            BasicText(AppStrings.get("frozen"), style = TextStyle(Color(0xFFFF3B30), 11f.sp))
+            BasicText(AppStrings.get("frozen"), style = TextStyle(Color(0xFFFF3B30), AppLayout.captionSize))
         }
     }
 }

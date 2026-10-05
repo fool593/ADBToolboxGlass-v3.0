@@ -33,6 +33,7 @@ import com.example.adbtoolbox.common.AppStrings
 import com.example.adbtoolbox.common.perf.BrandDatabase
 import com.example.adbtoolbox.common.perf.PerfChannels
 import com.example.adbtoolbox.common.perf.PerfRunner
+import com.example.adbtoolbox.common.theme.AppLayout
 import com.example.adbtoolbox.common.theme.AppTheme
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.catalog.components.LiquidButton
@@ -74,14 +75,14 @@ fun BrandPerfScreen(
         Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16f.dp)
+            .padding(horizontal = AppLayout.screenH)
     ) {
-        Spacer(Modifier.height(24f.dp))
+        Spacer(Modifier.height(AppLayout.screenTop))
 
         Row(verticalAlignment = Alignment.CenterVertically) {
             BasicText(
                 AppStrings.get("brand_perf_title"),
-                style = TextStyle(contentColor, 24f.sp, FontWeight.Bold)
+                style = TextStyle(contentColor, AppLayout.titleSize, FontWeight.Bold)
             )
             Spacer(Modifier.weight(1f))
             LiquidButton(
@@ -102,14 +103,14 @@ fun BrandPerfScreen(
             AppStrings.get("brand_perf_hint"),
             style = TextStyle(contentColor.copy(alpha = 0.6f), 12f.sp)
         )
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(AppLayout.sectionGap))
 
         // ---------------- 本机识别 ----------------
         GlassCard(backdrop = backdrop, pageType = "home") {
-            Column(Modifier.padding(18.dp)) {
+            Column(Modifier.padding(AppLayout.cardPad)) {
                 BasicText(
                     AppStrings.get("brand_perf_local_device"),
-                    style = TextStyle(contentColor, 15f.sp, FontWeight.Bold)
+                    style = TextStyle(contentColor, AppLayout.sectionTitleSize, FontWeight.Bold)
                 )
                 Spacer(Modifier.height(6.dp))
                 if (loading || info == null) {
@@ -163,9 +164,9 @@ fun BrandPerfScreen(
             else PerfChannels.adbItems(specific).size
             val isLocal = info != null && !isUniversal && info.brandId == brandId
 
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(AppLayout.sectionGap))
             GlassCard(backdrop = backdrop, pageType = "home") {
-                Column(Modifier.padding(18.dp)) {
+                Column(Modifier.padding(AppLayout.cardPad)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(
                             Modifier
@@ -177,7 +178,7 @@ fun BrandPerfScreen(
                         Spacer(Modifier.width(8.dp))
                         BasicText(
                             AppStrings.get(BrandDatabase.nameKeyOf(brandId)),
-                            style = TextStyle(contentColor, 16f.sp, FontWeight.Bold)
+                            style = TextStyle(contentColor, AppLayout.sectionTitleSize, FontWeight.Bold)
                         )
                         Spacer(Modifier.weight(1f))
                         if (isLocal) {
@@ -224,10 +225,10 @@ fun BrandPerfScreen(
                         Spacer(Modifier.height(6.dp))
                         BasicText(
                             AppStrings.get("brand_perf_no_specific"),
-                            style = TextStyle(contentColor.copy(alpha = 0.6f), 11f.sp)
+                            style = TextStyle(contentColor.copy(alpha = 0.6f), AppLayout.captionSize)
                         )
                     }
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(AppLayout.innerGap))
                     LiquidButton(
                         onClick = { onOpenBrand(callbackId) },
                         backdrop = backdrop,

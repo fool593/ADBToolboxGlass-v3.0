@@ -426,36 +426,45 @@ actual object ADBTools {
             val outPipe = android.os.ParcelFileDescriptor.createPipe()
             val errPipe = android.os.ParcelFileDescriptor.createPipe()
 
-            for (execMethod in execMethods) {
-                try {
-                    val params = execMethod.parameterTypes
-                    val args = arrayOfNulls<Any?>(params.size)
-                    for (i in params.indices) {
-                        when {
-                            params[i] == Array<String>::class.java -> args[i] = arrayOf("sh", "-c", command)
-                            params[i] == android.os.ParcelFileDescriptor::class.java -> {
-                                if (i == 0) args[i] = inPipe[1]
-                                else if (i == 1) args[i] = outPipe[1]
-                                else args[i] = errPipe[1]
+            // 为什么整段包在 try/finally 里：三条管道一共 6 个 fd，而原来只在"反射调用成功"
+            // 这一条路径上逐个 close。只要这些 exec 方法全部调用失败（签名不匹配抛
+            // IllegalArgumentException、返回 null、或者读取输出时抛异常），这 6 个 fd 就永久
+            // 留在进程里。fd 是内核对象，堆快照里看不到，但每次 execCommand 走到这条路都会
+            // 再漏 6 个 —— 累积到进程 fd 上限后表现为"越用越卡、命令莫名失败"。
+            // finally 中的关闭是幂等的：读端已被 readPipeOutput 内部的 AutoCloseInputStream
+            // 关过，ParcelFileDescriptor.close() 对已关闭对象是空操作。
+            try {
+                for (execMethod in execMethods) {
+                    try {
+                        val params = execMethod.parameterTypes
+                        val args = arrayOfNulls<Any?>(params.size)
+                        for (i in params.indices) {
+                            when {
+                                params[i] == Array<String>::class.java -> args[i] = arrayOf("sh", "-c", command)
+                                params[i] == android.os.ParcelFileDescriptor::class.java -> {
+                                    if (i == 0) args[i] = inPipe[1]
+                                    else if (i == 1) args[i] = outPipe[1]
+                                    else args[i] = errPipe[1]
+                                }
+                                params[i] == String::class.java -> args[i] = null
+                                params[i] == Int::class.javaPrimitiveType -> args[i] = 0
                             }
-                            params[i] == String::class.java -> args[i] = null
-                            params[i] == Int::class.javaPrimitiveType -> args[i] = 0
                         }
-                    }
-                    val exitCode = execMethod.invoke(service, *args) as? Int
-                    if (exitCode != null) {
-                        // 读取输出
-                        val output = readPipeOutput(outPipe[0])
-                        val error = readPipeOutput(errPipe[0])
-                        inPipe[0].close()
-                        inPipe[1].close()
-                        outPipe[1].close()
-                        errPipe[1].close()
-                        return CommandResult(output, error, exitCode)
-                    }
-                } catch (_: Exception) {}
+                        val exitCode = execMethod.invoke(service, *args) as? Int
+                        if (exitCode != null) {
+                            // 读取输出（读端由 readPipeOutput 内部关闭）
+                            val output = readPipeOutput(outPipe[0])
+                            val error = readPipeOutput(errPipe[0])
+                            return CommandResult(output, error, exitCode)
+                        }
+                    } catch (_: Exception) {}
+                }
+                null
+            } finally {
+                closePipeQuietly(inPipe)
+                closePipeQuietly(outPipe)
+                closePipeQuietly(errPipe)
             }
-            null
         } catch (e: Exception) {
             null
         }
@@ -518,6 +527,22 @@ actual object ADBTools {
             inputStream.bufferedReader().use { it.readText() }
         } catch (e: Exception) {
             ""
+        }
+    }
+
+    /**
+     * 安静地关掉一条管道（读写两端）。
+     *
+     * 专门给 [tryExecViaAIDL] 的 finally 用：那里必须在所有分支上把三条管道的 6 个 fd 收干净，
+     * 否则反射失败路径每次都会漏 6 个 fd。ParcelFileDescriptor.close() 对已关闭对象是空操作，
+     * 所以这里可以无条件重复关闭（读端已经被 AutoCloseInputStream 关过一次）。
+     */
+    private fun closePipeQuietly(pipe: Array<android.os.ParcelFileDescriptor>) {
+        for (descriptor in pipe) {
+            try {
+                descriptor.close()
+            } catch (_: Exception) {
+            }
         }
     }
 
@@ -1298,37 +1323,12 @@ actual object ADBTools {
             return log.toString()
         }
 
-        // 先在本机把包看清楚：module.prop 落点 / APK / Recovery 落点
-        val apkEntries = mutableListOf<String>()
-        val topLevel = mutableListOf<String>()
-        var modulePropEntry: String? = null
-        var moduleId = ""
-        var hasRecoveryBinary = false
-        try {
+        // 先在本机把包看清楚：三条安装路径（插件 / Root 模块 / 这里）共用同一份结构探测器。
+        // module.prop 允许在任意一层；没有 module.prop 时，只要有安装脚本 / ap_patch / 自带 APK，
+        // 也算"落点已经确定"。失败时顶层条目 / id / rootPrefix 会原样带回给用户。
+        val layout = try {
             java.util.zip.ZipFile(file).use { zip ->
-                val entries = zip.entries()
-                while (entries.hasMoreElements()) {
-                    val entry = entries.nextElement()
-                    if (entry.isDirectory) continue
-                    val name = entry.name.replace('\\', '/')
-                    if (name.substringAfterLast('/').equals("module.prop", ignoreCase = true) && modulePropEntry == null) {
-                        modulePropEntry = name
-                        moduleId = try {
-                            zip.getInputStream(entry).use { it.readBytes().toString(Charsets.UTF_8) }
-                                .removePrefix("\uFEFF")
-                                .lineSequence()
-                                .firstOrNull { it.trim().startsWith("id=") }
-                                ?.substringAfter("=")?.trim().orEmpty()
-                        } catch (e: Exception) {
-                            ""
-                        }
-                    }
-                    if (name.endsWith(".apk", ignoreCase = true)) apkEntries.add(name)
-                    if (name.equals("META-INF/com/google/android/update-binary", ignoreCase = true)) {
-                        hasRecoveryBinary = true
-                    }
-                    if (!name.contains('/')) topLevel.add(name)
-                }
+                ModuleZipInspector.inspect(zip, file.nameWithoutExtension)
             }
         } catch (e: Exception) {
             log.appendLine(
@@ -1339,29 +1339,56 @@ actual object ADBTools {
             )
             return log.toString()
         }
-
-        // Root 模块包：ADB/Shizuku 是 shell uid，写不进 /data/adb（0700 root:root），必须换 Root 模式
-        val propEntry = modulePropEntry
-        if (propEntry != null) {
-            log.appendLine("Error: " + fmt(AppStrings.get("adb_mode_requires_root"), moduleId.ifBlank { propEntry }))
-            log.appendLine(AppStrings.get("root_mode_hint"))
+        if (layout.unsafeEntry != null) {
+            // 越界路径（../ 或绝对路径）：安全校验不因为"想装进去"而放松
+            log.appendLine("Error: " + fmt(AppStrings.get("module_err_zip_slip"), layout.unsafeEntry))
+            log.appendLine(layout.diagnostics("module_step_scan", ""))
             return log.toString()
         }
-        // Recovery / Magisk 刷机包（含 update-binary）：同样只能由 Root 侧的 Magisk / KernelSU 安装
-        if (hasRecoveryBinary) {
+        // 探测结果直接写进日志：用户看到的不只是结论，还有"这个包到底长什么样"
+        log.appendLine(layout.diagnostics("module_step_scan", ""))
+
+        val apkEntries = layout.apkEntries
+        // 需要 Root 才能落地的部分：module.prop / Recovery 的 update-binary / 安装脚本，命中任意一个都算
+        val rootOnly = layout.hasModuleProp || layout.hasUpdateBinary || layout.markers.isNotEmpty()
+
+        if (rootOnly && isRooted()) {
+            // ADB / Shizuku 跑在 shell uid，写不进 /data/adb（0700 root:root）。
+            // 但"设备其实有可用 Root、只是没切模式"很常见，所以先真试一次 Root 路径：
+            // 成功即等价于 Root 模式刷入 —— 这正是用户要的"装进去"，而不是又一句"请换模式"。
+            val viaRoot = try {
+                RootModuleManager.installModule(localFilePath)
+            } catch (e: Exception) {
+                RootModuleInstallResult(false, "E_EXCEPTION\n${e.javaClass.simpleName}: ${e.message.orEmpty()}")
+            }
+            if (viaRoot.success) {
+                log.appendLine(AppStrings.get("module_adb_root_fallback"))
+                val lines = viaRoot.message.lines()
+                log.appendLine(AppStrings.get("flash_result_ok") + ": " + lines.firstOrNull()?.trim().orEmpty())
+                lines.drop(1).forEach { if (it.isNotBlank()) log.appendLine(it) }
+                log.appendLine(AppStrings.get("rm_reboot_hint"))
+                return log.toString()
+            }
+            // 没成功：把 Root 侧的真实原因也留下来（可能只是 su 没授权），再试 ADB 模式能做的部分
+            log.appendLine(AppStrings.get("module_adb_root_failed"))
+            viaRoot.message.lines().drop(1).forEach { if (it.isNotBlank()) log.appendLine(it) }
+        }
+
+        if (rootOnly) {
+            // 结论放在最前面：界面取第一条 Error: 作为失败原因，这条必须是真正的原因
             log.appendLine(
                 "Error: " + fmt(
                     AppStrings.get("adb_mode_requires_root"),
-                    "META-INF/com/google/android/update-binary"
+                    layout.id.ifBlank { layout.modulePropEntry ?: layout.rootPrefix.ifEmpty { "/" } }
                 )
             )
-            log.appendLine(AppStrings.get("root_mode_hint"))
-            return log.toString()
         }
+
         if (apkEntries.isEmpty()) {
-            log.appendLine("Error: " + AppStrings.get("adb_mode_no_apk"))
-            if (topLevel.isNotEmpty()) {
-                log.appendLine(fmt(AppStrings.get("adb_mode_top_entries"), topLevel.take(20).joinToString(", ")))
+            if (rootOnly) {
+                log.appendLine(AppStrings.get("root_mode_hint"))
+            } else {
+                log.appendLine("Error: " + AppStrings.get("adb_mode_no_apk"))
             }
             return log.toString()
         }
@@ -1425,7 +1452,15 @@ actual object ADBTools {
         }
 
         log.appendLine(fmt(AppStrings.get("adb_mode_summary"), installed, failed))
-        log.appendLine(if (failed == 0) AppStrings.get("flash_result_ok") else AppStrings.get("flash_result_failed"))
+        if (rootOnly) {
+            // 模块本体（/data/adb 部分）在 ADB 模式下装不了：APK 装好了也必须如实说清楚，
+            // 不能让用户以为整个模块已经装上了。
+            log.appendLine(fmt(AppStrings.get("module_adb_apk_only"), installed))
+            log.appendLine(AppStrings.get("root_mode_hint"))
+            log.appendLine(AppStrings.get("flash_result_failed"))
+        } else {
+            log.appendLine(if (failed == 0) AppStrings.get("flash_result_ok") else AppStrings.get("flash_result_failed"))
+        }
         return log.toString()
     }
 
@@ -1954,7 +1989,8 @@ actual object ADBTools {
      */
     actual fun prepareAndPushKit(localPath: String, remoteDirName: String): CommandResult {
         val local = java.io.File(localPath)
-        if (!local.isFile || local.length() <= 0L) {
+        val isDir = local.isDirectory
+        if (!isDir && (!local.isFile || local.length() <= 0L)) {
             return CommandResult("", "local file missing or empty: $localPath", 1)
         }
         val safeDir = remoteDirName.replace(Regex("[^A-Za-z0-9._-]"), "_").take(40)
@@ -1962,11 +1998,14 @@ actual object ADBTools {
             return CommandResult("", "invalid remote dir name", 1)
         }
         val remoteDir = "/data/local/tmp/$safeDir"
-        val isZip = local.name.lowercase().endsWith(".zip")
+        val isZip = !isDir && local.name.lowercase().endsWith(".zip")
 
         // ---------- 1) 本机准备 ----------
+        // 三种输入：zip（解压）、目录（例如从 assets 解出的内置工具包）、单文件
         var stageDir = local.parentFile
         var entryName = local.name
+        // 多文件时（zip 或目录）远端按原文件名逐个放，单文件才统一改名
+        val perFileNames = isZip || isDir
         if (isZip) {
             val outDir = java.io.File(appContext.cacheDir, "kx_kit_${System.currentTimeMillis()}")
             if (!outDir.mkdirs() && !outDir.isDirectory) {
@@ -1976,6 +2015,11 @@ actual object ADBTools {
             if (unzipError != null) return CommandResult("", unzipError, 1)
             stageDir = outDir
             val picked = pickKitEntry(outDir)
+                ?: return CommandResult("", "kit has no runnable entry (no script and no file)", 1)
+            entryName = picked
+        } else if (isDir) {
+            stageDir = local
+            val picked = pickKitEntry(local)
                 ?: return CommandResult("", "kit has no runnable entry (no script and no file)", 1)
             entryName = picked
         }
@@ -1988,7 +2032,7 @@ actual object ADBTools {
             return CommandResult("", "cannot create $remoteDir: ${reasonOfResult(mk)}", 1)
         }
         files.forEach { f ->
-            val remotePath = if (isZip) "$remoteDir/${f.name}" else "$remoteDir/${local.name}"
+            val remotePath = if (perFileNames) "$remoteDir/${f.name}" else "$remoteDir/${local.name}"
             val err = pushFileRaw(f, remotePath)
             if (err != null) return CommandResult("", "push ${f.name} failed: $err", 1)
         }
@@ -2258,5 +2302,62 @@ actual object ADBTools {
         if (iconCache.size >= ICON_CACHE_MAX) iconCache.clear()
         iconCache[packageName] = encoded ?: ""
         return encoded
+    }
+
+    // ---------------------------------------------------------------- 内置内核提权工具包
+    // 说明：源码仓库里**不预置任何 exploit**，assets/exploits 下默认只有说明文件。
+    // 需要"把越狱做进去"时，把对应机型的工具包整个目录放进
+    // androidApp/src/main/assets/exploits/<机型名>/ ，重新构建后应用里就会列出来并可一键执行。
+
+    /** 列出 assets/exploits 下的工具包目录（只列目录，忽略 README 等文件）。 */
+    actual fun listAssetKits(): List<String> {
+        return try {
+            val listing = appContext.assets.list("exploits") ?: emptyArray()
+            listing.filter { name ->
+                val inner = try {
+                    appContext.assets.list("exploits/$name")
+                } catch (e: Exception) {
+                    null
+                }
+                !inner.isNullOrEmpty()
+            }.sorted()
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    /** 把整个 assets/exploits/<dir> 递归解到 cacheDir/kx_assets/<dir>，返回本地目录路径。 */
+    actual fun extractAssetKit(assetDir: String): CommandResult {
+        val safe = assetDir.replace(Regex("[^A-Za-z0-9._-]"), "_").take(48)
+        if (safe.isBlank()) return CommandResult("", "invalid asset dir", 1)
+        val outDir = java.io.File(appContext.cacheDir, "kx_assets/$safe")
+        return try {
+            if (outDir.exists()) outDir.deleteRecursively()
+            if (!outDir.mkdirs() && !outDir.isDirectory) {
+                return CommandResult("", "cannot create ${outDir.absolutePath}", 1)
+            }
+            var count = 0
+            fun copyAsset(assetPath: String, target: java.io.File) {
+                val children = appContext.assets.list(assetPath).orEmpty()
+                if (children.isEmpty()) {
+                    target.parentFile?.mkdirs()
+                    appContext.assets.open(assetPath).use { input ->
+                        target.outputStream().use { output -> input.copyTo(output) }
+                    }
+                    count++
+                } else {
+                    target.mkdirs()
+                    children.forEach { child -> copyAsset("$assetPath/$child", java.io.File(target, child)) }
+                }
+            }
+            copyAsset("exploits/$safe", outDir)
+            if (count == 0) {
+                CommandResult("", "asset kit '$safe' has no files", 1)
+            } else {
+                CommandResult(outDir.absolutePath, "", 0)
+            }
+        } catch (e: Exception) {
+            CommandResult("", "${e.javaClass.simpleName}: ${e.message}", 1)
+        }
     }
 }

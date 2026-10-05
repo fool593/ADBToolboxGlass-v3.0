@@ -646,6 +646,8 @@ private fun pluginInstallErrorMessage(code: String): String? = when (code) {
     "E_ZIP_SLIP" -> AppStrings.get("plugin_err_zip_slip")
     "E_NO_MODULE_PROP" -> AppStrings.get("module_err_no_module_prop")
     "E_NO_MODULE_ID" -> AppStrings.get("module_err_no_module_id")
+    // 包里既没有 module.prop、也没有安装脚本 / ap_patch / 自带 APK：结构确实认不出来
+    "E_NO_INSTALL_TARGET" -> AppStrings.get("module_err_no_install_target")
     "E_ID_UNSAFE" -> AppStrings.get("plugin_err_id_unsafe")
     "E_EXTRACT_FAILED" -> AppStrings.get("plugin_err_extract_failed")
     "E_COPY_FAILED" -> AppStrings.get("plugin_err_copy_failed")

@@ -57,6 +57,58 @@ enum class LineType {
     INPUT, OUTPUT, ERROR, INFO
 }
 
+/**
+ * 终端输出保留的最大行数。
+ *
+ * 为什么需要上界：每执行一条命令都会把整段输出作为一个 [TerminalLine] 追加进 `lines`，
+ * 而 `lines` 是只增不减的 compose 状态 —— 一次会话里敲几条 `dumpsys` / `pm list packages`
+ * 就能把几百 KB 到几 MB 的字符串长期留在内存里（页面退出前不会被回收）。
+ * 同时 `lines + ...` 每次都复制整条列表，行数越多追加越慢。
+ *
+ * 400 行足够覆盖一屏可见内容与向上回看；这里只按"整行"淘汰最旧的行，
+ * 不截断任何一行的文本，因此用户看到的输出内容不会被改动。
+ */
+private const val MAX_TERMINAL_LINES = 400
+
+/** 终端输出保留的总字符数上界：防止"行数不多但每行很长"（例如 cat 一个大日志文件）把内存撑起来。 */
+private const val MAX_TERMINAL_CHARS = 160_000
+
+/** 本地命令历史上界：`history` 用它回显，原来同样是只增不减。 */
+private const val MAX_COMMAND_HISTORY = 200
+
+/**
+ * 追加终端输出，并在超过 [MAX_TERMINAL_LINES] / [MAX_TERMINAL_CHARS] 时丢弃最旧的行。
+ *
+ * 返回新的不可变列表（Compose 需要新实例才会重组）；**至少保留最新一条**，
+ * 所以单条超长输出不会被砍掉一半。
+ */
+private fun appendTerminalLines(
+    old: List<TerminalLine>,
+    added: List<TerminalLine>
+): List<TerminalLine> {
+    if (added.isEmpty()) return old
+    val merged = ArrayList<TerminalLine>(old.size + added.size)
+    merged.addAll(old)
+    merged.addAll(added)
+    var totalChars = 0
+    for (line in merged) totalChars += line.text.length
+    var from = 0
+    while (from < merged.size - 1 &&
+        (merged.size - from > MAX_TERMINAL_LINES || totalChars > MAX_TERMINAL_CHARS)
+    ) {
+        totalChars -= merged[from].text.length
+        from++
+    }
+    if (from == 0) return merged
+    val trimmed = ArrayList<TerminalLine>(merged.size - from)
+    for (index in from until merged.size) trimmed.add(merged[index])
+    return trimmed
+}
+
+/** 追加单行的便捷写法。 */
+private fun appendTerminalLine(old: List<TerminalLine>, line: TerminalLine): List<TerminalLine> =
+    appendTerminalLines(old, listOf(line))
+
 @Composable
 fun TerminalScreen(
     backdrop: Backdrop,
@@ -72,7 +124,11 @@ fun TerminalScreen(
     // 本地命令历史（供 history 命令使用）
     var commandHistory by remember { mutableStateOf(listOf<String>()) }
 
-    LaunchedEffect(lines.size) {
+    // 自动滚到底部。
+    // key 用 lines 而不是 lines.size：加了行数上界后，行数到达上限时 size 不再变化，
+    // 用 size 做 key 会让"溢出后新追加的行"不再触发滚动（终端看着像卡住了）。
+    // lines 每次追加都是新实例且内容不同，结构相等比较能正确判定为变化。
+    LaunchedEffect(lines) {
         if (lines.isNotEmpty()) listState.animateScrollToItem(lines.size - 1)
     }
 
@@ -86,13 +142,13 @@ fun TerminalScreen(
         } catch (e: Exception) {
             CommandResult("", "${AppStrings.get("operation_failed")}: ${e.javaClass.simpleName}: ${e.message}", -1)
         }
-        lines = lines + buildList {
+        lines = appendTerminalLines(lines, buildList {
             if (result.output.isNotBlank()) add(TerminalLine(result.output.trim(), LineType.OUTPUT))
             if (result.error.isNotBlank()) add(TerminalLine(result.error.trim(), LineType.ERROR))
             if (result.exitCode != 0) {
                 add(TerminalLine("${AppStrings.get("exit_code_bracket")}${result.exitCode}]", LineType.ERROR))
             }
-        }
+        })
     }
 
     /**
@@ -104,14 +160,17 @@ fun TerminalScreen(
         val normalized = cmd.trim().lowercase()
         when (normalized) {
             "clear", "cls" -> lines = mutableListOf(TerminalLine(AppStrings.get("clear_screen"), LineType.INFO))
-            "history" -> lines = lines + if (commandHistory.isEmpty()) {
+            "history" -> lines = appendTerminalLines(lines, if (commandHistory.isEmpty()) {
                 listOf(TerminalLine("(no history)", LineType.INFO))
             } else {
                 commandHistory.mapIndexed { index, item ->
                     TerminalLine("${index + 1}  $item", LineType.OUTPUT)
                 }
-            }
-            "exit" -> lines = lines + TerminalLine("Exit is not supported here - use the back button to leave the terminal.", LineType.INFO)
+            })
+            "exit" -> lines = appendTerminalLine(
+                lines,
+                TerminalLine("Exit is not supported here - use the back button to leave the terminal.", LineType.INFO)
+            )
             else -> return false
         }
         return true
@@ -122,18 +181,21 @@ fun TerminalScreen(
         if (trimmed.isEmpty()) return
         // 已在设备端 shell 里执行，用户却按 PC 习惯敲 adb 前缀时自动剥掉，避免 "adb: not found"
         val shellCommand = Regex("^adb\\s+shell\\s+", RegexOption.IGNORE_CASE).replace(trimmed, "")
-        lines = lines + TerminalLine("$ $shellCommand", LineType.INPUT)
+        lines = appendTerminalLine(lines, TerminalLine("$ $shellCommand", LineType.INPUT))
         input = ""
         if (runLocalCommand(shellCommand)) {
             return
         }
-        commandHistory = commandHistory + shellCommand
+        commandHistory = (commandHistory + shellCommand).takeLast(MAX_COMMAND_HISTORY)
         if (Regex("^adb(\\s|$)", RegexOption.IGNORE_CASE).containsMatchIn(shellCommand)) {
             // adb push/pull/install 需要连接电脑，本 App 无法直接执行，明确告知而不是静默失败
-            lines = lines + TerminalLine(
-                "This app already runs commands in the device shell, so the 'adb' prefix is not needed.\n" +
-                    "For file push/pull or APK install, use the ADB Panel instead.",
-                LineType.INFO
+            lines = appendTerminalLine(
+                lines,
+                TerminalLine(
+                    "This app already runs commands in the device shell, so the 'adb' prefix is not needed.\n" +
+                        "For file push/pull or APK install, use the ADB Panel instead.",
+                    LineType.INFO
+                )
             )
             return
         }
@@ -162,12 +224,22 @@ fun TerminalScreen(
             BasicText(AppStrings.get("terminal_title"), style = TextStyle(contentColor, 24f.sp, androidx.compose.ui.text.font.FontWeight.Bold), modifier = Modifier.weight(1f))
             LiquidButton(
                 onClick = {
-                    lines = lines + TerminalLine("$ diag", LineType.INPUT)
+                    lines = appendTerminalLine(lines, TerminalLine("$ diag", LineType.INPUT))
                     scope.launch {
                         val diag = withContext(Dispatchers.Default) {
                             ADBTools.getShizukuDiagnostics()
                         }
-                        lines = lines + TerminalLine(diag, LineType.OUTPUT)
+                        // 诊断输出末尾附一行进程内内存快照（缓存条数 + 玻璃图层收支）。
+                        // 用户反馈的"内存泄漏"里，图标位图与玻璃图层都在原生内存上，堆快照看不到；
+                        // 进出一轮页面后再点一次"诊断"，比较这两行的数字即可判断是否只增不减。
+                        // 这是技术数据，不走本地化文案。
+                        lines = appendTerminalLines(
+                            lines,
+                            listOf(
+                                TerminalLine(diag, LineType.OUTPUT),
+                                TerminalLine("mem: ${AppCache.diagnosticsSnapshot()}", LineType.INFO)
+                            )
+                        )
                     }
                 },
                 backdrop = backdrop,

@@ -179,6 +179,24 @@ expect object ADBTools {
     fun prepareAndPushKit(localPath: String, remoteDirName: String): CommandResult
 
     /**
+     * 列出**随应用一起打包**的内核提权工具包目录名（`assets/exploits/<名字>/`）。
+     *
+     * 用途：让"把越狱做进去"成为一条真实可用的通道——只要把对应机型的工具包放进
+     * `androidApp/src/main/assets/exploits/<机型>/`，重新构建后应用里就会列出来，
+     * 可以一键解出、推送并执行，不需要用户自己在手机上找文件。
+     *
+     * 注意：源码仓库里**不预置任何 exploit**，这个目录默认只有说明文件；
+     * 是否放入、放哪一个机型的包，由使用者自己决定并自行承担风险。
+     */
+    fun listAssetKits(): List<String>
+
+    /**
+     * 把 `assets/exploits/<assetDir>/` 下的整套文件解到应用私有目录，返回解出后的本地目录路径。
+     * 之后可直接交给 [prepareAndPushKit] 推送执行。失败时 error 是真实原因。
+     */
+    fun extractAssetKit(assetDir: String): CommandResult
+
+    /**
      * 强制结束全部后台进程（保留前台与本应用），等效厂商"一键清理"。
      * 返回被结束的包名列表。
      */

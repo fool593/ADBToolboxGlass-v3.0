@@ -19,6 +19,7 @@ import androidx.compose.ui.node.invalidateDraw
 import androidx.compose.ui.node.requireGraphicsContext
 import androidx.compose.ui.platform.InspectorInfo
 import androidx.compose.ui.unit.Density
+import com.kyant.backdrop.BackdropDiagnostics
 import com.kyant.backdrop.internal.ShapeProvider
 import com.kyant.backdrop.internal.clipOutline
 import com.kyant.backdrop.isRenderEffectSupported
@@ -138,6 +139,7 @@ internal class InnerShadowNode(
             graphicsContext.createGraphicsLayer().apply {
                 compositingStrategy = CompositingStrategy.Offscreen
             }
+        BackdropDiagnostics.onGraphicsLayerCreated()
     }
 
     override fun onDetach() {
@@ -145,6 +147,7 @@ internal class InnerShadowNode(
         shadowLayer?.let { layer ->
             graphicsContext.releaseGraphicsLayer(layer)
             shadowLayer = null
+            BackdropDiagnostics.onGraphicsLayerReleased()
         }
     }
 

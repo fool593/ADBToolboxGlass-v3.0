@@ -43,6 +43,7 @@ import com.example.adbtoolbox.common.perf.InspectResult
 import com.example.adbtoolbox.common.perf.PerfChannels
 import com.example.adbtoolbox.common.perf.PerfItem
 import com.example.adbtoolbox.common.perf.PerfRunner
+import com.example.adbtoolbox.common.theme.AppLayout
 import com.example.adbtoolbox.common.theme.AppTheme
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.catalog.components.LiquidButton
@@ -146,14 +147,14 @@ fun PhoneInspectorScreen(
         Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16f.dp)
+            .padding(horizontal = AppLayout.screenH)
     ) {
-        Spacer(Modifier.height(24f.dp))
+        Spacer(Modifier.height(AppLayout.screenTop))
 
         Row(verticalAlignment = Alignment.CenterVertically) {
             BasicText(
                 AppStrings.get("phone_inspector"),
-                style = TextStyle(contentColor, 24f.sp, FontWeight.Bold)
+                style = TextStyle(contentColor, AppLayout.titleSize, FontWeight.Bold)
             )
             Spacer(Modifier.weight(1f))
             LiquidButton(
@@ -174,11 +175,11 @@ fun PhoneInspectorScreen(
             AppStrings.get("phone_inspector_hint"),
             style = TextStyle(contentColor.copy(alpha = 0.6f), 12f.sp)
         )
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(AppLayout.sectionGap))
 
         // ---------------- 得分与机型 ----------------
         GlassCard(backdrop = backdrop, pageType = "home") {
-            Column(Modifier.padding(18.dp)) {
+            Column(Modifier.padding(AppLayout.cardPad)) {
                 if (running) {
                     BasicText(
                         AppStrings.get("inspect_running") + " · $phaseIndex / $phaseTotal",
@@ -200,11 +201,11 @@ fun PhoneInspectorScreen(
                         Column {
                             BasicText(
                                 AppStrings.get("inspect_score"),
-                                style = TextStyle(contentColor, 14f.sp, FontWeight.Medium)
+                                style = TextStyle(contentColor, AppLayout.bodySize, FontWeight.Medium)
                             )
                             BasicText(
                                 "${AppStrings.get(info?.brandKey ?: "unknown")} · ${info?.romName ?: ""}",
-                                style = TextStyle(contentColor.copy(alpha = 0.6f), 11f.sp)
+                                style = TextStyle(contentColor.copy(alpha = 0.6f), AppLayout.captionSize)
                             )
                         }
                     }
@@ -216,17 +217,17 @@ fun PhoneInspectorScreen(
                     }
                 }
                 if (info != null) {
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(AppLayout.innerGap))
                     BasicText(
                         AppStrings.get("inspect_device_summary"),
-                        style = TextStyle(contentColor, 14f.sp, FontWeight.Bold)
+                        style = TextStyle(contentColor, AppLayout.bodySize, FontWeight.Bold)
                     )
                     Spacer(Modifier.height(6.dp))
                     info.deviceSummaryPreview().forEach { (k, v) ->
                         PerfInfoRow(k, v, contentColor)
                     }
                 }
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(AppLayout.innerGap))
                 PerfButtonRow(
                     backdrop = backdrop,
                     leftLabel = AppStrings.get("re_inspect"),
@@ -259,12 +260,12 @@ fun PhoneInspectorScreen(
 
         // ---------------- 体检分组明细：组内再按提权通道分成两块 ----------------
         report?.groups?.forEach { group ->
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(AppLayout.sectionGap))
             GlassCard(backdrop = backdrop, pageType = "home") {
-                Column(Modifier.padding(18.dp)) {
+                Column(Modifier.padding(AppLayout.cardPad)) {
                     BasicText(
                         AppStrings.get(group.nameKey),
-                        style = TextStyle(contentColor, 16f.sp, FontWeight.Bold)
+                        style = TextStyle(contentColor, AppLayout.sectionTitleSize, FontWeight.Bold)
                     )
                     val byChannel = group.results.groupBy { channelOfResult(it) }
                     listOf(PerfChannels.ROOT, PerfChannels.ADB).forEach { channel ->
@@ -272,7 +273,7 @@ fun PhoneInspectorScreen(
                         // 空通道不画标题，避免出现"Root 专属 0 条"的噪音区块
                         if (channelResults.isEmpty()) return@forEach
                         val channelMissing = info != null && PerfChannels.missingOn(info, channel)
-                        Spacer(Modifier.height(12.dp))
+                        Spacer(Modifier.height(AppLayout.innerGap))
                         PerfChannelHeader(
                             title = AppStrings.get(PerfChannels.titleKey(channel)),
                             countText = String.format(AppStrings.get("perf_group_count"), channelResults.size),
@@ -322,9 +323,9 @@ fun PhoneInspectorScreen(
         }
 
         if (report == null && !running) {
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(AppLayout.sectionGap))
             GlassCard(backdrop = backdrop, pageType = "home") {
-                Column(Modifier.padding(18.dp)) {
+                Column(Modifier.padding(AppLayout.cardPad)) {
                     BasicText(
                         AppStrings.get("no_permission_hint"),
                         style = TextStyle(Color(0xFFFF9500), 13f.sp)
@@ -484,7 +485,7 @@ private fun InspectResultRow(
             Spacer(Modifier.height(4.dp))
             BasicText(
                 detail,
-                style = TextStyle(contentColor.copy(alpha = 0.65f), 11f.sp)
+                style = TextStyle(contentColor.copy(alpha = 0.65f), AppLayout.captionSize)
             )
         }
         if (fixResult != null) {

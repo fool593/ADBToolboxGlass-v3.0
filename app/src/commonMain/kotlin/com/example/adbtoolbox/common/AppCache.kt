@@ -2,6 +2,7 @@ package com.example.adbtoolbox.common
 
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.graphics.ImageBitmap
+import com.kyant.backdrop.BackdropDiagnostics
 
 // 全局数据缓存，预加载后各页面直接读取，避免重复加载导致卡顿
 object AppCache {
@@ -150,5 +151,26 @@ object AppCache {
         kernelVersion.value = ""
         deviceInfoLoaded.value = false
         permissionCache.clear()
+        // 图标缓存必须一起清：解码后的 ImageBitmap 是原生位图（每张约 36KB），
+        // 原来 clearAll 只清数据、不清它们，于是"清空缓存"之后这块内存仍然留着。
+        appIconCache.clear()
     }
+
+    /**
+     * 一行内存诊断快照。
+     *
+     * 为什么加这个：用户反馈的"内存泄漏/越用越卡"里，很大一部分占用不在 Java 堆上
+     * （图标是原生位图、玻璃效果是 HWUI 的 GraphicsLayer / RenderEffect 原生缓冲），
+     * 普通堆快照与 GC 日志都看不到。这里把"进程内自己维护的缓存条数"与
+     * [com.kyant.backdrop.BackdropDiagnostics] 的玻璃节点/图层计数拼成一行，
+     * 挂在终端页的"诊断"输出里（见 TerminalScreen），进出一轮页面后对比数字即可判断
+     * 是"缓存有上界、只是没到上限"还是"真的只增不减"。
+     *
+     * 例：`icons=12/64 perms=3/32 apps=287 glass=8 highlight=8 layersInUse=16 (created=64/released=48)`
+     */
+    fun diagnosticsSnapshot(): String =
+        "icons=${appIconCache.size}/$MAX_ICON_CACHE " +
+            "perms=${permissionCache.size}/$PERMISSION_CACHE_MAX " +
+            "apps=${installedApps.value.size} " +
+            BackdropDiagnostics.snapshot()
 }

@@ -69,10 +69,12 @@ fun KernelRootScreen(
     var runOutput by remember { mutableStateOf<String?>(null) }
     var rootProbe by remember { mutableStateOf<String?>(null) }
     var confirmRun by remember { mutableStateOf(false) }
+    var builtinKits by remember { mutableStateOf<List<String>>(emptyList()) }
 
     LaunchedEffect(Unit) {
         info = KernelRoot.readInfo()
         rootProbe = KernelRoot.probeRoot()
+        builtinKits = withContext(Dispatchers.Default) { ADBTools.listAssetKits() }
     }
 
     Column(
@@ -154,6 +156,93 @@ fun KernelRootScreen(
                             AppStrings.get("kroot_match_hint") + ": " + k.kernelRelease,
                             style = TextStyle(AppTheme.accentAlt, AppLayout.captionSize)
                         )
+                    }
+                }
+            }
+        }
+
+        Spacer(Modifier.height(AppLayout.sectionGap))
+
+    // ---------------- 内置工具包（随应用打包的，可一键执行） ----------------
+        GlassCard(backdrop = backdrop, pageType = "home") {
+            Column(Modifier.padding(AppLayout.cardPad)) {
+                BasicText(
+                    AppStrings.get("kroot_builtin_title"),
+                    style = TextStyle(contentColor, AppLayout.sectionTitleSize, FontWeight.Medium)
+                )
+                Spacer(Modifier.height(6.dp))
+                if (builtinKits.isEmpty()) {
+                    BasicText(
+                        AppStrings.get("kroot_builtin_none"),
+                        style = TextStyle(contentColor.copy(alpha = 0.6f), AppLayout.captionSize)
+                    )
+                } else {
+                    BasicText(
+                        AppStrings.get("kroot_builtin_found"),
+                        style = TextStyle(Color(0xFF34C759), AppLayout.captionSize)
+                    )
+                    builtinKits.forEach { kit ->
+                        Spacer(Modifier.height(10.dp))
+                        BasicText(
+                            kit,
+                            style = TextStyle(contentColor, AppLayout.bodySize, FontWeight.Medium)
+                        )
+                        Spacer(Modifier.height(6.dp))
+                        LiquidButton(
+                            onClick = {
+                                if (busy) return@LiquidButton
+                                busy = true
+                                statusText = AppStrings.get("kroot_pushing")
+                                runOutput = null
+                                scope.launch {
+                                    // 解出内置包 → 推送（目录方式）→ 执行 → 真实探测
+                                    val extract = withContext(Dispatchers.Default) {
+                                        ADBTools.extractAssetKit(kit)
+                                    }
+                                    if (extract.exitCode != 0) {
+                                        statusText = AppStrings.get("kroot_push_failed") + ": " + extract.error
+                                        busy = false
+                                        return@launch
+                                    }
+                                    val push = withContext(Dispatchers.Default) {
+                                        ADBTools.prepareAndPushKit(
+                                            extract.output.trim(),
+                                            "kx_asset_" + kit.take(16)
+                                        )
+                                    }
+                                    if (push.exitCode != 0) {
+                                        statusText = AppStrings.get("kroot_push_failed") + ": " + push.error
+                                        busy = false
+                                        return@launch
+                                    }
+                                    val entry = push.output.lineSequence().firstOrNull()?.trim().orEmpty()
+                                    remotePath = entry
+                                    statusText = AppStrings.get("kroot_running")
+                                    val run = withContext(Dispatchers.Default) {
+                                        KernelRoot.runExploit(entry, 120)
+                                    }
+                                    runOutput = buildString {
+                                        append(run.output)
+                                        if (run.error.isNotBlank()) append("\n[stderr] ").append(run.error)
+                                    }
+                                    rootProbe = withContext(Dispatchers.Default) { KernelRoot.probeRoot() }
+                                    statusText = if ((rootProbe ?: "").contains("uid=0")) {
+                                        AppStrings.get("kroot_root_ok")
+                                    } else {
+                                        AppStrings.get("kroot_root_failed")
+                                    }
+                                    busy = false
+                                }
+                            },
+                            backdrop = backdrop,
+                            modifier = Modifier.height(44.dp).fillMaxWidth(),
+                            tint = if (busy) Color(0xFF8E8E93) else Color(0xFFFF3B30)
+                        ) {
+                            BasicText(
+                                if (busy) AppStrings.get("kroot_working") else AppStrings.get("kroot_builtin_run"),
+                                style = TextStyle(Color.White, 13.sp, FontWeight.Medium)
+                            )
+                        }
                     }
                 }
             }

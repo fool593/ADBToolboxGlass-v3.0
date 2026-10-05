@@ -120,6 +120,13 @@ fun SystemRestoreScreen(
                     style = TextStyle(contentColor, AppLayout.sectionTitleSize, FontWeight.Medium)
                 )
                 Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.height(6.dp))
+                BasicText(
+                    AppStrings.get("restore_full_scope") + " (" +
+                            SystemRestore.totalKeyCount + " + " + SystemRestore.totalPackageCount + ")",
+                    style = TextStyle(Color(0xFF34C759), AppLayout.captionSize)
+                )
+                Spacer(Modifier.height(2.dp))
                 BasicText(
                     AppStrings.get("restore_steps_hint"),
                     style = TextStyle(contentColor.copy(alpha = 0.6f), AppLayout.captionSize)

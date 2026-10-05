@@ -16,6 +16,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.adbtoolbox.common.*
+import com.example.adbtoolbox.common.theme.AppLayout
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.catalog.utils.InteractiveHighlight
 import com.kyant.backdrop.catalog.components.LiquidButton
@@ -66,21 +67,21 @@ fun RootToolScreen(
             .verticalScroll(rememberScrollState())
     ) {
         GlassBackButton(backdrop = backdrop, contentColor = contentColor, onBack = onBack)
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(AppLayout.sectionGap))
 
-        BasicText(AppStrings.get("root_tool"), style = TextStyle(contentColor, 24.sp, FontWeight.Bold))
+        BasicText(AppStrings.get("root_tool"), style = TextStyle(contentColor, AppLayout.titleSize, FontWeight.Bold))
         Spacer(Modifier.height(4.dp))
-        BasicText(AppStrings.get("root_tool_hint"), style = TextStyle(contentColor.copy(alpha = 0.6f), 14.sp))
-        Spacer(Modifier.height(20.dp))
+        BasicText(AppStrings.get("root_tool_hint"), style = TextStyle(contentColor.copy(alpha = 0.6f), AppLayout.bodySize))
+        Spacer(Modifier.height(AppLayout.sectionGap))
 
         // 设备信息卡片
         GlassCard(backdrop = backdrop, pageType = "plugins") {
-            Column(Modifier.padding(16.dp)) {
-                BasicText(AppStrings.get("device_info"), style = TextStyle(contentColor, 16.sp, FontWeight.Bold))
-                Spacer(Modifier.height(12.dp))
+            Column(Modifier.padding(AppLayout.cardPadCompact)) {
+                BasicText(AppStrings.get("device_info"), style = TextStyle(contentColor, AppLayout.sectionTitleSize, FontWeight.Bold))
+                Spacer(Modifier.height(AppLayout.innerGap))
 
                 if (isLoading) {
-                    BasicText(AppStrings.get("detecting"), style = TextStyle(contentColor.copy(alpha = 0.5f), 14.sp))
+                    BasicText(AppStrings.get("detecting"), style = TextStyle(contentColor.copy(alpha = 0.5f), AppLayout.bodySize))
                 } else if (deviceInfo != null) {
                     val info = deviceInfo!!
                     RootInfoRow(AppStrings.get("brand"), info.brand, contentColor)
@@ -102,18 +103,18 @@ fun RootToolScreen(
                 }
             }
         }
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(AppLayout.sectionGap))
 
         // 自动检测到的Available Root Methods（基于网上公开漏洞与教程）
         if (availableMethods.isNotEmpty()) {
             GlassCard(backdrop = backdrop, pageType = "plugins") {
-                Column(Modifier.padding(16.dp)) {
-                    BasicText(if (AppSettings.language == "en") "Available Root Methods (${availableMethods.size})" else "可用 Root 方法 (${availableMethods.size})", style = TextStyle(contentColor, 16.sp, FontWeight.Bold))
+                Column(Modifier.padding(AppLayout.cardPadCompact)) {
+                    BasicText(if (AppSettings.language == "en") "Available Root Methods (${availableMethods.size})" else "可用 Root 方法 (${availableMethods.size})", style = TextStyle(contentColor, AppLayout.sectionTitleSize, FontWeight.Bold))
                     Spacer(Modifier.height(4.dp))
                     if (recommendedMethod != null) {
                         BasicText("${if (AppSettings.language == "en") "Recommended: " else "推荐: "}${recommendedMethod!!.getLocalizedName()}", style = TextStyle(Color(0xFFAF52DE), 13.sp, FontWeight.Bold))
                     }
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(AppLayout.innerGap))
 
                     // 排序：Mobile方法放前面，需要电脑的放后面
                     val sortedMethods = availableMethods.sortedBy { it.requiresComputer }
@@ -145,13 +146,13 @@ fun RootToolScreen(
                                         )
                                         BasicText(
                                             if (method.requiresComputer) "${method.getLocalizedName()} (${if (AppSettings.language == "en") "PC Required" else "需电脑"})" else method.getLocalizedName(),
-                                            style = TextStyle(contentColor, 14.sp, FontWeight.Bold)
+                                            style = TextStyle(contentColor, AppLayout.bodySize, FontWeight.Bold)
                                         )
                                     }
                                     Spacer(Modifier.height(2.dp))
                                     BasicText(
                                         "${method.getLocalizedPrinciple().take(50)}...",
-                                        style = TextStyle(contentColor.copy(alpha = 0.5f), 11.sp)
+                                        style = TextStyle(contentColor.copy(alpha = 0.5f), AppLayout.captionSize)
                                     )
                                     Spacer(Modifier.height(2.dp))
                                     BasicText(
@@ -248,17 +249,17 @@ fun RootToolScreen(
                                     Column {
                                         BasicText(if (AppSettings.language == "en") "[Principle]" else "【原理】", style = TextStyle(Color(0xFFAF52DE), 12.sp, FontWeight.Bold))
                                         Spacer(Modifier.height(2.dp))
-                                        BasicText(method.getLocalizedPrinciple(), style = TextStyle(contentColor.copy(alpha = 0.8f), 11.sp))
+                                        BasicText(method.getLocalizedPrinciple(), style = TextStyle(contentColor.copy(alpha = 0.8f), AppLayout.captionSize))
                                         Spacer(Modifier.height(8.dp))
                                         BasicText(if (AppSettings.language == "en") "[Supported Devices]" else "【支持机型】", style = TextStyle(Color(0xFFAF52DE), 12.sp, FontWeight.Bold))
                                         Spacer(Modifier.height(2.dp))
-                                        BasicText(method.getLocalizedSupportedDevices(), style = TextStyle(contentColor.copy(alpha = 0.8f), 11.sp))
+                                        BasicText(method.getLocalizedSupportedDevices(), style = TextStyle(contentColor.copy(alpha = 0.8f), AppLayout.captionSize))
                                         Spacer(Modifier.height(8.dp))
-                                        BasicText("${if (AppSettings.language == "en") "[Risk Level]" else "【风险等级】"}${method.riskLevel} | ${if (method.requiresComputer) (if (AppSettings.language == "en") "PC Required" else "需要电脑配合") else (if (AppSettings.language == "en") "Mobile Executable" else "可直接在手机执行")} | ${if (method.requiresKSU) (if (AppSettings.language == "en") "KSU Required" else "需要先安装KSU") else (if (AppSettings.language == "en") "No KSU Needed" else "无需KSU")}", style = TextStyle(contentColor.copy(alpha = 0.7f), 11.sp))
+                                        BasicText("${if (AppSettings.language == "en") "[Risk Level]" else "【风险等级】"}${method.riskLevel} | ${if (method.requiresComputer) (if (AppSettings.language == "en") "PC Required" else "需要电脑配合") else (if (AppSettings.language == "en") "Mobile Executable" else "可直接在手机执行")} | ${if (method.requiresKSU) (if (AppSettings.language == "en") "KSU Required" else "需要先安装KSU") else (if (AppSettings.language == "en") "No KSU Needed" else "无需KSU")}", style = TextStyle(contentColor.copy(alpha = 0.7f), AppLayout.captionSize))
                                         Spacer(Modifier.height(8.dp))
                                         BasicText(if (AppSettings.language == "en") "[Steps]" else "【操作步骤】", style = TextStyle(Color(0xFFAF52DE), 12.sp, FontWeight.Bold))
                                         Spacer(Modifier.height(2.dp))
-                                        BasicText(method.getLocalizedDescription(), style = TextStyle(contentColor.copy(alpha = 0.8f), 11.sp))
+                                        BasicText(method.getLocalizedDescription(), style = TextStyle(contentColor.copy(alpha = 0.8f), AppLayout.captionSize))
                                         if (method.downloadUrl.isNotBlank()) {
                                             Spacer(Modifier.height(6.dp))
                                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -322,7 +323,7 @@ fun RootToolScreen(
                                                 modifier = Modifier.height(34.dp),
                                                 tint = Color(0xFFAF52DE)
                                             ) {
-                                                BasicText(if (AppSettings.language == "en") "▶ Run in Terminal (PC commands)" else "▶ 终端执行（电脑端命令）", Modifier.padding(horizontal = 14.dp), style = TextStyle(Color.White, 11.sp, FontWeight.Bold))
+                                                BasicText(if (AppSettings.language == "en") "▶ Run in Terminal (PC commands)" else "▶ 终端执行（电脑端命令）", Modifier.padding(horizontal = 14.dp), style = TextStyle(Color.White, AppLayout.captionSize, FontWeight.Bold))
                                             }
                                         }
                                     }
@@ -333,7 +334,7 @@ fun RootToolScreen(
                                 Spacer(Modifier.height(6.dp))
                                 BasicText(
                                     if (methodResult!!.success) "✓ ${methodResult!!.message.take(300)}" else "✗ ${methodResult!!.message.take(300)}",
-                                    style = TextStyle(if (methodResult!!.success) Color(0xFF34C759) else Color(0xFFFF3B30), 11.sp)
+                                    style = TextStyle(if (methodResult!!.success) Color(0xFF34C759) else Color(0xFFFF3B30), AppLayout.captionSize)
                                 )
                             }
                             Spacer(Modifier.height(6.dp))
@@ -341,15 +342,15 @@ fun RootToolScreen(
                     }
                 }
             }
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(AppLayout.sectionGap))
         }
 
         // Root 方案选择
         if (deviceInfo != null && deviceInfo!!.supportedMethods.isNotEmpty()) {
             GlassCard(backdrop = backdrop, pageType = "plugins") {
-                Column(Modifier.padding(16.dp)) {
-                    BasicText(AppStrings.get("select_root_method"), style = TextStyle(contentColor, 16.sp, FontWeight.Bold))
-                    Spacer(Modifier.height(12.dp))
+                Column(Modifier.padding(AppLayout.cardPadCompact)) {
+                    BasicText(AppStrings.get("select_root_method"), style = TextStyle(contentColor, AppLayout.sectionTitleSize, FontWeight.Bold))
+                    Spacer(Modifier.height(AppLayout.innerGap))
 
                     deviceInfo!!.supportedMethods.forEach { method ->
                         val isSelected = selectedMethod == method
@@ -386,7 +387,7 @@ fun RootToolScreen(
                                     BasicText("✓", style = TextStyle(Color.White, 12.sp, FontWeight.Bold))
                                 }
                             }
-                            Spacer(Modifier.width(12.dp))
+                            Spacer(Modifier.width(AppLayout.innerGap))
                             Column {
                                 BasicText(
                                     when (method) {
@@ -395,7 +396,7 @@ fun RootToolScreen(
                                         RootMethod.TEMP_ROOT -> AppStrings.get("temp_root_vuln")
                                         RootMethod.UNKNOWN -> AppStrings.get("unknown")
                                     },
-                                    style = TextStyle(contentColor, 14.sp, FontWeight.Medium)
+                                    style = TextStyle(contentColor, AppLayout.bodySize, FontWeight.Medium)
                                 )
                                 BasicText(
                                     when (method) {
@@ -412,15 +413,15 @@ fun RootToolScreen(
                     }
                 }
             }
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(AppLayout.sectionGap))
         }
 
         // 进度显示
         if (currentStep != RootStep.IDLE && currentStep != RootStep.DONE && currentStep != RootStep.ERROR) {
             GlassCard(backdrop = backdrop, pageType = "plugins") {
-                Column(Modifier.padding(16.dp)) {
-                    BasicText(AppStrings.get("exec_progress"), style = TextStyle(contentColor, 16.sp, FontWeight.Bold))
-                    Spacer(Modifier.height(12.dp))
+                Column(Modifier.padding(AppLayout.cardPadCompact)) {
+                    BasicText(AppStrings.get("exec_progress"), style = TextStyle(contentColor, AppLayout.sectionTitleSize, FontWeight.Bold))
+                    Spacer(Modifier.height(AppLayout.innerGap))
                     BasicText(
                         when (currentStep) {
                             RootStep.CHECKING_DEVICE -> AppStrings.get("checking_device")
@@ -430,7 +431,7 @@ fun RootToolScreen(
                             RootStep.REBOOTING -> AppStrings.get("rebooting")
                             else -> stepMessage
                         },
-                        style = TextStyle(Color(0xFFFF9500), 14.sp)
+                        style = TextStyle(Color(0xFFFF9500), AppLayout.bodySize)
                     )
                     if (stepMessage.isNotEmpty()) {
                         Spacer(Modifier.height(8.dp))
@@ -438,22 +439,22 @@ fun RootToolScreen(
                     }
                 }
             }
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(AppLayout.sectionGap))
         }
 
         // 结果显示
         result?.let { r ->
             GlassCard(backdrop = backdrop, pageType = "plugins") {
-                Column(Modifier.padding(16.dp)) {
+                Column(Modifier.padding(AppLayout.cardPadCompact)) {
                     BasicText(
                         if (r.success) AppStrings.get("op_success") else AppStrings.get("op_failed"),
-                        style = TextStyle(if (r.success) Color(0xFF34C759) else Color(0xFFFF3B30), 16.sp, FontWeight.Bold)
+                        style = TextStyle(if (r.success) Color(0xFF34C759) else Color(0xFFFF3B30), AppLayout.sectionTitleSize, FontWeight.Bold)
                     )
                     Spacer(Modifier.height(8.dp))
                     BasicText(r.message, style = TextStyle(contentColor.copy(alpha = 0.8f), 13.sp))
                 }
             }
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(AppLayout.sectionGap))
         }
 
         // 操作按钮
@@ -545,7 +546,7 @@ fun RootToolScreen(
             ) {
                 BasicText(if (isLoading) AppStrings.get("executing") else AppStrings.get("start_root"), style = TextStyle(Color.White, 16.sp, FontWeight.Bold))
             }
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(AppLayout.innerGap))
 
             LiquidButton(
                 onClick = {
@@ -561,12 +562,12 @@ fun RootToolScreen(
                 modifier = Modifier.fillMaxWidth().height(44.dp),
                 tint = Color(0xFF8E8E93)
             ) {
-                BasicText(AppStrings.get("redetect"), style = TextStyle(Color.White, 14.sp))
+                BasicText(AppStrings.get("redetect"), style = TextStyle(Color.White, AppLayout.bodySize))
             }
         } else if (!isLoading) {
             GlassCard(backdrop = backdrop, pageType = "plugins") {
-                Column(Modifier.padding(16.dp)) {
-                    BasicText(AppStrings.get("not_supported"), style = TextStyle(Color(0xFFFF9500), 16.sp, FontWeight.Bold))
+                Column(Modifier.padding(AppLayout.cardPadCompact)) {
+                    BasicText(AppStrings.get("not_supported"), style = TextStyle(Color(0xFFFF9500), AppLayout.sectionTitleSize, FontWeight.Bold))
                     Spacer(Modifier.height(8.dp))
                     BasicText(
                         AppStrings.get("unsupported_msg"),
@@ -580,8 +581,8 @@ fun RootToolScreen(
 
         // 风险提示
         GlassCard(backdrop = backdrop, pageType = "plugins") {
-            Column(Modifier.padding(16.dp)) {
-                BasicText(AppStrings.get("risk_warning"), style = TextStyle(Color(0xFFFF3B30), 14.sp, FontWeight.Bold))
+            Column(Modifier.padding(AppLayout.cardPadCompact)) {
+                BasicText(AppStrings.get("risk_warning"), style = TextStyle(Color(0xFFFF3B30), AppLayout.sectionTitleSize, FontWeight.Bold))
                 Spacer(Modifier.height(8.dp))
                 BasicText(
                     AppStrings.get("risk_msg"),

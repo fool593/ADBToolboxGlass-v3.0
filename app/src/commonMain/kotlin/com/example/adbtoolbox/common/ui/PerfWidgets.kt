@@ -42,6 +42,7 @@ import androidx.compose.ui.window.Dialog
 import com.example.adbtoolbox.common.AppStrings
 import com.example.adbtoolbox.common.perf.PerfItem
 import com.example.adbtoolbox.common.perf.PerfRunResult
+import com.example.adbtoolbox.common.theme.AppLayout
 import com.example.adbtoolbox.common.theme.AppMotion
 import com.example.adbtoolbox.common.theme.AppTheme
 import com.kyant.backdrop.Backdrop
@@ -112,13 +113,13 @@ fun PerfChannelHeader(
                     .background(barColor)
             )
             Spacer(Modifier.width(8.dp))
-            BasicText(title, style = TextStyle(contentColor, 16f.sp, FontWeight.Bold))
+            BasicText(title, style = TextStyle(contentColor, AppLayout.sectionTitleSize, FontWeight.Bold))
             Spacer(Modifier.weight(1f))
             BasicText(countText, style = TextStyle(contentColor.copy(alpha = 0.6f), 12f.sp))
         }
         if (warning != null) {
             Spacer(Modifier.height(4.dp))
-            BasicText(warning, style = TextStyle(Color(0xFFFF9500), 11f.sp))
+            BasicText(warning, style = TextStyle(Color(0xFFFF9500), AppLayout.captionSize))
         }
         if (note != null) {
             Spacer(Modifier.height(2.dp))
@@ -195,12 +196,12 @@ fun PerfItemRow(
             Column(Modifier.weight(1f)) {
                 BasicText(
                     AppStrings.get(item.nameKey),
-                    style = TextStyle(contentColor.copy(alpha = contentColor.alpha * rowAlpha), 14f.sp, FontWeight.Medium)
+                    style = TextStyle(contentColor.copy(alpha = contentColor.alpha * rowAlpha), AppLayout.bodySize, FontWeight.Medium)
                 )
                 Spacer(Modifier.height(2.dp))
                 BasicText(
                     AppStrings.get(item.descKey),
-                    style = TextStyle(contentColor.copy(alpha = contentColor.alpha * 0.6f * rowAlpha), 11f.sp)
+                    style = TextStyle(contentColor.copy(alpha = contentColor.alpha * 0.6f * rowAlpha), AppLayout.captionSize)
                 )
                 Spacer(Modifier.height(6.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -279,7 +280,7 @@ fun PerfInfoRow(label: String, value: String, contentColor: Color) {
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         BasicText(label, style = TextStyle(contentColor.copy(alpha = 0.6f), 12f.sp))
-        Spacer(Modifier.width(12.dp))
+        Spacer(Modifier.width(AppLayout.innerGap))
         BasicText(value, style = TextStyle(contentColor, 12f.sp), maxLines = 1)
     }
 }
@@ -371,9 +372,9 @@ fun PerfConfirmDialog(
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(20.dp))
                 .background(Color(0xF21C1C1E))
-                .padding(20.dp)
+                .padding(AppLayout.cardPad)
         ) {
-            BasicText(title, style = TextStyle(contentColor, 17f.sp, FontWeight.Bold))
+            BasicText(title, style = TextStyle(contentColor, AppLayout.sectionTitleSize, FontWeight.Bold))
             Spacer(Modifier.height(10.dp))
             BasicText(message, style = TextStyle(contentColor.copy(alpha = 0.8f), 13f.sp))
             Spacer(Modifier.height(18.dp))
@@ -387,7 +388,7 @@ fun PerfConfirmDialog(
                         .clickable(onClick = onDismiss),
                     contentAlignment = Alignment.Center
                 ) {
-                    BasicText(cancelLabel, style = TextStyle(contentColor, 14f.sp))
+                    BasicText(cancelLabel, style = TextStyle(contentColor, AppLayout.bodySize))
                 }
                 Box(
                     Modifier
@@ -398,7 +399,7 @@ fun PerfConfirmDialog(
                         .clickable(onClick = onConfirm),
                     contentAlignment = Alignment.Center
                 ) {
-                    BasicText(confirmLabel, style = TextStyle(Color.White, 14f.sp, FontWeight.Medium))
+                    BasicText(confirmLabel, style = TextStyle(Color.White, AppLayout.bodySize, FontWeight.Medium))
                 }
             }
         }
@@ -419,7 +420,7 @@ fun PerfTextBox(text: String, contentColor: Color, modifier: Modifier = Modifier
         BasicText(
             text,
             Modifier.verticalScroll(rememberScrollState()),
-            style = TextStyle(contentColor.copy(alpha = 0.9f), 11f.sp, fontFamily = FontFamily.Monospace)
+            style = TextStyle(contentColor.copy(alpha = 0.9f), AppLayout.captionSize, fontFamily = FontFamily.Monospace)
         )
     }
 }

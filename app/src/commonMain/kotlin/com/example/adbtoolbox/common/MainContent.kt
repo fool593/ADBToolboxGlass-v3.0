@@ -131,7 +131,13 @@ fun MainContent() {
                                     com.example.adbtoolbox.common.theme.AppTheme.apply(pickedTheme, persist = true)
                                 },
                                 // 只请求重新检测/授权，不在向导里替用户做任何决定
-                                onRequestShizuku = { AppCache.requestShizukuRefresh() },
+                                // 先真正发起 Shizuku 授权请求，再刷新状态。
+                                // 之前这里只调了 requestShizukuRefresh()（只重查状态），
+                                // 导致向导里的"去授权 Shizuku"按钮点了不会弹授权框——已修。
+                                onRequestShizuku = {
+                                    com.example.adbtoolbox.common.ADBTools.requestShizukuPermission()
+                                    AppCache.requestShizukuRefresh()
+                                },
                                 onOpenWriteSettings = { AppCache.openWriteSettingsTrigger.value++ },
                                 onFinish = {
                                     com.example.adbtoolbox.common.AppSettings.onboardingDone = true

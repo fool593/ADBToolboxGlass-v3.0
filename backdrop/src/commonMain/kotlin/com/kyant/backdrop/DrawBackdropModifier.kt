@@ -391,6 +391,9 @@ private class DrawBackdropNode(
     override fun onAttach() {
         val graphicsContext = requireGraphicsContext()
         graphicsLayer = graphicsContext.createGraphicsLayer()
+        // 诊断计数：与 onDetach 的释放成对，供 BackdropDiagnostics.snapshot 核对"层是否收支平衡"
+        BackdropDiagnostics.onBackdropNodeAttached()
+        BackdropDiagnostics.onGraphicsLayerCreated()
 
         observeEffects()
     }
@@ -400,7 +403,9 @@ private class DrawBackdropNode(
         graphicsLayer?.let { layer ->
             graphicsContext.releaseGraphicsLayer(layer)
             graphicsLayer = null
+            BackdropDiagnostics.onGraphicsLayerReleased()
         }
+        BackdropDiagnostics.onBackdropNodeDetached()
 
         effectScope.reset()
         layoutCoordinates = null

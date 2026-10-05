@@ -359,16 +359,50 @@ actual object RootModuleManager {
             }
 
             zip.use { archive ->
-                val meta = try {
+                // 3.1) 结构探测：与插件安装 / ADB 刷入共用一份规则（module.prop 任意深度；
+                // 没有 module.prop 时由安装脚本 / ap_patch / 自带 APK 推导落点）。
+                val inspected = ModuleZipInspector.inspect(archive, zipFile.nameWithoutExtension)
+                if (inspected.unsafeEntry != null) {
+                    // 越界路径一律拒绝，不为"装得进去"放松安全校验
+                    return RootModuleInstallResult(false, err("E_ZIP_SLIP", inspected.unsafeEntry))
+                }
+                var step = "module_step_scan"
+                var syntheticProp = false
+                val meta: ModuleArchive = try {
                     inspectLocalZip(archive)
                 } catch (f: ModuleInstallFailure) {
-                    return RootModuleInstallResult(false, err(f.code, f.detail))
+                    if (f.code != "E_NO_MODULE_PROP") {
+                        return RootModuleInstallResult(false, err(f.code, f.detail))
+                    }
+                    if (!inspected.hasInstallTarget || inspected.suggestedId.isBlank()) {
+                        // 结构真的认不出来：把顶层条目 / 落点 / 命中的标记一起给出来
+                        return RootModuleInstallResult(
+                            false,
+                            err("E_NO_MODULE_PROP", inspected.diagnostics(step, f.detail))
+                        )
+                    }
+                    // 只有安装脚本 / ap_patch / APK 的包：落点已经确定，补一份 module.prop 继续装。
+                    // 不补的话 Root 侧根本不认这个目录 —— Magisk / KernelSU 都是靠 module.prop 认模块的。
+                    syntheticProp = true
+                    ModuleArchive(
+                        id = inspected.suggestedId,
+                        rootPrefix = inspected.rootPrefix,
+                        modulePropEntry = inspected.modulePropEntry ?: "(synthesized)",
+                        magiskMarker = inspected.hasUpdateBinary,
+                        customizeSh = inspected.markers.contains("customize.sh")
+                    )
                 }
 
                 // 4) 官方安装器优先（Magisk / KernelSU）
+                step = "module_step_installer"
                 val installerErrors = mutableListOf<String>()
-                val magiskAvailable = rootExec("command -v magisk >/dev/null 2>&1 && echo RMM_HAS_MAGISK", timeout = 30)
-                    .output.contains("RMM_HAS_MAGISK")
+                if (syntheticProp) {
+                    // 包里没有 module.prop，官方安装器一定拒绝，不必白等一次 300 秒的调用
+                    installerErrors.add("official installer skipped: archive has no module.prop")
+                }
+                val magiskAvailable = !syntheticProp &&
+                    rootExec("command -v magisk >/dev/null 2>&1 && echo RMM_HAS_MAGISK", timeout = 30)
+                        .output.contains("RMM_HAS_MAGISK")
                 if (magiskAvailable) {
                     val magisk = rootExec("magisk --install-module ${shq(zipFile.absolutePath)}", timeout = 300)
                     if (magisk.exitCode == 0) {
@@ -381,8 +415,9 @@ actual object RootModuleManager {
                         )
                     }
                 }
-                val ksudAvailable = rootExec("command -v ksud >/dev/null 2>&1 && echo RMM_HAS_KSUD", timeout = 30)
-                    .output.contains("RMM_HAS_KSUD")
+                val ksudAvailable = !syntheticProp &&
+                    rootExec("command -v ksud >/dev/null 2>&1 && echo RMM_HAS_KSUD", timeout = 30)
+                        .output.contains("RMM_HAS_KSUD")
                 if (ksudAvailable) {
                     val ksud = rootExec("ksud module install ${shq(zipFile.absolutePath)}", timeout = 300)
                     if (ksud.exitCode == 0) {
@@ -393,21 +428,45 @@ actual object RootModuleManager {
                         installerErrors.add("ksud module install: " + detailOf(ksud).ifBlank { "exit=${ksud.exitCode}" })
                     }
                 }
-                if (!magiskAvailable && !ksudAvailable) {
+                if (!magiskAvailable && !ksudAvailable && !syntheticProp) {
                     installerErrors.add("neither magisk nor ksud is available in Root PATH")
                 }
 
                 // 5) 兜底：本机解压 + Root 复制到 /data/adb/modules/<id>
+                step = "module_step_stage"
                 val stage = File(appContext.cacheDir, "rmm_stage_${System.currentTimeMillis()}")
                 if (!stage.mkdirs() && !stage.isDirectory) {
-                    return RootModuleInstallResult(false, err("E_STAGE_FAILED", stage.absolutePath))
+                    return RootModuleInstallResult(
+                        false,
+                        err("E_STAGE_FAILED", inspected.diagnostics(step, stage.absolutePath))
+                    )
                 }
                 try {
+                    step = "module_step_extract"
                     try {
                         extractModuleRoot(archive, meta.rootPrefix, stage)
                     } catch (f: ModuleInstallFailure) {
-                        return RootModuleInstallResult(false, err(f.code, withInstaller(f.detail, installerErrors)))
+                        return RootModuleInstallResult(
+                            false,
+                            err(f.code, withInstaller(inspected.diagnostics(step, f.detail), installerErrors))
+                        )
                     }
+                    if (syntheticProp && !File(stage, "module.prop").isFile) {
+                        // 合成 module.prop：没有它，Magisk / KernelSU 不会把这个目录当成模块
+                        try {
+                            File(stage, "module.prop")
+                                .writeText(synthModulePropText(meta.id, zipFile.nameWithoutExtension), Charsets.UTF_8)
+                        } catch (e: IOException) {
+                            return RootModuleInstallResult(
+                                false,
+                                err(
+                                    "E_STAGE_FAILED",
+                                    inspected.diagnostics(step, "cannot write module.prop: ${e.message.orEmpty()}")
+                                )
+                            )
+                        }
+                    }
+                    step = "module_step_copy"
                     val targetDir = "$MODULES_DIR/${meta.id}"
                     val copy = rootExec(
                         "rm -rf ${shq(targetDir)} && mkdir -p ${shq(targetDir)} && " +
@@ -421,20 +480,44 @@ actual object RootModuleManager {
                             detail.contains("denied", ignoreCase = true) -> "E_ROOT_DENIED"
                             else -> "E_COPY_FAILED"
                         }
-                        return RootModuleInstallResult(false, err(code, withInstaller(detail, installerErrors)))
+                        // 复制失败就把半成品目录清掉：Magisk 会扫描 /data/adb/modules 下任何带
+                        // module.prop 的目录，留一半在那里等于给用户塞了一个坏模块。
+                        rootExec("rm -rf ${shq(targetDir)}", timeout = 60)
+                        return RootModuleInstallResult(
+                            false,
+                            err(code, withInstaller(inspected.diagnostics(step, detail), installerErrors))
+                        )
                     }
+                    // 权限与 SELinux 上下文：Magisk 挂载 system 文件时按文件现有上下文处理，
+                    // 不设置的话部分 ROM 上会被 SELinux 拦下（chcon 不是所有设备都有，失败不影响模块加载）
                     rootExec("chmod -R 755 ${shq(targetDir)}", timeout = 120)
                     rootExec("chown -R 0:0 ${shq(targetDir)}", timeout = 120)
+                    if (File(stage, "system").isDirectory) {
+                        rootExec(
+                            "chcon -R u:object_r:system_file:s0 ${shq("$targetDir/system")} 2>/dev/null",
+                            timeout = 120
+                        )
+                    }
 
+                    step = "module_step_verify"
                     val verify = verifyInstalled(meta.id)
                     if (verify.isNotEmpty()) {
                         return RootModuleInstallResult(
                             false,
-                            err("E_VERIFY_FAILED", withInstaller("${meta.id}: $verify", installerErrors))
+                            err(
+                                "E_VERIFY_FAILED",
+                                withInstaller(inspected.diagnostics(step, "${meta.id}: $verify"), installerErrors)
+                            )
                         )
                     }
-                    // Magisk/KernelSU 都是重启后才会加载新模块，文案必须如实说明
-                    RootModuleInstallResult(true, err("E_OK_MANUAL", meta.id))
+                    // Magisk/KernelSU 都是重启后才会加载新模块，文案必须如实说明；
+                    // 合成过 module.prop 的包额外说明 id 是怎么来的
+                    val okDetail = if (syntheticProp) {
+                        meta.id + "\n" + AppStrings.get("module_warn_synth_prop")
+                    } else {
+                        meta.id
+                    }
+                    RootModuleInstallResult(true, err("E_OK_MANUAL", okDetail))
                 } finally {
                     stage.deleteRecursively()
                     rootExec("rm -rf ${shq(stage.absolutePath)}", timeout = 60)
