@@ -87,6 +87,10 @@ object AppCache {
     // 「修改系统设置」授权页触发（游戏帧率页在非华为机型上需要该权限才能直写刷新率）
     val openWriteSettingsTrigger = mutableStateOf(0)
 
+    // 内核提权：用户自己从 GitHub 下载的 exploit / 工具包（本应用不内置、不下载任何 exploit）
+    val selectedKernelExploitPath = mutableStateOf<String?>(null)
+    val pickKernelExploitTrigger = mutableStateOf(0)
+
     // 「使用情况访问」授权页触发（按游戏自动切换帧率需要它来判断前台应用）
     val openUsageAccessTrigger = mutableStateOf(0)
 

@@ -123,7 +123,7 @@ fun MainContent() {
                         modifier = Modifier.fillMaxSize()
                     ) { dest ->
                         when (dest) {
-                            // v2.8 首次启动的设置向导（欢迎 → 主题 → 权限 → 完成）
+                            // v2.9 首次启动的设置向导（欢迎 → 主题 → 权限 → 完成）
                             ADBDestination.Onboarding -> com.example.adbtoolbox.common.ui.OnboardingScreen(
                                 backdrop = backdrop,
                                 contentColor = contentColor,
@@ -139,11 +139,23 @@ fun MainContent() {
                                     currentDestination = ADBDestination.Home
                                 }
                             )
-                            // v2.8 还原所有系统默认设置（性能优化的退路，含提醒与真实回读）
+                            // v2.9 还原所有系统默认设置（性能优化的退路，含提醒与真实回读）
                             ADBDestination.SystemRestore -> com.example.adbtoolbox.common.ui.SystemRestoreScreen(
                                 backdrop = backdrop,
                                 contentColor = contentColor,
                                 onBack = { currentDestination = ADBDestination.Home }
+                            )
+                            // v2.9 内核提权（运行用户自备的公开 exploit；本应用不内置、不下载）
+                            ADBDestination.KernelRoot -> com.example.adbtoolbox.common.ui.KernelRootScreen(
+                                backdrop = backdrop,
+                                contentColor = contentColor,
+                                onBack = { currentDestination = ADBDestination.Home },
+                                selectedExploitPath = AppCache.selectedKernelExploitPath.value,
+                                onPickExploit = { AppCache.pickKernelExploitTrigger.value++ },
+                                onOpenTerminal = { command ->
+                                    AppCache.terminalInitialCommand.value = command
+                                    currentDestination = ADBDestination.Terminal
+                                }
                             )
                             ADBDestination.Home -> HomeScreen(
                                 backdrop = backdrop,
@@ -241,7 +253,7 @@ fun MainContent() {
                             ADBDestination.TempRoot -> com.example.adbtoolbox.common.ui.TempRootScreen(
                                 backdrop = backdrop,
                             )
-                            // v2.8 品牌自适应一键性能加速
+                            // v2.9 品牌自适应一键性能加速
                             ADBDestination.PerformanceBoost -> com.example.adbtoolbox.common.ui.PerformanceBoostScreen(
                                 backdrop = backdrop,
                                 contentColor = contentColor,
@@ -252,7 +264,7 @@ fun MainContent() {
                                 onOpenInspector = { currentDestination = ADBDestination.PhoneInspector },
                                 brandFilter = pendingBrandFilter
                             )
-                            // v2.8 机型分类优化：每个品牌独立入口
+                            // v2.9 机型分类优化：每个品牌独立入口
                             ADBDestination.BrandPerf -> com.example.adbtoolbox.common.ui.BrandPerfScreen(
                                 backdrop = backdrop,
                                 contentColor = contentColor,
@@ -262,7 +274,7 @@ fun MainContent() {
                                     currentDestination = ADBDestination.PerformanceBoost
                                 }
                             )
-                            // v2.8 游戏帧率（全机型）：非华为用应用权限直写，华为/荣耀走 ADB 或 Root
+                            // v2.9 游戏帧率（全机型）：非华为用应用权限直写，华为/荣耀走 ADB 或 Root
                             ADBDestination.GameFrameRate -> com.example.adbtoolbox.common.ui.GameFrameRateScreen(
                                 backdrop = backdrop,
                                 contentColor = contentColor,
@@ -274,14 +286,14 @@ fun MainContent() {
                                 },
                                 onOpenUsageAccess = { AppCache.openUsageAccessTrigger.value++ }
                             )
-                            // v2.8 手机体检（指令可用性检查员）
+                            // v2.9 手机体检（指令可用性检查员）
                             ADBDestination.PhoneInspector -> com.example.adbtoolbox.common.ui.PhoneInspectorScreen(
                                 backdrop = backdrop,
                                 contentColor = contentColor,
                                 onBack = { currentDestination = ADBDestination.Home },
                                 onOpenBoost = { currentDestination = ADBDestination.PerformanceBoost }
                             )
-                            // v2.8 华为深度优化（HarmonyOS / EMUI 专属）
+                            // v2.9 华为深度优化（HarmonyOS / EMUI 专属）
                             ADBDestination.HuaweiBoost -> com.example.adbtoolbox.common.ui.HuaweiBoostScreen(
                                 backdrop = backdrop,
                                 contentColor = contentColor,
@@ -291,7 +303,7 @@ fun MainContent() {
                                     currentDestination = ADBDestination.Terminal
                                 }
                             )
-                            // v2.8 已安装 Root 模块管理（此前 RootModuleManager.getInstalledModules() 没有任何 UI 调用者）
+                            // v2.9 已安装 Root 模块管理（此前 RootModuleManager.getInstalledModules() 没有任何 UI 调用者）
                             ADBDestination.RootModules -> com.example.adbtoolbox.common.ui.RootModuleScreen(
                                 backdrop = backdrop,
                                 contentColor = contentColor,

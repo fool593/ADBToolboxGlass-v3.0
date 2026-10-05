@@ -1914,6 +1914,178 @@ actual object ADBTools {
     }
 
     /**
+     * 把本机文件推到 /data/local/tmp 并 chmod 755。
+     *
+     * 与临时提权包用的是同一套做法：分块 base64 追加写入，最后 `wc -c` 校验字节数，
+     * 避免"看着成功、其实文件写坏了"（内核 exploit 二进制写坏后执行会直接段错误）。
+     */
+    actual fun pushLocalFileToTemp(localPath: String, remoteName: String): CommandResult {
+        // 远端文件名只保留安全字符，防止路径穿越/命令注入
+        val safeName = remoteName.replace(Regex("[^A-Za-z0-9._-]"), "_").take(64)
+        if (safeName.isBlank() || safeName == "." || safeName == "..") {
+            return CommandResult("", "invalid remote name", 1)
+        }
+        val local = java.io.File(localPath)
+        if (!local.isFile || local.length() <= 0L) {
+            return CommandResult("", "local file missing or empty: $localPath", 1)
+        }
+        val remotePath = "/data/local/tmp/$safeName"
+        val err = pushFileRaw(local, remotePath)
+        if (err != null) return CommandResult("", err, 1)
+        val chmod = execCommand("chmod 755 ${shq(remotePath)}", timeout = 30)
+        if (chmod.exitCode != 0) {
+            return CommandResult(remotePath, "chmod failed: ${reasonOfResult(chmod)}", 1)
+        }
+        return CommandResult(remotePath, "", 0)
+    }
+
+    /**
+     * 准备并推送一整套"内核提权工具包"到设备，返回**入口文件的远端路径**。
+     *
+     * 为什么需要它：公开的内核提权套件（例如 GhostLock / CVE-2026-43499 的各机型移植）
+     * 通常不是单个二进制，而是一个压缩包，里面同时有可执行文件、shell 脚本和说明文件，
+     * 需要整体推上去、全部给可执行权限、再执行其中某一个入口脚本。
+     *
+     * 行为：
+     * - 传 zip：在本机解压（不依赖设备端 unzip）→ 整体推送 → chmod 755 → 入口取
+     *   run.sh / root.sh / start.sh / install.sh / exploit，都没有就取唯一的那个可执行文件；
+     * - 传单个文件：直接推送并作为入口。
+     * 每个文件都会做字节数校验；任何一步失败都如实返回原因，不做"部分成功"的假象。
+     */
+    actual fun prepareAndPushKit(localPath: String, remoteDirName: String): CommandResult {
+        val local = java.io.File(localPath)
+        if (!local.isFile || local.length() <= 0L) {
+            return CommandResult("", "local file missing or empty: $localPath", 1)
+        }
+        val safeDir = remoteDirName.replace(Regex("[^A-Za-z0-9._-]"), "_").take(40)
+        if (safeDir.isBlank() || safeDir == "." || safeDir == "..") {
+            return CommandResult("", "invalid remote dir name", 1)
+        }
+        val remoteDir = "/data/local/tmp/$safeDir"
+        val isZip = local.name.lowercase().endsWith(".zip")
+
+        // ---------- 1) 本机准备 ----------
+        var stageDir = local.parentFile
+        var entryName = local.name
+        if (isZip) {
+            val outDir = java.io.File(appContext.cacheDir, "kx_kit_${System.currentTimeMillis()}")
+            if (!outDir.mkdirs() && !outDir.isDirectory) {
+                return CommandResult("", "cannot create staging dir", 1)
+            }
+            val unzipError = unzipInto(local, outDir)
+            if (unzipError != null) return CommandResult("", unzipError, 1)
+            stageDir = outDir
+            val picked = pickKitEntry(outDir)
+                ?: return CommandResult("", "kit has no runnable entry (no script and no file)", 1)
+            entryName = picked
+        }
+        val files = stageDir?.listFiles()?.filter { it.isFile } ?: emptyList()
+        if (files.isEmpty()) return CommandResult("", "kit has no files", 1)
+
+        // ---------- 2) 推送 ----------
+        val mk = execCommand("mkdir -p ${shq(remoteDir)}", timeout = 30)
+        if (mk.exitCode != 0) {
+            return CommandResult("", "cannot create $remoteDir: ${reasonOfResult(mk)}", 1)
+        }
+        files.forEach { f ->
+            val remotePath = if (isZip) "$remoteDir/${f.name}" else "$remoteDir/${local.name}"
+            val err = pushFileRaw(f, remotePath)
+            if (err != null) return CommandResult("", "push ${f.name} failed: $err", 1)
+        }
+        // ---------- 3) 全部给可执行权限（脚本与 ELF 都要） ----------
+        execCommand("chmod -R 755 ${shq(remoteDir)} 2>/dev/null", timeout = 30)
+        val remoteEntry = "$remoteDir/$entryName"
+        val listing = execCommand("ls -l ${shq(remoteDir)}", timeout = 30).output.trim()
+        return CommandResult(remoteEntry, "", 0).copy(output = remoteEntry + "\n" + listing)
+    }
+
+    /** 单引号包裹 + 内部单引号转义，供 shell 使用。 */
+    private fun shq(s: String): String = "'" + s.replace("'", "'\\''") + "'"
+
+    private fun reasonOfResult(r: CommandResult): String =
+        listOf(r.error, r.output).firstOrNull { it.isNotBlank() }?.trim().orEmpty()
+
+    /**
+     * 把一个本地文件分块 base64 追加写到设备路径，最后按字节数校验。
+     * 返回 null 表示成功，否则是真实失败原因。抽出来是因为推送单个文件与推送整套 kit 都要用。
+     */
+    private fun pushFileRaw(local: java.io.File, remotePath: String): String? {
+        val remove = execCommand("rm -f ${shq(remotePath)}", timeout = 30)
+        if (remove.exitCode != 0) {
+            return reasonOfResult(remove).ifBlank { "cannot create $remotePath" }
+        }
+        val bytes = try {
+            local.readBytes()
+        } catch (e: Exception) {
+            return "${e.javaClass.simpleName}: ${e.message}"
+        }
+        var offset = 0
+        while (offset < bytes.size) {
+            val end = minOf(offset + 64 * 1024, bytes.size)
+            val encoded = Base64.encodeToString(bytes.copyOfRange(offset, end), Base64.NO_WRAP)
+            val write = execCommand(
+                "printf '%s' ${shq(encoded)} | base64 -d >> ${shq(remotePath)}",
+                timeout = 60
+            )
+            if (write.exitCode != 0) {
+                val why = reasonOfResult(write)
+                val lower = why.lowercase()
+                if (lower.contains("not found") || lower.contains("inaccessible") ||
+                    lower.contains("no such file")
+                ) {
+                    return AppStrings.get("device_no_base64")
+                }
+                return why.ifBlank { "exit=${write.exitCode}" }
+            }
+            offset = end
+        }
+        val sizeCheck = execCommand("wc -c < ${shq(remotePath)}", timeout = 30)
+        val remoteSize = sizeCheck.output.trim().toLongOrNull()
+        if (remoteSize == null || remoteSize != local.length()) {
+            return "size mismatch: local=${local.length()} remote=${sizeCheck.output.trim().ifBlank { "?" }}"
+        }
+        return null
+    }
+
+    /** 把 zip 解压到 [outDir]；成功返回 null。逐条校验路径，拒绝越界解压。 */
+    private fun unzipInto(zip: java.io.File, outDir: java.io.File): String? {
+        return try {
+            java.util.zip.ZipFile(zip).use { zf ->
+                val outCanonical = outDir.canonicalPath
+                zf.entries().asSequence().forEach { entry ->
+                    if (entry.isDirectory) return@forEach
+                    val target = java.io.File(outDir, entry.name)
+                    if (!target.canonicalPath.startsWith(outCanonical + java.io.File.separator)) {
+                        return "zip entry escapes target dir: ${entry.name}"
+                    }
+                    target.parentFile?.mkdirs()
+                    zf.getInputStream(entry).use { input ->
+                        target.outputStream().use { output -> input.copyTo(output) }
+                    }
+                }
+            }
+            null
+        } catch (e: Exception) {
+            "${e.javaClass.simpleName}: ${e.message}"
+        }
+    }
+
+    /** 选入口：常见脚本名优先，其次名为 exploit/root/ghostlock 的文件，最后是唯一的文件。 */
+    private fun pickKitEntry(dir: java.io.File): String? {
+        val all = dir.listFiles()?.filter { it.isFile } ?: return null
+        if (all.isEmpty()) return null
+        val preferred = listOf("run.sh", "root.sh", "start.sh", "install.sh", "exploit", "root")
+        preferred.forEach { name ->
+            all.firstOrNull { it.name.equals(name, ignoreCase = true) }?.let { return it.name }
+        }
+        all.firstOrNull { it.name.contains("ghostlock", true) || it.name.contains("ghost", true) }
+            ?.let { return it.name }
+        if (all.size == 1) return all.first().name
+        all.firstOrNull { it.name.endsWith(".sh") }?.let { return it.name }
+        return all.first().name
+    }
+
+    /**
      * 强制结束所有第三方后台进程，保留本应用、系统关键进程与[保留白名单]。
      * 这是"一键关闭后台"的核心实现：
      *  1) ActivityManager.killBackgroundProcesses（无需 Root，能覆盖部分包）

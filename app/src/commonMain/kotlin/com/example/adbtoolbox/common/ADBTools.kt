@@ -152,6 +152,32 @@ expect object ADBTools {
     /** 读回某个游戏的 game_overlay 配置，用于如实校验；无配置返回空串。 */
     fun getGameOverlayFps(packageName: String): String
 
+    // ---------------- 内核提权（运行用户自备的 exploit） ----------------
+
+    /**
+     * 把本机上的一个文件推送到设备 `/data/local/tmp/<remoteName>` 并 `chmod 755`。
+     *
+     * 用途：内核提权 exploit 通常是 GitHub 上编译好的 arm64 可执行文件，需要先推上设备再执行。
+     * 走的是与临时提权包相同的"分块 base64 追加 + 字节数校验"方式，
+     * **不依赖设备端是否有 unzip**；校验不通过会如实返回失败，不会假装推送成功。
+     *
+     * 返回值 [CommandResult.output] 为远端路径（成功时），失败时 error 里是真实原因。
+     * 本应用**不内置、不下载任何 exploit**，只负责把用户自己选择的文件送上去。
+     */
+    fun pushLocalFileToTemp(localPath: String, remoteName: String): CommandResult
+
+    /**
+     * 准备并推送**一整套** exploit 工具包（zip 或单个文件）到设备，返回入口文件的远端路径。
+     *
+     * 公开的内核提权套件（例如 GhostLock / CVE-2026-43499 的各机型移植）多是一个压缩包，
+     * 内含可执行文件 + shell 脚本 + 说明文件，需要整体推送、统一给可执行权限、再执行入口脚本。
+     * 传 zip 时在本机解压（不依赖设备端 unzip），入口优先取 run.sh / root.sh / start.sh /
+     * install.sh / exploit，其次带 ghost/ghostlock 字样的文件，最后取唯一文件。
+     *
+     * 返回值 [CommandResult.output] 首行为入口远端路径，其后是设备上的文件清单（便于核对）。
+     */
+    fun prepareAndPushKit(localPath: String, remoteDirName: String): CommandResult
+
     /**
      * 强制结束全部后台进程（保留前台与本应用），等效厂商"一键清理"。
      * 返回被结束的包名列表。

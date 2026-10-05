@@ -301,6 +301,37 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
+            // 内核提权：选择用户自备的 exploit / 工具包。
+            // 用 */* 是因为 ELF 可执行文件没有标准 MIME，用具体类型会选不到。
+            // 选中的文件复制到应用私有目录再使用，避免拿不到 content:// 的读取权限。
+            val kernelExploitPicker = rememberLauncherForActivityResult(
+                contract = ActivityResultContracts.GetContent()
+            ) { uri: Uri? ->
+                if (uri != null) {
+                    try {
+                        val dir = java.io.File(cacheDir, "kx")
+                        if (!dir.exists()) dir.mkdirs()
+                        val name = "kit_${System.currentTimeMillis()}.bin"
+                        val target = java.io.File(dir, name)
+                        contentResolver.openInputStream(uri)?.use { input ->
+                            target.outputStream().use { output -> input.copyTo(output) }
+                        }
+                        if (target.exists() && target.length() > 0) {
+                            AppCache.selectedKernelExploitPath.value = target.absolutePath
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+            }
+            val kernelExploitTrigger by androidx.compose.runtime.rememberUpdatedState(AppCache.pickKernelExploitTrigger.value)
+            LaunchedEffect(kernelExploitTrigger) {
+                if (kernelExploitTrigger > 0) {
+                    AppCache.pickKernelExploitTrigger.value = 0
+                    kernelExploitPicker.launch("*/*")
+                }
+            }
+
             // 自定义开屏动画视频选择器
             val splashPicker = rememberLauncherForActivityResult(
                 contract = ActivityResultContracts.GetContent()

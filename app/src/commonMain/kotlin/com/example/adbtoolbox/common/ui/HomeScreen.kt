@@ -169,23 +169,28 @@ fun HomeScreen(
             QuickActionButton(backdrop, AppStrings.get("temp_root"), Color(0xFFFF9500), contentColor, Modifier.weight(1f)) { onNavigate(ADBDestination.TempRoot) }
             QuickActionButton(backdrop, AppStrings.get("huawei_boost"), AppTheme.accent, contentColor, Modifier.weight(1f)) { onNavigate(ADBDestination.HuaweiBoost) }
         }
-        // v2.8 新增：机型分类优化（每个品牌独立分类入口，独占一行避免与其它入口挤在一起）
+        // v2.9 新增：机型分类优化（每个品牌独立分类入口，独占一行避免与其它入口挤在一起）
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12f.dp)) {
             QuickActionButton(backdrop, AppStrings.get("brand_perf_entry"), Color(0xFFFF9500), contentColor, Modifier.weight(1f)) { onNavigate(ADBDestination.BrandPerf) }
         }
-        // v2.8 新增：游戏帧率（全机型）+ 已安装 Root 模块管理
+        // v2.9 新增：游戏帧率（全机型）+ 已安装 Root 模块管理
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12f.dp)) {
             QuickActionButton(backdrop, AppStrings.get("game_frame_rate"), Color(0xFF34C759), contentColor, Modifier.weight(1f)) { onNavigate(ADBDestination.GameFrameRate) }
             QuickActionButton(backdrop, AppStrings.get("installed_root_modules"), AppTheme.accentAlt, contentColor, Modifier.weight(1f)) { onNavigate(ADBDestination.RootModules) }
         }
-        // v2.8 新增：品牌自适应一键性能加速 + 手机体检（配色跟随当前主题）
+        // v2.9 新增：品牌自适应一键性能加速 + 手机体检（配色跟随当前主题）
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12f.dp)) {
             QuickActionButton(backdrop, AppStrings.get("performance_boost"), AppTheme.accent, contentColor, Modifier.weight(1f)) { onNavigate(ADBDestination.PerformanceBoost) }
             QuickActionButton(backdrop, AppStrings.get("phone_inspector"), AppTheme.deep, contentColor, Modifier.weight(1f)) { onNavigate(ADBDestination.PhoneInspector) }
         }
-        // v2.8 新增：还原系统默认设置（性能优化改了整机级设置时的退路）
+        // v2.9 新增：还原系统默认设置（性能优化改了整机级设置时的退路）
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12f.dp)) {
             QuickActionButton(backdrop, AppStrings.get("restore_entry"), Color(0xFFFF3B30), contentColor, Modifier.weight(1f)) { onNavigate(ADBDestination.SystemRestore) }
+        }
+        // v2.9 新增：内核提权（运行自备的公开 exploit，例如 GhostLock）+ 一键 Root 工具
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12f.dp)) {
+            QuickActionButton(backdrop, AppStrings.get("kroot_entry"), Color(0xFFAF52DE), contentColor, Modifier.weight(1f)) { onNavigate(ADBDestination.KernelRoot) }
+            QuickActionButton(backdrop, AppStrings.get("root_tool"), Color(0xFF5856D6), contentColor, Modifier.weight(1f)) { onNavigate(ADBDestination.RootTool) }
         }
         Spacer(Modifier.height(6f.dp))
         BasicText(

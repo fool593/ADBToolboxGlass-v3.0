@@ -38,7 +38,7 @@ import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.catalog.components.LiquidButton
 
 /**
- * v2.8 机型独立分类入口。
+ * v2.9 机型独立分类入口。
  *
  * 用户要求「每个机型的独立分类，而不是一个仅用于性能加速的选项，比如 vivo iQOO 性能优化、
  * 小米红米性能优化必须分开来使用」，本页就是这条要求的入口：一个品牌一张卡，

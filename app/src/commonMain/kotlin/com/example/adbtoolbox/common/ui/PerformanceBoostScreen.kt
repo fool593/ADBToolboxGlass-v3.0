@@ -53,14 +53,14 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * v2.8 品牌自适应一键性能加速。
+ * v2.9 品牌自适应一键性能加速。
  *
  * 与"普通 ADB 指令"的区别：
  * - 先识别本机品牌/ROM，再匹配该品牌真实存在的 settings/cmd 接口；
  * - 每条指令都能展开看到原文，执行结果逐条回显 stdout/stderr，失败不静默；
  * - "一键关闭后台"是单独的真实实现（ActivityManager + am force-stop + trim-caches）。
  *
- * 列表结构（v2.8 用户要求）：
+ * 列表结构（v2.9 用户要求）：
  * - 按**提权通道**分成两个区块：`Root 专属` 与 `ADB / Shizuku 可用`，各自标题、条数、
  *   全选/清空按钮，绝不混在一段里（判定统一走 [PerfChannels]）；
  * - 每个通道区块内部再按原有的 [BrandDatabase.categories] 分类分段，既有分类与条目一条都没删。
