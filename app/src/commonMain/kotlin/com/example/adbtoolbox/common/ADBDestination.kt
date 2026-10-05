@@ -33,5 +33,11 @@ enum class ADBDestination {
      * v2.8 首次启动的设置向导（欢迎 → 主题 → 权限 → 完成）。
      * 只在首次启动（[com.example.adbtoolbox.common.AppSettings.onboardingDone] 为 false）时作为初始页面。
      */
-    Onboarding
+    Onboarding,
+    /**
+     * v2.8 还原所有系统默认设置。
+     * 性能优化里有整机级改动（后台策略、Doze、被禁用的厂商组件、刷新率、动画缩放），
+     * 这个页面提供一条明确、可验证的退路。
+     */
+    SystemRestore
 }

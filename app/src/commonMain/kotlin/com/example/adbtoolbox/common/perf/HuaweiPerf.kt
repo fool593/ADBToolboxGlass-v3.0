@@ -1,6 +1,7 @@
 package com.example.adbtoolbox.common.perf
 
 import com.example.adbtoolbox.common.ADBTools
+import com.example.adbtoolbox.common.AppStrings
 import com.example.adbtoolbox.common.CommandResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -916,15 +917,41 @@ object HuaweiPerf {
     // ============================================================ 执行
 
     private fun runOneInternal(method: HuaweiMethod, info: HuaweiDeviceInfo): HuaweiRunResult {
-        val command = resolveCommand(method, info)
+        val rawCommand = resolveCommand(method, info)
+        // 与 PerfRunner 同一道安全闸门：摘掉会破坏系统后台/权限入口的语句（详见 PerfSafety）
+        val safe = PerfSafety.sanitize(rawCommand)
+        val command = safe.command
+        if (command.isBlank()) {
+            return HuaweiRunResult(
+                id = method.id,
+                titleKey = method.titleKey,
+                command = rawCommand,
+                exitCode = 1,
+                stdout = "",
+                stderr = buildString {
+                    append(AppStrings.get("perf_safety_all_blocked"))
+                    safe.blocked.forEachIndexed { i, seg ->
+                        append("\n").append(AppStrings.get("perf_safety_skipped")).append(": ")
+                        append(seg).append(" (").append(safe.reasons[i]).append(")")
+                    }
+                },
+                durationMs = 0L,
+                marker = ""
+            )
+        }
         val started = System.currentTimeMillis()
         val raw = safeExec(command, method.timeoutSec)
+        val blockedNote = if (safe.hasBlocked) {
+            safe.blocked.mapIndexed { i, seg ->
+                "${AppStrings.get("perf_safety_skipped")}: $seg (${safe.reasons[i]})"
+            }.joinToString("\n")
+        } else ""
         return HuaweiRunResult(
             id = method.id,
             titleKey = method.titleKey,
             command = command,
             exitCode = raw.exitCode,
-            stdout = raw.output,
+            stdout = listOf(raw.output, blockedNote).filter { it.isNotBlank() }.joinToString("\n"),
             stderr = raw.error,
             durationMs = System.currentTimeMillis() - started,
             marker = method.marker

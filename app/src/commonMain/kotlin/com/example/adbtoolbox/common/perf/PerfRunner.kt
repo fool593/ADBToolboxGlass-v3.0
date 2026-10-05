@@ -163,12 +163,35 @@ object PerfRunner {
         items.forEachIndexed { i, item ->
             onProgress(i + 1, items.size, item)
             val result = try {
-                val cmd = resolveCommand(item, info)
-                if (cmd.isBlank() || cmd == "echo NOANALYTICS") {
+                val rawCmd = resolveCommand(item, info)
+                // 安全闸门：摘掉会破坏系统后台/权限入口的语句（详见 PerfSafety）。
+                // 被摘掉的原文与原因会写进执行结果，界面如实展示"跳过了什么"，不假装成功。
+                val safe = PerfSafety.sanitize(rawCmd)
+                val cmd = safe.command
+                val blockedNote = if (safe.hasBlocked) {
+                    safe.blocked.mapIndexed { idx, seg ->
+                        "${AppStrings.get("perf_safety_skipped")}: $seg (${safe.reasons[idx]})"
+                    }.joinToString("\n")
+                } else ""
+                if (cmd.isBlank()) {
+                    val reason = if (safe.hasBlocked) {
+                        "${AppStrings.get("perf_safety_all_blocked")}\n$blockedNote"
+                    } else {
+                        "该品牌在本机没有可用的对应指令"
+                    }
+                    PerfRunResult(item.id, item.nameKey, rawCmd, 1, "", reason)
+                } else if (cmd == "echo NOANALYTICS") {
                     PerfRunResult(item.id, item.nameKey, cmd, 1, "", "该品牌在本机没有可用的对应指令")
                 } else {
                     val r = ADBTools.execPerfCommand(cmd, timeout = commandTimeout(item))
-                    PerfRunResult(item.id, item.nameKey, cmd, r.exitCode, r.output, r.error)
+                    PerfRunResult(
+                        item.id,
+                        item.nameKey,
+                        cmd,
+                        r.exitCode,
+                        listOf(r.output, blockedNote).filter { it.isNotBlank() }.joinToString("\n"),
+                        r.error
+                    )
                 }
             } catch (e: Exception) {
                 PerfRunResult(item.id, item.nameKey, item.command, -1, "", "${e.javaClass.simpleName}: ${e.message}")

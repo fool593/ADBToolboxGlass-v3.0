@@ -183,6 +183,16 @@ fun HomeScreen(
             QuickActionButton(backdrop, AppStrings.get("performance_boost"), AppTheme.accent, contentColor, Modifier.weight(1f)) { onNavigate(ADBDestination.PerformanceBoost) }
             QuickActionButton(backdrop, AppStrings.get("phone_inspector"), AppTheme.deep, contentColor, Modifier.weight(1f)) { onNavigate(ADBDestination.PhoneInspector) }
         }
+        // v2.8 新增：还原系统默认设置（性能优化改了整机级设置时的退路）
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12f.dp)) {
+            QuickActionButton(backdrop, AppStrings.get("restore_entry"), Color(0xFFFF3B30), contentColor, Modifier.weight(1f)) { onNavigate(ADBDestination.SystemRestore) }
+        }
+        Spacer(Modifier.height(6f.dp))
+        BasicText(
+            "· " + AppStrings.get("restore_remind_perf"),
+            Modifier.padding(horizontal = 4.dp),
+            style = TextStyle(contentColor.copy(alpha = 0.55f), 11.sp)
+        )
 
         Spacer(Modifier.height(16f.dp))
     }

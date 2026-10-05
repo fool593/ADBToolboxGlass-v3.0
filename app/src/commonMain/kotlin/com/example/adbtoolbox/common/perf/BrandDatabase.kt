@@ -328,6 +328,11 @@ object BrandDatabase {
                     "dumpsys deviceidle disable 2>/dev/null; echo SAVEROFF",
             category = "power",
             requiresPermission = "shizuku",
+            // `dumpsys deviceidle disable` 会让整机不再进入 Doze（后台更自由，但耗电明显上升），
+            // 属于整机级策略改动：默认不勾选，并给出可用的恢复命令。
+            risk = "caution",
+            defaultSelected = false,
+            toggleOffCommand = "dumpsys deviceidle enable 2>/dev/null; echo SAVEON",
             order = 80
         ),
         PerfItem(
@@ -472,10 +477,15 @@ object BrandDatabase {
             id = "mi_kill_background",
             nameKey = "perf_item_mi_kill_background",
             descKey = "perf_item_mi_kill_background_desc",
-            command = "settings put global background_process_limit 0; " +
-                    "am kill-all; echo MI2DONE",
+            // 这里**不再写** `settings put global background_process_limit 0`：
+            // 那是整机级的后台进程上限，写 0 等于不许任何后台进程存在，会让系统设置里
+            // "允许后台无限制运行"这类入口失去意义，通知也可能收不到，用户还很难改回来。
+            // 只保留一次性的 am kill-all（不写任何持久设置）。
+            command = "am kill-all; echo MI2DONE",
             category = "brand",
             requiresPermission = "shizuku",
+            risk = "caution",
+            defaultSelected = false,
             order = 205
         ),
         PerfItem(

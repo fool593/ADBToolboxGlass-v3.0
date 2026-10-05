@@ -164,67 +164,29 @@ object UniversalTuning {
             minSdk = 14,
             timeoutMs = 60000
         ),
-        u(
-            id = "bg_standby_bucket_rare",
-            order = 144,
-            command = "for p in com.android.chrome com.android.vending com.facebook.katana " +
-                    "com.tencent.mm com.tencent.mobileqq com.taobao.taobao com.eg.android.AlipayGphone " +
-                    "com.ss.android.ugc.aweme com.sina.weibo com.netease.cloudmusic com.ximalaya.ting.android " +
-                    "com.zhihu.android com.baidu.BaiduMap com.autonavi.minimap com.smile.gifmaker; do " +
-                    "pm list packages 2>/dev/null | grep -q \"package:${'$'}p\" && " +
-                    "am set-standby-bucket \"${'$'}p\" rare 2>/dev/null; done; " +
-                    "echo \"mm=$(am get-standby-bucket com.tencent.mm 2>/dev/null)\"",
-            verifyCommand = "am help 2>&1 | grep -m1 set-standby-bucket",
-            verifyExpect = "set-standby-bucket",
-            rollbackCommand = "for p in com.tencent.mm com.taobao.taobao com.ss.android.ugc.aweme; do " +
-                    "am set-standby-bucket \"${'$'}p\" active 2>/dev/null; done",
-            requiresPermission = PERM_SHIZUKU,
-            risk = RISK_CAUTION,
-            defaultSelected = false,
-            minSdk = 28,
-            timeoutMs = 45000
-        ),
-        u(
-            id = "bg_standby_bucket_extreme",
-            order = 146,
-            command = "for p in com.tencent.mm com.taobao.taobao com.ss.android.ugc.aweme " +
-                    "com.eg.android.AlipayGphone com.android.chrome; do " +
-                    "pm list packages 2>/dev/null | grep -q \"package:${'$'}p\" && " +
-                    "am set-standby-bucket \"${'$'}p\" restricted 2>/dev/null; done; " +
-                    "echo \"mm=$(am get-standby-bucket com.tencent.mm 2>/dev/null)\"",
-            verifyCommand = "am help 2>&1 | grep -m1 set-standby-bucket",
-            verifyExpect = "set-standby-bucket",
-            rollbackCommand = "for p in com.tencent.mm com.taobao.taobao com.ss.android.ugc.aweme " +
-                    "com.eg.android.AlipayGphone com.android.chrome; do " +
-                    "am set-standby-bucket \"${'$'}p\" active 2>/dev/null; done",
-            requiresPermission = PERM_SHIZUKU,
-            risk = RISK_CAUTION,
-            defaultSelected = false,
-            isDisableAction = true,
-            minSdk = 28,
-            uncertain = true,
-            timeoutMs = 45000
-        ),
-        u(
-            id = "bg_restrict_background_appops",
-            order = 148,
-            command = "pm list packages -3 2>/dev/null | sed -n 's/^package://p' | head -n 60 | " +
-                    "while read -r p; do cmd appops set \"${'$'}p\" RUN_IN_BACKGROUND deny 2>/dev/null; " +
-                    "cmd appops set \"${'$'}p\" RUN_ANY_IN_BACKGROUND deny 2>/dev/null; done; " +
-                    "echo \"mm=$(cmd appops get com.tencent.mm RUN_ANY_IN_BACKGROUND 2>/dev/null | tr -s ' ')\"",
-            verifyCommand = "cmd appops help 2>&1 | grep -m1 RUN_ANY_IN_BACKGROUND",
-            verifyExpect = "RUN_ANY_IN_BACKGROUND",
-            rollbackCommand = "pm list packages -3 2>/dev/null | sed -n 's/^package://p' | head -n 60 | " +
-                    "while read -r p; do cmd appops set \"${'$'}p\" RUN_IN_BACKGROUND allow 2>/dev/null; " +
-                    "cmd appops set \"${'$'}p\" RUN_ANY_IN_BACKGROUND allow 2>/dev/null; done",
-            requiresPermission = PERM_SHIZUKU,
-            risk = RISK_CAUTION,
-            // 保守：会明显延迟第三方应用通知，交给用户显式勾选，不放进默认一键加速。
-            defaultSelected = false,
-            isDisableAction = true,
-            minSdk = 21,
-            timeoutMs = 45000
-        ),
+        // ------------------------------------------------------------------
+        // 已移除：bg_standby_bucket_rare / bg_standby_bucket_extreme
+        //
+        // 这两条会把微信、QQ、淘宝、支付宝、抖音、Chrome 等常用应用（最多 15 个）的待机桶
+        // 设成 rare / restricted。后果与"限制后台"是同一类：这些应用收不到消息或严重延迟，
+        // 用户会以为手机坏了，也很难意识到是"性能优化"干的。
+        //
+        // 性能优化不该用牺牲消息可达性来换内存数字。已经执行过的用户可以在
+        // 「还原系统默认设置」里用"恢复常用应用的待机桶"把它们的 bucket 改回 active。
+        // ------------------------------------------------------------------
+        // ------------------------------------------------------------------
+        // 已移除：bg_restrict_background_appops（遍历最多 60 个第三方应用，
+        // 逐个写入 `cmd appops set <包> RUN_IN_BACKGROUND deny` /
+        // `RUN_ANY_IN_BACKGROUND deny`）。
+        //
+        // 移除原因（用户反馈的严重问题）：这一条会把**所有第三方应用**的后台运行权限直接拒绝，
+        // 结果是系统设置里"允许后台无限制运行"这类开关全部变成受限/失效、通知大面积延迟或收不到，
+        // 而用户几乎不可能知道是哪个操作造成的，也很难逐个改回来。
+        // 即使它默认不勾选，这种"一次改动影响全机所有应用"的条目也不该存在于性能优化里。
+        //
+        // 已经执行过它的用户，可以在「还原系统默认设置」里用
+        // "恢复所有应用的后台运行权限" 这一步把 appops 改回 allow（见 SystemRestore）。
+        // ------------------------------------------------------------------
         u(
             id = "bg_deviceidle_whitelist_core",
             order = 150,

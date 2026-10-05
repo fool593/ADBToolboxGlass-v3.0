@@ -139,6 +139,12 @@ fun MainContent() {
                                     currentDestination = ADBDestination.Home
                                 }
                             )
+                            // v2.8 还原所有系统默认设置（性能优化的退路，含提醒与真实回读）
+                            ADBDestination.SystemRestore -> com.example.adbtoolbox.common.ui.SystemRestoreScreen(
+                                backdrop = backdrop,
+                                contentColor = contentColor,
+                                onBack = { currentDestination = ADBDestination.Home }
+                            )
                             ADBDestination.Home -> HomeScreen(
                                 backdrop = backdrop,
                                 contentColor = contentColor,
