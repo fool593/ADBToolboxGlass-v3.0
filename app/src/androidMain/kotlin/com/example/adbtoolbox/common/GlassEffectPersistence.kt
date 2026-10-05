@@ -135,6 +135,8 @@ actual object GlassEffectPersistence {
         editor.putString("app_theme", AppSettings.themeId)
         editor.putBoolean("app_theme_chosen", AppSettings.themeChosenByUser)
         editor.putBoolean("app_theme_user_overrode", AppSettings.themeUserOverrode)
+        // 首次设置向导是否已完成（完成或跳过都算已完成，不会每次启动都弹）
+        editor.putBoolean("app_onboarding_done", AppSettings.onboardingDone)
 
         editor.apply()
     }
@@ -155,6 +157,7 @@ actual object GlassEffectPersistence {
         val savedTheme = prefs.getString("app_theme", null)
         AppSettings.themeChosenByUser = prefs.getBoolean("app_theme_chosen", false)
         AppSettings.themeUserOverrode = prefs.getBoolean("app_theme_user_overrode", false)
+        AppSettings.onboardingDone = prefs.getBoolean("app_onboarding_done", false)
         if (savedTheme != null) AppSettings.themeId = savedTheme
 
         val config = GlassEffectConfig

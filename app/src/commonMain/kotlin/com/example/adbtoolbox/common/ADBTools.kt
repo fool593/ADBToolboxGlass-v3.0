@@ -123,6 +123,35 @@ expect object ADBTools {
      */
     fun setRefreshRateDirect(target: Float): Boolean
 
+    // ---------------- 游戏帧率：按游戏单独设置所需的能力 ----------------
+
+    /**
+     * 列出本机**被系统标记为游戏**的应用（`ApplicationInfo.category == CATEGORY_GAME`）。
+     * [includeAll] 为 true 时返回全部已安装应用，方便给没被正确分类的游戏手动指定。
+     * 只做真实枚举，不做任何猜测。
+     */
+    fun listGameApps(includeAll: Boolean = false): List<GameAppInfo>
+
+    /** 是否已授予「使用情况访问」权限（按游戏自动切换帧率需要它来判断前台应用）。 */
+    fun hasUsageAccess(): Boolean
+
+    /** 「使用情况访问」授权页的 Intent action。 */
+    fun usageAccessSettingsAction(): String
+
+    /** 当前前台应用包名；没有权限或读不到时返回空串。 */
+    fun getForegroundPackage(): String
+
+    /**
+     * 系统级"按游戏限制帧率"（Android 13+ 的 GameManagerService game_overlay）。
+     * [fps] <= 0 表示清除该游戏的覆盖配置。
+     * 需要 shell / Root（`device_config` 是受保护命令），因此这条**只作为有提权时的增强项**，
+     * 没有提权时界面不会假装能用。
+     */
+    fun setGameOverlayFps(packageName: String, fps: Int): CommandResult
+
+    /** 读回某个游戏的 game_overlay 配置，用于如实校验；无配置返回空串。 */
+    fun getGameOverlayFps(packageName: String): String
+
     /**
      * 强制结束全部后台进程（保留前台与本应用），等效厂商"一键清理"。
      * 返回被结束的包名列表。
@@ -167,6 +196,19 @@ data class DeviceInfoData(
     val isRooted: Boolean,
     val isAdbEnabled: Boolean,
     val refreshRate: String = "Unknown"
+)
+
+/**
+ * 用于"按游戏设置帧率"的应用条目。
+ *
+ * [isGame] 表示系统把它归类为游戏（`ApplicationInfo.category == CATEGORY_GAME`）；
+ * 用户开启"显示全部应用"时列表里会出现 isGame=false 的条目，用于给分类不准的游戏手动指定。
+ */
+data class GameAppInfo(
+    val packageName: String,
+    val label: String,
+    val isGame: Boolean,
+    val isSystem: Boolean
 )
 
 data class AppInfoData(

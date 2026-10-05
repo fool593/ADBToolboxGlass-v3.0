@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.verticalScroll
@@ -27,6 +28,7 @@ import com.example.adbtoolbox.common.ADBTools
 import com.example.adbtoolbox.common.AppCache
 import com.example.adbtoolbox.common.AppStrings
 import com.example.adbtoolbox.common.DeviceInfoData
+import com.example.adbtoolbox.common.theme.AppLayout
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.catalog.components.LiquidButton
 import kotlinx.coroutines.Dispatchers
@@ -90,18 +92,19 @@ fun DeviceInfoScreen(
         Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16f.dp)
+            .padding(horizontal = AppLayout.screenH)
     ) {
-        Spacer(Modifier.height(24f.dp))
+        Spacer(Modifier.height(AppLayout.screenTop))
         Row(verticalAlignment = Alignment.CenterVertically) {
             GlassBackButton(backdrop = backdrop, contentColor = contentColor, onBack = onBack)
-            Spacer(Modifier.height(12f.dp))
-            BasicText(AppStrings.get("device_info"), style = TextStyle(contentColor, 24f.sp, androidx.compose.ui.text.font.FontWeight.Bold))
+            // 返回按钮与标题之间是水平间距：以前误用 height，标题会贴死按钮
+            Spacer(Modifier.width(AppLayout.headerGap))
+            BasicText(AppStrings.get("device_info"), style = TextStyle(contentColor, AppLayout.titleSize, androidx.compose.ui.text.font.FontWeight.Bold))
         }
-        Spacer(Modifier.height(16f.dp))
+        Spacer(Modifier.height(AppLayout.sectionGap))
 
         GlassCard(backdrop = backdrop, pageType = "home") {
-            Column(Modifier.padding(20f.dp)) {
+            Column(Modifier.padding(AppLayout.cardPad)) {
                 SectionTitle(AppStrings.get("device_info"), contentColor)
                 deviceInfo?.let { info ->
                     InfoRow(AppStrings.get("model"), info.model, contentColor)
@@ -122,7 +125,7 @@ fun DeviceInfoScreen(
 
         // 刷新率：显示真实测量值，并在被锁 60Hz 时提供一键修复
         GlassCard(backdrop = backdrop, pageType = "home") {
-            Column(Modifier.padding(20f.dp)) {
+            Column(Modifier.padding(AppLayout.cardPad)) {
                 SectionTitle(AppStrings.get("refresh_rate"), contentColor)
                 InfoRow(
                     adbPanelStr("refresh_rate_current", "当前", "Current"),
@@ -143,7 +146,7 @@ fun DeviceInfoScreen(
                     contentColor
                 )
                 if (needFixRefreshRate) {
-                    Spacer(Modifier.height(12f.dp))
+                    Spacer(Modifier.height(AppLayout.innerGap))
                     LiquidButton(
                         onClick = {
                             // 修复中忽略重复点击，避免并发写设置
@@ -184,7 +187,7 @@ fun DeviceInfoScreen(
                             if (fixingRefreshRate) AppStrings.get("executing")
                             else adbPanelStr("fix_refresh_rate", "修复刷新率（解除 60Hz 锁定）", "Fix refresh rate (unlock 60Hz)"),
                             Modifier.padding(horizontal = 8f.dp),
-                            style = TextStyle(Color.White, 14f.sp)
+                            style = TextStyle(Color.White, AppLayout.bodySize)
                         )
                     }
                 }
@@ -195,10 +198,10 @@ fun DeviceInfoScreen(
             }
         }
 
-        Spacer(Modifier.height(16f.dp))
+        Spacer(Modifier.height(AppLayout.sectionGap))
 
         GlassCard(backdrop = backdrop, pageType = "home") {
-            Column(Modifier.padding(20f.dp)) {
+            Column(Modifier.padding(AppLayout.cardPad)) {
                 SectionTitle("${AppStrings.get("storage")} & ${AppStrings.get("memory")}", contentColor)
                 deviceInfo?.let { info ->
                     InfoRow("${AppStrings.get("memory")} (${AppStrings.get("version")})", info.totalMemory, contentColor)
@@ -209,10 +212,10 @@ fun DeviceInfoScreen(
             }
         }
 
-        Spacer(Modifier.height(16f.dp))
+        Spacer(Modifier.height(AppLayout.sectionGap))
 
         GlassCard(backdrop = backdrop, pageType = "home") {
-            Column(Modifier.padding(20f.dp)) {
+            Column(Modifier.padding(AppLayout.cardPad)) {
                 SectionTitle(AppStrings.get("root_status"), contentColor)
                 deviceInfo?.let { info ->
                     InfoRow("${AppStrings.get("battery")} (${AppStrings.get("version")})", "${info.batteryLevel}%", contentColor)
@@ -235,6 +238,6 @@ private fun formatRefreshRate(rate: Float): String {
 
 @Composable
 fun SectionTitle(title: String, contentColor: Color) {
-    BasicText(title, style = TextStyle(contentColor, 16f.sp, androidx.compose.ui.text.font.FontWeight.Medium))
-    Spacer(Modifier.height(12f.dp))
+    BasicText(title, style = TextStyle(contentColor, AppLayout.sectionTitleSize, androidx.compose.ui.text.font.FontWeight.Medium))
+    Spacer(Modifier.height(AppLayout.innerGap))
 }

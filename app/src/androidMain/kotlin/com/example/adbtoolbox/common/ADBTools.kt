@@ -21,6 +21,12 @@ import java.util.concurrent.TimeUnit
 
 lateinit var appContext: Context
 
+/**
+ * 图标字符串缓存上界，与 AppCache 里解码后位图的 LRU 上界（64）保持一致。
+ * 放文件级是因为 ADBTools 是 standalone object，内部不能写 companion object。
+ */
+private const val ICON_CACHE_MAX = 64
+
 actual object ADBTools {
 
     // Shizuku 状态缓存，避免频繁 Binder 调用导致卡顿
@@ -1786,6 +1792,127 @@ actual object ADBTools {
         }
     }
 
+    // ---------------------------------------------------------------- 游戏帧率：按游戏设置
+
+    /**
+     * 列出被系统归类为游戏的应用（`ApplicationInfo.category == CATEGORY_GAME`，API 26+）。
+     * [includeAll] 为 true 时返回全部已安装应用，便于给"没被正确分类"的游戏手动指定。
+     */
+    actual fun listGameApps(includeAll: Boolean): List<GameAppInfo> {
+        return try {
+            val pm = appContext.packageManager
+            @Suppress("DEPRECATION")
+            val apps = pm.getInstalledApplications(android.content.pm.PackageManager.GET_META_DATA)
+            apps.mapNotNull { ai ->
+                val isGame = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                    ai.category == android.content.pm.ApplicationInfo.CATEGORY_GAME
+                } else {
+                    false
+                }
+                if (!includeAll && !isGame) return@mapNotNull null
+                val label = try {
+                    ai.loadLabel(pm).toString()
+                } catch (e: Exception) {
+                    ai.packageName
+                }
+                GameAppInfo(
+                    packageName = ai.packageName,
+                    label = label,
+                    isGame = isGame,
+                    isSystem = (ai.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0
+                )
+            }.sortedWith(compareByDescending<GameAppInfo> { it.isGame }.thenBy { it.label.lowercase() })
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    /** 「使用情况访问」是否已授权（AppOps 的 GET_USAGE_STATS）。 */
+    actual fun hasUsageAccess(): Boolean {
+        return try {
+            val appOps = appContext.getSystemService(android.content.Context.APP_OPS_SERVICE)
+                    as? android.app.AppOpsManager ?: return false
+            @Suppress("DEPRECATION")
+            val mode = appOps.checkOpNoThrow(
+                android.app.AppOpsManager.OPSTR_GET_USAGE_STATS,
+                android.os.Process.myUid(),
+                appContext.packageName
+            )
+            mode == android.app.AppOpsManager.MODE_ALLOWED
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    actual fun usageAccessSettingsAction(): String =
+        android.provider.Settings.ACTION_USAGE_ACCESS_SETTINGS
+
+    /**
+     * 当前前台应用包名（用于"该游戏一进来就切到它配置的帧率"）。
+     * 用 UsageEvents 取最近一次 MOVE_TO_FOREGROUND；没有授权或读不到时返回空串。
+     */
+    actual fun getForegroundPackage(): String {
+        return try {
+            val usm = appContext.getSystemService(android.content.Context.USAGE_STATS_SERVICE)
+                    as? android.app.usage.UsageStatsManager ?: return ""
+            val now = System.currentTimeMillis()
+            val events = usm.queryEvents(now - 60_000L, now) ?: return ""
+            val event = android.app.usage.UsageEvents.Event()
+            var lastPkg = ""
+            var lastTs = 0L
+            while (events.hasNextEvent()) {
+                events.getNextEvent(event)
+                if (event.eventType == android.app.usage.UsageEvents.Event.MOVE_TO_FOREGROUND &&
+                    event.timeStamp >= lastTs
+                ) {
+                    lastTs = event.timeStamp
+                    lastPkg = event.packageName ?: ""
+                }
+            }
+            lastPkg
+        } catch (e: Exception) {
+            ""
+        }
+    }
+
+    /**
+     * 系统级按游戏限制帧率（Android 13+ GameManagerService 的 game_overlay）。
+     * 这是 `device_config` 受保护命令，需要 Shizuku / Root；**写完后一定要回读**：
+     * 不少 ROM 上 device_config 是空实现，只看 exitCode 会误判成功。
+     */
+    actual fun setGameOverlayFps(packageName: String, fps: Int): CommandResult {
+        if (packageName.isBlank() || packageName.contains(' ') || packageName.contains('/') ||
+            packageName.contains(';')
+        ) {
+            return CommandResult("", "invalid package name", 1)
+        }
+        val cmd = if (fps <= 0) {
+            "device_config delete game_overlay $packageName"
+        } else {
+            "device_config put game_overlay $packageName mode=2,fps=$fps"
+        }
+        val r = execCommand(cmd, timeout = 12)
+        val readBack = try {
+            execCommand("device_config get game_overlay $packageName", timeout = 8).output.trim()
+        } catch (e: Exception) {
+            ""
+        }
+        val ok = if (fps <= 0) !readBack.contains("fps=") else readBack.contains("fps=$fps")
+        return CommandResult(
+            output = r.output.trim() + if (readBack.isNotEmpty()) "\n[readback] $readBack" else "",
+            error = if (ok) "" else r.error.ifBlank { "device_config 写入未生效：本机可能不支持 game_overlay（需要 Android 13+ 且允许 shell 写入）" },
+            exitCode = if (ok) 0 else 1
+        )
+    }
+
+    actual fun getGameOverlayFps(packageName: String): String {
+        return try {
+            execCommand("device_config get game_overlay $packageName", timeout = 8).output.trim()
+        } catch (e: Exception) {
+            ""
+        }
+    }
+
     /**
      * 强制结束所有第三方后台进程，保留本应用、系统关键进程与[保留白名单]。
      * 这是"一键关闭后台"的核心实现：
@@ -1910,7 +2037,14 @@ actual object ADBTools {
 
     actual fun execPerfCommand(command: String, timeout: Int): CommandResult = execCommand(command, timeout)
 
-    /** 图标缓存：避免列表滚动时反复解码同一个图标。 */
+    /**
+     * 图标 base64 缓存。
+     *
+     * **必须有上界**：一个 96px WebP 的 base64 大约 3~10KB，300+ 个应用一路滚下来
+     * 就是好几 MB 的字符串且永不释放——这是用户反馈的"内存泄漏/越用越卡"的真实来源之一。
+     * 这里不做精细 LRU（并发访问下容易出错），采用"满了就整体清空"的简单有界策略：
+     * 最坏情况只是多解码几次图标，代价远小于无限增长。
+     */
     private val iconCache = java.util.concurrent.ConcurrentHashMap<String, String>()
 
     actual fun getAppIconBase64(packageName: String): String? {
@@ -1948,6 +2082,8 @@ actual object ADBTools {
         } catch (e: Exception) {
             null
         }
+        // 缓存已满先整体清空：保证有界（最坏只是多解码几次图标，代价远小于无限增长）
+        if (iconCache.size >= ICON_CACHE_MAX) iconCache.clear()
         iconCache[packageName] = encoded ?: ""
         return encoded
     }

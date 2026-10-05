@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.adbtoolbox.common.ADBTools
 import com.example.adbtoolbox.common.AppStrings
+import com.example.adbtoolbox.common.theme.AppLayout
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.catalog.components.LiquidButton
 import com.kyant.backdrop.catalog.components.LiquidToggle
@@ -137,27 +138,28 @@ fun ADBModuleScreen(
         Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16f.dp)
+            .padding(horizontal = AppLayout.screenH)
     ) {
-        Spacer(Modifier.height(24f.dp))
+        Spacer(Modifier.height(AppLayout.screenTop))
         Row(verticalAlignment = Alignment.CenterVertically) {
             GlassBackButton(backdrop = backdrop, contentColor = contentColor, onBack = onBack)
-            Spacer(Modifier.height(12f.dp))
+            // 返回按钮与标题之间是水平间距：以前误用 height，标题会贴死按钮
+            Spacer(Modifier.width(AppLayout.headerGap))
             BasicText(
                 AppStrings.get("root_module"),
-                style = TextStyle(contentColor, 24f.sp, androidx.compose.ui.text.font.FontWeight.Bold)
+                style = TextStyle(contentColor, AppLayout.titleSize, androidx.compose.ui.text.font.FontWeight.Bold)
             )
         }
-        Spacer(Modifier.height(12f.dp))
+        Spacer(Modifier.height(AppLayout.sectionGap))
 
         // 刷入模式 + 权限提示
         GlassCard(backdrop = backdrop, pageType = "adbmodule") {
-            Column(Modifier.padding(20f.dp)) {
+            Column(Modifier.padding(AppLayout.cardPad)) {
                 SectionTitle(AppStrings.get("flash_mode"), contentColor)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     BasicText(
                         if (useRootMode) AppStrings.get("root_mode") else AppStrings.get("adb_mode"),
-                        style = TextStyle(contentColor, 14f.sp)
+                        style = TextStyle(contentColor, AppLayout.bodySize)
                     )
                     Spacer(Modifier.width(12f.dp))
                     LiquidToggle(
@@ -195,18 +197,18 @@ fun ADBModuleScreen(
                         status,
                         style = TextStyle(
                             if (capability.anyUsable) Color(0xFF34C759) else Color(0xFFFF3B30),
-                            11f.sp
+                            AppLayout.captionSize
                         )
                     )
                 }
             }
         }
 
-        Spacer(Modifier.height(16f.dp))
+        Spacer(Modifier.height(AppLayout.sectionGap))
 
         // 文件选择
         GlassCard(backdrop = backdrop, pageType = "adbmodule") {
-            Column(Modifier.padding(20f.dp)) {
+            Column(Modifier.padding(AppLayout.cardPad)) {
                 SectionTitle(AppStrings.get("select_module_file"), contentColor)
                 Row(horizontalArrangement = Arrangement.spacedBy(8f.dp)) {
                     LiquidButton(
@@ -222,7 +224,7 @@ fun ADBModuleScreen(
                         )
                     }
                 }
-                Spacer(Modifier.height(12f.dp))
+                Spacer(Modifier.height(AppLayout.innerGap))
                 if (selectedFilePath.isNullOrBlank()) {
                     BasicText(
                         AppStrings.get("no_file_selected"),
@@ -231,14 +233,14 @@ fun ADBModuleScreen(
                 } else {
                     BasicText(
                         selectedFilePath,
-                        style = TextStyle(contentColor, 11f.sp, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace),
+                        style = TextStyle(contentColor, AppLayout.captionSize, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace),
                         maxLines = 2
                     )
                 }
             }
         }
 
-        Spacer(Modifier.height(16f.dp))
+        Spacer(Modifier.height(AppLayout.sectionGap))
 
         // 刷入按钮（未选文件时也可点击，会明确提示"未选择文件"）
         LiquidButton(
@@ -256,12 +258,12 @@ fun ADBModuleScreen(
                 style = TextStyle(Color.White, 16f.sp, androidx.compose.ui.text.font.FontWeight.Medium)
             )
         }
-        Spacer(Modifier.height(16f.dp))
+        Spacer(Modifier.height(AppLayout.sectionGap))
 
         // 失败原因（必须让用户看到，而不是只在日志里）
         failureMessage?.let { message ->
             GlassCard(backdrop = backdrop, pageType = "adbmodule") {
-                Column(Modifier.padding(20f.dp)) {
+                Column(Modifier.padding(AppLayout.cardPad)) {
                     SectionTitle(AppStrings.get("failed"), contentColor)
                     BasicText(
                         message,
@@ -269,13 +271,13 @@ fun ADBModuleScreen(
                     )
                 }
             }
-            Spacer(Modifier.height(16f.dp))
+            Spacer(Modifier.height(AppLayout.sectionGap))
         }
 
         // 刷入日志
         if (installLog.isNotEmpty()) {
             GlassCard(backdrop = backdrop, pageType = "adbmodule") {
-                Column(Modifier.padding(20f.dp)) {
+                Column(Modifier.padding(AppLayout.cardPad)) {
                     SectionTitle(
                         if (isSuccess) "${AppStrings.get("install_log")} - ${AppStrings.get("success")}"
                         else AppStrings.get("install_log"),
@@ -283,7 +285,7 @@ fun ADBModuleScreen(
                     )
                     BasicText(
                         installLog,
-                        style = TextStyle(contentColor, 11f.sp, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
+                        style = TextStyle(contentColor, AppLayout.captionSize, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
                     )
                 }
             }

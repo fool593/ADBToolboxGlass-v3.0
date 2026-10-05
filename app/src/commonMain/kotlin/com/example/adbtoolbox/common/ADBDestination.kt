@@ -28,5 +28,10 @@ enum class ADBDestination {
     /** v2.8 机型分类优化（每个品牌独立分类入口，不与其它品牌混在一起） */
     BrandPerf,
     /** v2.8 游戏帧率（全机型：非华为用应用权限直写，华为/荣耀走 ADB 或 Root） */
-    GameFrameRate
+    GameFrameRate,
+    /**
+     * v2.8 首次启动的设置向导（欢迎 → 主题 → 权限 → 完成）。
+     * 只在首次启动（[com.example.adbtoolbox.common.AppSettings.onboardingDone] 为 false）时作为初始页面。
+     */
+    Onboarding
 }

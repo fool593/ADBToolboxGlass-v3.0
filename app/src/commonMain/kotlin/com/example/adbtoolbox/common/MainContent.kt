@@ -57,7 +57,13 @@ fun MainContent() {
         else if (isLightTheme) Color.Black else Color.White
 
     var selectedTabIndex by rememberSaveable { mutableIntStateOf(0) }
-    var currentDestination by rememberSaveable { mutableStateOf(ADBDestination.Home) }
+    // 首次启动先进设置向导（欢迎 → 主题 → 权限 → 完成）；完成或跳过后落盘，之后直接进首页。
+    var currentDestination by rememberSaveable {
+        mutableStateOf(
+            if (com.example.adbtoolbox.common.AppSettings.onboardingDone) ADBDestination.Home
+            else ADBDestination.Onboarding
+        )
+    }
     var selectedAppPackage by remember { mutableStateOf<String?>(null) }
     var selectedPlugin by remember { mutableStateOf<com.example.adbtoolbox.common.PluginData?>(null) }
     // 机型分类优化：从"机型分类"页进入性能页时带上品牌过滤（null = 全机型）
@@ -117,6 +123,22 @@ fun MainContent() {
                         modifier = Modifier.fillMaxSize()
                     ) { dest ->
                         when (dest) {
+                            // v2.8 首次启动的设置向导（欢迎 → 主题 → 权限 → 完成）
+                            ADBDestination.Onboarding -> com.example.adbtoolbox.common.ui.OnboardingScreen(
+                                backdrop = backdrop,
+                                contentColor = contentColor,
+                                onPickTheme = { pickedTheme ->
+                                    com.example.adbtoolbox.common.theme.AppTheme.apply(pickedTheme, persist = true)
+                                },
+                                // 只请求重新检测/授权，不在向导里替用户做任何决定
+                                onRequestShizuku = { AppCache.requestShizukuRefresh() },
+                                onOpenWriteSettings = { AppCache.openWriteSettingsTrigger.value++ },
+                                onFinish = {
+                                    com.example.adbtoolbox.common.AppSettings.onboardingDone = true
+                                    com.example.adbtoolbox.common.GlassEffectPersistence.saveAll()
+                                    currentDestination = ADBDestination.Home
+                                }
+                            )
                             ADBDestination.Home -> HomeScreen(
                                 backdrop = backdrop,
                                 contentColor = contentColor,
@@ -243,7 +265,8 @@ fun MainContent() {
                                 onOpenTerminal = { command ->
                                     AppCache.terminalInitialCommand.value = command
                                     currentDestination = ADBDestination.Terminal
-                                }
+                                },
+                                onOpenUsageAccess = { AppCache.openUsageAccessTrigger.value++ }
                             )
                             // v2.8 手机体检（指令可用性检查员）
                             ADBDestination.PhoneInspector -> com.example.adbtoolbox.common.ui.PhoneInspectorScreen(

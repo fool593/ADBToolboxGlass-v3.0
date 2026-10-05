@@ -50,7 +50,10 @@ object AppCache {
     val deviceInfoLoaded = mutableStateOf(false)
 
     // 权限缓存: packageName -> permissions
+    // 加上界：每个应用的权限列表不大但也不小，用户一路点开几十个应用后会一直留着；
+    // 满了整体清空（最坏只是重新读一次权限），避免只增不减。
     private val permissionCache = mutableMapOf<String, List<PermissionInfoData>>()
+    private const val PERMISSION_CACHE_MAX = 32
 
     // 预加载状态
     val isPreloading = mutableStateOf(false)
@@ -84,6 +87,9 @@ object AppCache {
     // 「修改系统设置」授权页触发（游戏帧率页在非华为机型上需要该权限才能直写刷新率）
     val openWriteSettingsTrigger = mutableStateOf(0)
 
+    // 「使用情况访问」授权页触发（按游戏自动切换帧率需要它来判断前台应用）
+    val openUsageAccessTrigger = mutableStateOf(0)
+
     // ---------------- Shizuku 连接状态（全局唯一数据源） ----------------
     // 以前每个页面各自在 LaunchedEffect(Unit) 里查一次 isShizukuAvailable()，只查一次：
     // 如果进页面时 Shizuku 还没起、或者用户在别处才授权成功，界面就永远显示"未连接"，
@@ -114,6 +120,7 @@ object AppCache {
     }
 
     fun setPermissions(packageName: String, perms: List<PermissionInfoData>) {
+        if (permissionCache.size >= PERMISSION_CACHE_MAX) permissionCache.clear()
         permissionCache[packageName] = perms
     }
 

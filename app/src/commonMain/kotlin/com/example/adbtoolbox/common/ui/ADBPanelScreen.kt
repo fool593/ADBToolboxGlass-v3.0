@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.verticalScroll
@@ -28,6 +29,7 @@ import com.example.adbtoolbox.common.ADBTools
 import com.example.adbtoolbox.common.AppSettings
 import com.example.adbtoolbox.common.AppStrings
 import com.example.adbtoolbox.common.CommandResult
+import com.example.adbtoolbox.common.theme.AppLayout
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.catalog.components.LiquidButton
 import kotlinx.coroutines.Dispatchers
@@ -128,26 +130,27 @@ fun ADBPanelScreen(
         Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16f.dp)
+            .padding(horizontal = AppLayout.screenH)
     ) {
-        Spacer(Modifier.height(24f.dp))
+        Spacer(Modifier.height(AppLayout.screenTop))
         Row(verticalAlignment = Alignment.CenterVertically) {
             GlassBackButton(backdrop = backdrop, contentColor = contentColor, onBack = onBack)
-            Spacer(Modifier.height(12f.dp))
+            // 返回按钮与标题之间是水平间距：以前误用 height，标题会贴死按钮
+            Spacer(Modifier.width(AppLayout.headerGap))
             BasicText(
                 AppStrings.get("adb_quick_panel"),
-                style = TextStyle(contentColor, 24f.sp, FontWeight.Bold)
+                style = TextStyle(contentColor, AppLayout.titleSize, FontWeight.Bold)
             )
         }
-        Spacer(Modifier.height(16f.dp))
+        Spacer(Modifier.height(AppLayout.sectionGap))
 
         // 高危操作二次确认
         pendingOp?.let { op ->
             GlassCard(backdrop = backdrop, pageType = "home") {
-                Column(Modifier.padding(20f.dp)) {
+                Column(Modifier.padding(AppLayout.cardPad)) {
                     BasicText(
                         adbPanelStr("danger_operation_title", "⚠️ 危险操作，请确认", "⚠️ Dangerous operation"),
-                        style = TextStyle(Color(0xFFFF3B30), 16f.sp, FontWeight.Bold)
+                        style = TextStyle(Color(0xFFFF3B30), AppLayout.sectionTitleSize, FontWeight.Bold)
                     )
                     Spacer(Modifier.height(8f.dp))
                     BasicText(
@@ -160,7 +163,7 @@ fun ADBPanelScreen(
                         }",
                         style = TextStyle(contentColor.copy(alpha = 0.85f), 13f.sp)
                     )
-                    Spacer(Modifier.height(12f.dp))
+                    Spacer(Modifier.height(AppLayout.innerGap))
                     Row(horizontalArrangement = Arrangement.spacedBy(8f.dp)) {
                         ActionButton(
                             backdrop,
@@ -175,7 +178,7 @@ fun ADBPanelScreen(
                     }
                 }
             }
-            Spacer(Modifier.height(16f.dp))
+            Spacer(Modifier.height(AppLayout.sectionGap))
         }
 
         // 设备控制
@@ -196,7 +199,7 @@ fun ADBPanelScreen(
             }
         }
 
-        Spacer(Modifier.height(16f.dp))
+        Spacer(Modifier.height(AppLayout.sectionGap))
 
         // 系统设置
         GlassCard(backdrop = backdrop, pageType = "home") {
@@ -210,7 +213,7 @@ fun ADBPanelScreen(
             }
         }
 
-        Spacer(Modifier.height(16f.dp))
+        Spacer(Modifier.height(AppLayout.sectionGap))
 
         // 清理操作
         GlassCard(backdrop = backdrop, pageType = "home") {
@@ -223,12 +226,12 @@ fun ADBPanelScreen(
             }
         }
 
-        Spacer(Modifier.height(16f.dp))
+        Spacer(Modifier.height(AppLayout.sectionGap))
 
         // 执行结果
         if (resultOutput.isNotEmpty()) {
             GlassCard(backdrop = backdrop, pageType = "home") {
-                Column(Modifier.padding(20f.dp)) {
+                Column(Modifier.padding(AppLayout.cardPad)) {
                     SectionTitle(AppStrings.get("output"), contentColor)
                     BasicText(
                         resultOutput,

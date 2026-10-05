@@ -275,6 +275,32 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
+            // 观察「使用情况访问」授权页触发器：
+            // 游戏帧率页要按游戏自动切换帧率，必须先能判断"当前前台是不是那个游戏"，
+            // 这需要用户手动授予使用情况访问权限，这里负责把他带到那个系统页面。
+            val usageAccessTrigger by androidx.compose.runtime.rememberUpdatedState(AppCache.openUsageAccessTrigger.value)
+            LaunchedEffect(usageAccessTrigger) {
+                if (usageAccessTrigger > 0) {
+                    AppCache.openUsageAccessTrigger.value = 0
+                    try {
+                        startActivity(
+                            android.content.Intent(android.provider.Settings.ACTION_USAGE_ACCESS_SETTINGS)
+                        )
+                    } catch (e: Exception) {
+                        try {
+                            startActivity(
+                                android.content.Intent(
+                                    android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                    android.net.Uri.parse("package:$packageName")
+                                )
+                            )
+                        } catch (e2: Exception) {
+                            e2.printStackTrace()
+                        }
+                    }
+                }
+            }
+
             // 自定义开屏动画视频选择器
             val splashPicker = rememberLauncherForActivityResult(
                 contract = ActivityResultContracts.GetContent()
