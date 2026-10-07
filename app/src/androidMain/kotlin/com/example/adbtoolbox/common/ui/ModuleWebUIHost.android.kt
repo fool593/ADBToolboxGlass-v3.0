@@ -265,7 +265,39 @@ actual fun ModuleWebUIHost(
                                 return true
                             }
                         }
-                        settings.apply {
+                        // 只读环境桥：把当前提权环境与内核信息交给模块页面，让它能如实显示
+                        // "可用/预览模式"，而不是永远探测不到。
+                        // 注意：**只暴露只读信息，不暴露 shell 执行**，防止恶意模块页面拿到执行能力。
+                        try {
+                            addJavascriptInterface(
+                                object {
+                                    @android.webkit.JavascriptInterface
+                                    fun environment(): String {
+                                        return try {
+                                            val sh = com.example.adbtoolbox.common.AppCache.shizukuState.value
+                                            val root = com.example.adbtoolbox.common.ADBTools.execCommand(
+                                                "su -c id 2>/dev/null || id", 10
+                                            ).output.contains("uid=0")
+                                            val dh = com.example.adbtoolbox.common.ADBTools.isDhizukuActive()
+                                            "{\"shizuku\":\"\",\"root\":,\"dhizuku\":}"
+                                        } catch (e: Exception) {
+                                            "{\"error\":\"bridge-failed\"}"
+                                        }
+                                    }
+
+                                    @android.webkit.JavascriptInterface
+                                    fun kernel(): String {
+                                        return try {
+                                            com.example.adbtoolbox.common.ADBTools.execCommand("uname -r", 10).output.trim()
+                                        } catch (e: Exception) { "" }
+                                    }
+                                },
+                                "ADBToolboxBridge"
+                            )
+                        } catch (e: Exception) {
+                            // 个别 ROM 不允许 addJavascriptInterface，忽略即可
+                        }
+settings.apply {
                             javaScriptEnabled = true
                             domStorageEnabled = true
                             allowFileAccess = true
