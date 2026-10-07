@@ -412,14 +412,35 @@ actual object PluginManager {
         }
     }
 
-    /** 执行 customize.sh；没装、装好、失败三种情况分别返回 ""/""/真实原因。 */
+    /** 执行 customize.sh；没装、装好、失败三种情况分别返回 ""/""/真实原因。
+     *  AxManager 感知（按其源码/server 语义）：
+     *  - 若设备装了 AxManager（/data/user_de/0/com.android.shell/axeron/bin/busybox），
+     *    用它的 BusyBox ash 运行，并注入 AXERON=true / AXERONVER，脚本才能正确初始化；
+     *  - 脚本执行前统一转 LF（AxManager 与 KernelSU 规范都要求 UNIX 换行，
+     *    CRLF 会让 Android sh 解析失败 → 退出码 1，这正是"脚本刷入返回值 1"的元凶之一）。 */
     private fun runCustomizeIfPresent(moduleDir: File): String {
         val script = File(moduleDir, "customize.sh")
         if (!script.isFile) return ""
         return try {
+            // 1) LF 规范化：.sh / module.prop 必须是 UNIX 换行
+            try {
+                if (script.exists() && script.length() > 0) {
+                    val txt = script.readText()
+                    if (txt.contains("\r\n")) script.writeText(txt.replace("\r\n", "\n"))
+                }
+                val prop = File(moduleDir, "module.prop")
+                if (prop.exists()) {
+                    val pt = prop.readText()
+                    if (pt.contains("\r\n")) prop.writeText(pt.replace("\r\n", "\n"))
+                }
+            } catch (_: Exception) {}
+            // 2) 优先用 AxManager BusyBox ash（装了 AxManager 时），并注入 AXERON 环境
             val dir = moduleDir.absolutePath
+            val axBox = detectAxManagerBusybox()
+            val shell = if (axBox != null) "${shq(axBox)} sh" else "sh"
+            val axEnv = if (axBox != null) "AXERON=true AXERONVER=10400 " else ""
             val result = ADBTools.execCommand(
-                "cd ${shq(dir)} && MODPATH=${shq(dir)} TMPDIR=${shq(dir)} sh customize.sh",
+                "cd ${shq(dir)} && ${axEnv}MODPATH=${shq(dir)} TMPDIR=${shq(dir)} $shell customize.sh",
                 timeout = 120
             )
             if (result.exitCode == 0) {
@@ -431,6 +452,17 @@ actual object PluginManager {
             }
         } catch (e: Exception) {
             "${e.javaClass.simpleName}: ${e.message.orEmpty()}"
+        }
+    }
+
+    /** 检测 AxManager BusyBox 是否存在；存在则返回其路径（其插件/脚本要求在该环境下运行）。 */
+    private fun detectAxManagerBusybox(): String? {
+        return try {
+            val p = "/data/user_de/0/com.android.shell/axeron/bin/busybox"
+            val r = ADBTools.execCommand("test -x ${shq(p)} && echo yes", 8)
+            if (r.output.contains("yes")) p else null
+        } catch (e: Exception) {
+            null
         }
     }
 
