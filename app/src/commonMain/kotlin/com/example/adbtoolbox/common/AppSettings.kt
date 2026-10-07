@@ -1305,6 +1305,9 @@ object AppStrings {
         "webui_dbg_report" to "模块 UI 诊断",
         "webui_dbg_retry" to "重试",
         "webui_dbg_url" to "页面地址",
+        "kroot_gh_matched" to "本机内核已收录，匹配的偏移配置：",
+        "kroot_gh_unmatched" to "未收录：本机内核没有对应的偏移配置（GhostLock 按精确 uname -r 匹配，未收录会拒绝运行）",
+        "kroot_gh_unkernel" to "读不到内核版本，无法核对",
     )
 
     private val enStrings = mapOf(
@@ -2553,6 +2556,9 @@ object AppStrings {
         "webui_dbg_report" to "Module UI diagnostics",
         "webui_dbg_retry" to "Retry",
         "webui_dbg_url" to "Page URL",
+        "kroot_gh_matched" to "Kernel is supported; matching offset profile:",
+        "kroot_gh_unmatched" to "Not supported: no offset profile for this kernel (GhostLock matches the exact uname -r and refuses to run otherwise)",
+        "kroot_gh_unkernel" to "Cannot read the kernel release, cannot check",
     )
     private val hiStrings = mapOf(
         // सामान्य
@@ -3776,8 +3782,12 @@ object AppStrings {
         "webui_dbg_report" to "मॉड्यूल UI डायग्नोस्टिक्स",
         "webui_dbg_retry" to "पुनः प्रयास",
         "webui_dbg_url" to "पेज URL",
+        "kroot_gh_matched" to "कर्नल समर्थित; मेल खाती प्रोफ़ाइल:",
+        "kroot_gh_unmatched" to "समर्थित नहीं: इस कर्नल के लिए कोई प्रोफ़ाइल नहीं",
+        "kroot_gh_unkernel" to "कर्नल रिलीज़ नहीं पढ़ी जा सकी",
     )
 }
+
 
 
 

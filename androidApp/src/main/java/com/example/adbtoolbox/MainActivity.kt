@@ -32,6 +32,12 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        // 开屏崩溃标记：能安全走到主界面 = 开屏没有崩，允许下次继续放开屏动画
+        try {
+            getSharedPreferences("splash_state", MODE_PRIVATE)
+                .edit().putBoolean("splash_ok", true).apply()
+        } catch (e: Exception) {
+        }
         // 用户很可能刚切到 Shizuku 里启动服务或授权，再切回本应用 —— 回到前台必须重查一次，
         // 否则界面会一直停在"未连接"（这正是用户反馈的"连上了却不显示"）
         try {

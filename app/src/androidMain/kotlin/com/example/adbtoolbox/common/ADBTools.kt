@@ -2116,7 +2116,11 @@ actual object ADBTools {
 
     /** 选入口：常见脚本名优先，其次名为 exploit/root/ghostlock 的文件，最后是唯一的文件。 */
     private fun pickKitEntry(dir: java.io.File): String? {
-        val all = dir.listFiles()?.filter { it.isFile } ?: return null
+        // 数据类文件绝不当作可执行入口（例如 GhostLock 的 *.conf 偏移表）
+        val dataExt = setOf("conf", "json", "txt", "md", "hocon", "properties", "xml", "html", "js", "css", "LICENSE")
+        val all = dir.listFiles()?.filter {
+            it.isFile && it.name.substringAfterLast('.', "").lowercase() !in dataExt
+        } ?: return null
         if (all.isEmpty()) return null
         val preferred = listOf("run.sh", "root.sh", "start.sh", "install.sh", "exploit", "root")
         preferred.forEach { name ->

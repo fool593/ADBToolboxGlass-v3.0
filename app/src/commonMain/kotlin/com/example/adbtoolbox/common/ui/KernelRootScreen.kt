@@ -70,6 +70,7 @@ fun KernelRootScreen(
     var rootProbe by remember { mutableStateOf<String?>(null) }
     var confirmRun by remember { mutableStateOf(false) }
     var builtinKits by remember { mutableStateOf<List<String>>(emptyList()) }
+    var matchLine by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
         info = KernelRoot.readInfo()
@@ -187,13 +188,27 @@ fun KernelRootScreen(
                             kit,
                             style = TextStyle(contentColor, AppLayout.bodySize, FontWeight.Medium)
                         )
+                        if (matchLine.isNotEmpty()) {
+                            Spacer(Modifier.height(4.dp))
+                            BasicText(
+                                matchLine,
+                                style = TextStyle(
+                                    if (matchLine.startsWith(AppStrings.get("kroot_gh_unmatched"))) Color(0xFFFF9500)
+                                    else AppTheme.accentAlt,
+                                    11.sp,
+                                    fontFamily = FontFamily.Monospace
+                                )
+                            )
+                        }
                         Spacer(Modifier.height(6.dp))
+                        val kitDir = "kx_asset_" + kit.take(16)
                         LiquidButton(
                             onClick = {
                                 if (busy) return@LiquidButton
                                 busy = true
                                 statusText = AppStrings.get("kroot_pushing")
                                 runOutput = null
+                                matchLine = ""
                                 scope.launch {
                                     // 解出内置包 → 推送（目录方式）→ 执行 → 真实探测
                                     val extract = withContext(Dispatchers.Default) {
@@ -207,7 +222,7 @@ fun KernelRootScreen(
                                     val push = withContext(Dispatchers.Default) {
                                         ADBTools.prepareAndPushKit(
                                             extract.output.trim(),
-                                            "kx_asset_" + kit.take(16)
+                                            kitDir
                                         )
                                     }
                                     if (push.exitCode != 0) {
@@ -217,6 +232,21 @@ fun KernelRootScreen(
                                     }
                                     val entry = push.output.lineSequence().firstOrNull()?.trim().orEmpty()
                                     remotePath = entry
+                                    // GhostLock 内核偏移表核对：.conf 文件名以 uname -r 开头 = 已收录
+                                    val remoteDir = entry.substringBeforeLast('/')
+                                    val rel = info?.kernelRelease.orEmpty().trim()
+                                    val matched = withContext(Dispatchers.Default) {
+                                        if (rel.isEmpty()) ""
+                                        else ADBTools.execCommand(
+                                            "ls ${remoteDir} | grep -i '^${rel}' | head -n 3",
+                                            10
+                                        ).output.trim()
+                                    }
+                                    matchLine = when {
+                                        rel.isEmpty() -> AppStrings.get("kroot_gh_unkernel")
+                                        matched.isNotEmpty() -> AppStrings.get("kroot_gh_matched") + "\n" + matched
+                                        else -> AppStrings.get("kroot_gh_unmatched")
+                                    }
                                     statusText = AppStrings.get("kroot_running")
                                     val run = withContext(Dispatchers.Default) {
                                         KernelRoot.runExploit(entry, 120)
