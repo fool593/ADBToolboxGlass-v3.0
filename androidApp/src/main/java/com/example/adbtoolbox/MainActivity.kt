@@ -61,6 +61,17 @@ class MainActivity : ComponentActivity() {
             }
         } catch (_: Exception) {
         }
+        // 上次若崩溃：本会话进入减负模式（玻璃强度/折射降档，降低原生渲染崩溃再触发概率）
+        try {
+            if (com.example.adbtoolbox.CrashGuard.lastCrash(this) != null) {
+                com.example.adbtoolbox.common.AppCache.reducedMode.value = true
+                val c = com.example.adbtoolbox.common.GlassEffectConfig
+                c.globalIntensity.value = (c.globalIntensity.value * 0.5f).coerceAtLeast(0.2f)
+                c.refractionAmount.value = (c.refractionAmount.value * 0.5f).coerceIn(0f, 0.1f)
+                c.blurRadius.value = (c.blurRadius.value * 0.5f).coerceAtLeast(2f)
+            }
+        } catch (_: Exception) {
+        }
         com.example.adbtoolbox.common.appContext = applicationContext
         WindowCompat.setDecorFitsSystemWindows(window, false)
 

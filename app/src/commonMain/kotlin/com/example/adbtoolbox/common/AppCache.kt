@@ -98,6 +98,9 @@ object AppCache {
     // 无障碍设置页触发（安全护盾：识别新装应用；删除仍需应用内确认）
     val openAccessibilityTrigger = mutableStateOf(0)
 
+    // 减负模式：上次运行崩溃后本会话置 true（玻璃/动效降档，避免同一渲染路径反复触发崩溃）
+    val reducedMode = mutableStateOf(false)
+
     // 无障碍服务状态：系统侧开启/关闭时由服务自身更新（护盾页据此显示授权真实状态）
     val accessibilityServiceConnected = mutableStateOf(false)
     val lastSeenAccessibilityPackage = mutableStateOf<String?>(null)
