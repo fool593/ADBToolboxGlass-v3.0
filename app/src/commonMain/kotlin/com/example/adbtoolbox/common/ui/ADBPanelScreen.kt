@@ -73,6 +73,9 @@ private enum class PanelOp(
     ENABLE_ADB("enable_adb", "settings put global adb_enabled 1"),
     // 关闭 ADB 会切断本应用正在使用的权限通道，属于危险操作
     DISABLE_ADB("disable_adb", "settings put global adb_enabled 0", requiresConfirm = true),
+    // 强开网络 ADB：不依赖电脑、不依赖系统"无线调试"配对——设置 TCP 端口并重启 adbd。
+    // 需要 Shizuku / Root（protected 属性）；执行后另一台设备 adb connect <本机IP>:5555 即可。
+    ADB_OVER_NETWORK("adb_over_network", "setprop service.adb.tcp.port 5555; setprop persist.adb.tcp.port 5555; stop adbd; start adbd"),
     INSTALL_UNKNOWN_APPS("install_unknown_apps", "settings put global install_non_market_apps 1"),
     SCREENSHOT("screenshot"),
     CLEAR_ALL_CACHE("clean_all_cache"),
@@ -82,6 +85,7 @@ private enum class PanelOp(
     val verifyCommand: String?
         get() = when (this) {
             ENABLE_ADB, DISABLE_ADB -> "settings get global adb_enabled"
+            ADB_OVER_NETWORK -> "getprop service.adb.tcp.port; ip -4 addr show 2>/dev/null | grep -oP 'inet \\K[\\d.]+' | grep -v '^127' | head -n 1"
             INSTALL_UNKNOWN_APPS -> "settings get global install_non_market_apps"
             else -> null
         }
@@ -207,6 +211,7 @@ fun ADBPanelScreen(
                 SectionTitle(AppStrings.get("system_settings"), contentColor)
                 Row(horizontalArrangement = Arrangement.spacedBy(8f.dp)) {
                     ActionButton(backdrop, AppStrings.get("enable_adb"), Color(0xFF34C759)) { request(PanelOp.ENABLE_ADB) }
+            ActionButton(backdrop, adbPanelStr("adb_over_network", "强开网络ADB(端口5555)", "Force ADB-over-net :5555", "नेट ADB :5555 चालू"), Color(0xFF00C7BE)) { request(PanelOp.ADB_OVER_NETWORK) }
                     ActionButton(backdrop, AppStrings.get("disable_adb"), Color(0xFFFF3B30)) { request(PanelOp.DISABLE_ADB) }
                     ActionButton(backdrop, AppStrings.get("install_unknown_apps"), Color(0xFFFF9500)) { request(PanelOp.INSTALL_UNKNOWN_APPS) }
                 }

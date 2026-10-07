@@ -667,20 +667,7 @@ actual object ADBTools {
         }
     }
 
-    private fun drawableToBase64(drawable: Drawable?): String? {
-        return try {
-            drawable ?: return null
-            val bitmap = Bitmap.createBitmap(drawable.intrinsicWidth.coerceAtLeast(1), drawable.intrinsicHeight.coerceAtLeast(1), Bitmap.Config.ARGB_8888)
-            val canvas = Canvas(bitmap)
-            drawable.setBounds(0, 0, canvas.width, canvas.height)
-            drawable.draw(canvas)
-            val stream = ByteArrayOutputStream()
-            bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
-            Base64.encodeToString(stream.toByteArray(), Base64.NO_WRAP)
-        } catch (e: Exception) {
-            null
-        }
-    }
+    // 已删除 drawableToBase64：全工程零调用点的死代码，且缺 bitmap.recycle()（精简优化，不删任何功能）
 
     actual fun freezeApp(packageName: String): Boolean {
         return try {
