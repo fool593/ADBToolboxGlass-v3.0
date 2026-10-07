@@ -20,6 +20,7 @@ android {
         release {
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            // 签名在构建后用 apksigner 进行（见 README：密钥为本地 release.keystore，不进源码包）
         }
     }
     buildFeatures {

@@ -53,3 +53,7 @@ temp/
 
 # Compose Multiplatform
 .compose/
+
+# local release signing (never commit)
+keystore.properties
+release.keystore
