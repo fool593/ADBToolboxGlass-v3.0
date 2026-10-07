@@ -1,0 +1,9 @@
+# 统一换行：文本文件在 git 里一律存 LF，检出时按平台习惯换算。
+# 加上它之后，任何机器（无论 core.autocrlf 怎么配）解压/克隆本仓库，
+# `git status` 都是干净的，GitHub 网页显示也是 LF。
+* text=auto
+
+# 明确要求的例外
+*.bat text eol=crlf
+*.sh  text eol=lf
+*.bin text eol=lf
