@@ -100,6 +100,8 @@ object AppCache {
 
     // 减负模式：上次运行崩溃后本会话置 true（玻璃/动效降档，避免同一渲染路径反复触发崩溃）
     val reducedMode = mutableStateOf(false)
+    // 上次崩溃堆栈（androidMain 启动时从 CrashGuard 填充），设置页可展示/复制后发回定位
+    val crashLog = mutableStateOf<String?>(null)
 
     // 无障碍服务状态：系统侧开启/关闭时由服务自身更新（护盾页据此显示授权真实状态）
     val accessibilityServiceConnected = mutableStateOf(false)

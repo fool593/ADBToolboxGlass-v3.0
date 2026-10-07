@@ -1344,6 +1344,8 @@ object AppStrings {
         "shield_a11y_enabled" to "已开启",
         "shield_a11y_disabled" to "未开启（点下方按钮去系统里开启）",
         "shield_root_ok" to "已就绪（su uid=0）",
+        "settings_crashlog" to "上次运行崩溃日志（请复制发给开发者）",
+        "settings_crashlog_hint" to "复制这段文字发给开发者即可定位闪退根因",
     )
 
     private val enStrings = mapOf(
@@ -2627,6 +2629,8 @@ object AppStrings {
         "shield_a11y_enabled" to "Enabled",
         "shield_a11y_disabled" to "Not enabled (open system settings below)",
         "shield_root_ok" to "Ready (su uid=0)",
+        "settings_crashlog" to "Last crash log (copy and send to the developer)",
+        "settings_crashlog_hint" to "Send this text to the developer to locate the crash root cause",
     )
     private val hiStrings = mapOf(
         // सामान्य
@@ -3885,8 +3889,11 @@ object AppStrings {
         "shield_a11y_enabled" to "चालू",
         "shield_a11y_disabled" to "चालू नहीं",
         "shield_root_ok" to "तैयार (su uid=0)",
+        "settings_crashlog" to "पिछला क्रैश लॉग (डेवलपर को भेजें)",
+        "settings_crashlog_hint" to "यह पाठ डेवलपर को भेजें",
     )
 }
+
 
 
 

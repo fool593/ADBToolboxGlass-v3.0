@@ -1,5 +1,6 @@
 package com.example.adbtoolbox.common.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,6 +36,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.sp
 import com.example.adbtoolbox.common.ADBTools
 import com.example.adbtoolbox.common.AppCache
@@ -493,6 +495,29 @@ fun SettingsScreen(
                         BasicText(AppStrings.get("settings_splash_anim"), style = TextStyle(contentColor, AppLayout.bodySize, FontWeight.Medium))
                         BasicText(AppStrings.get("settings_splash_anim_desc"), style = TextStyle(contentColor.copy(alpha = 0.55f), AppLayout.captionSize))
                     }
+                Spacer(Modifier.height(14.dp))
+                val crash = com.example.adbtoolbox.common.AppCache.crashLog.value
+                if (crash != null) {
+                    BasicText(AppStrings.get("settings_crashlog"), style = TextStyle(contentColor, AppLayout.bodySize, FontWeight.Medium))
+                    Spacer(Modifier.height(4.dp))
+                    Box(
+                        Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(contentColor.copy(alpha = 0.06f)).padding(10.dp)
+                    ) {
+                        BasicText(
+                            crash.take(900),
+                            style = TextStyle(
+                                color = Color(0xFFE8A33D),
+                                fontSize = 10.sp,
+                                fontFamily = FontFamily.Monospace
+                            )
+                        )
+                    }
+                    Spacer(Modifier.height(4.dp))
+                    BasicText(
+                        AppStrings.get("settings_crashlog_hint"),
+                        style = TextStyle(contentColor.copy(alpha = 0.5f), AppLayout.captionSize)
+                    )
+                }
                     LiquidToggle(
                         selected = { com.example.adbtoolbox.common.AppSettings.splashAnimEnabled },
                         onSelect = {

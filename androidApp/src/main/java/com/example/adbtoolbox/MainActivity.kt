@@ -51,6 +51,7 @@ class MainActivity : ComponentActivity() {
         com.example.adbtoolbox.CrashGuard.install(applicationContext)
         // 上次运行若崩溃：用 Toast 显示堆栈开头，便于用户原样发回定位（不吞异常）
         try {
+            com.example.adbtoolbox.common.AppCache.crashLog.value = com.example.adbtoolbox.CrashGuard.lastCrash(this)
             com.example.adbtoolbox.CrashGuard.lastCrash(this)?.let { c ->
                 val head = c.take(1200)
                 android.widget.Toast.makeText(
