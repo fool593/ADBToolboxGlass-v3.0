@@ -276,6 +276,10 @@ actual object RootToolManager {
     }
 
     actual fun tempRoot(): RootResult {
+        // 自动重试（v2.9）：首次注入失败后自动重试，只有两种情况才停止——
+        // 1) 用户在界面点了「停止重试」；2) 强制注入达到上限 [TEMP_ROOT_MAX_ATTEMPTS]（10 次）。
+        // 每次尝试之间等待 1.5s 并监听停止；拿到 uid=0 立即成功返回。
+        com.example.adbtoolbox.common.AppCache.cancelTempRootRequested.value = false
         return try {
             val device = exec("getprop ro.product.device").trim().lowercase()
             val brand = exec("getprop ro.product.brand").trim()
@@ -284,21 +288,41 @@ actual object RootToolManager {
             val isOnePlus = brand.equals("oneplus", ignoreCase = true) ||
                             brand.equals("一加", ignoreCase = true) ||
                             ghostLockDevices.any { device.contains(it, ignoreCase = true) }
+            val isXiaomi = tempRootDevices.any { device.contains(it, ignoreCase = true) }
 
-            if (isOnePlus) {
-                return ghostLockTempRoot()
+            if (!isOnePlus && !isXiaomi) {
+                return RootResult(false, "Current device ($device) does not support temp root", "temproot")
             }
 
-            // 小米 TempRoot
-            if (tempRootDevices.any { device.contains(it, ignoreCase = true) }) {
-                return xiaomiTempRoot()
+            var attempt = 0
+            var last: RootResult? = null
+            while (attempt < TEMP_ROOT_MAX_ATTEMPTS) {
+                if (com.example.adbtoolbox.common.AppCache.cancelTempRootRequested.value) break
+                attempt++
+                last = if (isOnePlus) ghostLockTempRoot() else xiaomiTempRoot()
+                if (last.success) return last
+                // 两次尝试之间 1.5s，期间持续监听「停止」
+                var waited = 0
+                while (waited < 1500) {
+                    if (com.example.adbtoolbox.common.AppCache.cancelTempRootRequested.value) break
+                    try { Thread.sleep(100) } catch (_: InterruptedException) { break }
+                    waited += 100
+                }
             }
-
-            RootResult(false, "Current device ($device) does not support temp root", "temproot")
+            val stopped = com.example.adbtoolbox.common.AppCache.cancelTempRootRequested.value
+            RootResult(
+                false,
+                if (stopped) "Temp root stopped by user (after ${attempt} attempt(s))"
+                else "Temp root failed after $attempt attempt(s) (max $TEMP_ROOT_MAX_ATTEMPTS)",
+                "temproot"
+            )
         } catch (e: Exception) {
             RootResult(false, "Temp root failed: ${e.message}", "temproot")
         }
     }
+
+    /** 一键 Root（临时 root）自动重试上限：失败后自动重试，最多 10 次；期间可被「停止重试」打断。 */
+    private const val TEMP_ROOT_MAX_ATTEMPTS = 10
 
     // 一加 GhostLock 临时 root（CVE-2026-43499）
     private fun ghostLockTempRoot(): RootResult {

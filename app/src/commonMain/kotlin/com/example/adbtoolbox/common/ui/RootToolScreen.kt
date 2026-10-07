@@ -44,6 +44,7 @@ fun RootToolScreen(
     var selectedMethod by remember { mutableStateOf(RootMethod.MAGISK) }
     var isLoading by remember { mutableStateOf(false) }
     var result by remember { mutableStateOf<RootResult?>(null) }
+    var tempRootRunning by remember { mutableStateOf(false) }
     var isRooted by remember { mutableStateOf(false) }
     var availableMethods by remember { mutableStateOf<List<RootMethodInfo>>(emptyList()) }
     var recommendedMethod by remember { mutableStateOf<RootMethodInfo?>(null) }
@@ -99,6 +100,17 @@ fun RootToolScreen(
                             else -> AppStrings.get("supported")
                         }
                         RootInfoRow(AppStrings.get("temp_root"), tempType, contentColor)
+                        if (tempRootRunning) {
+                            Spacer(Modifier.height(8.dp))
+                            com.kyant.backdrop.catalog.components.LiquidButton(
+                                onClick = { com.example.adbtoolbox.common.AppCache.cancelTempRootRequested.value = true },
+                                backdrop = backdrop,
+                                modifier = Modifier.fillMaxWidth().height(38.dp),
+                                tint = androidx.compose.ui.graphics.Color(0xFFFF3B30)
+                            ) {
+                                BasicText(AppStrings.get("temp_root_stop"), style = TextStyle(androidx.compose.ui.graphics.Color.White, 13.sp, androidx.compose.ui.text.font.FontWeight.Medium))
+                            }
+                        }
                     }
                 }
             }
@@ -517,6 +529,7 @@ fun RootToolScreen(
                                 RootMethod.TEMP_ROOT -> {
                                     currentStep = RootStep.EXTRACTING_BOOT
                                     stepMessage = AppStrings.get("msg_temp_root")
+                                    tempRootRunning = true
                                     // 先检测 KSU 包名，检测到就直接用 KSU 获取 root，不再跳官网
                                     val hasKSU = withContext(Dispatchers.Default) { RootToolManager.isKernelSUInstalled() }
                                     val tempResult = if (hasKSU) {
@@ -527,6 +540,7 @@ fun RootToolScreen(
                                         withContext(Dispatchers.Default) { RootToolManager.tempRoot() }
                                     }
                                     result = tempResult
+                                    tempRootRunning = false
                                     currentStep = if (tempResult.success) RootStep.DONE else RootStep.ERROR
                                     // 不再自动跳转到 KSU 官网
                                 }

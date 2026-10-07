@@ -98,6 +98,10 @@ object AppCache {
     // 无障碍设置页触发（安全护盾：识别新装应用；删除仍需应用内确认）
     val openAccessibilityTrigger = mutableStateOf(0)
 
+    // 一键 Root（临时 root）自动重试的停止开关：用户点「停止重试」置 true，
+    // 注入循环在每个尝试间隔检查它，置 true 即退出（下一次启动前会复位）。
+    val cancelTempRootRequested = mutableStateOf(false)
+
     // ---------------- Shizuku 连接状态（全局唯一数据源） ----------------
     // 以前每个页面各自在 LaunchedEffect(Unit) 里查一次 isShizukuAvailable()，只查一次：
     // 如果进页面时 Shizuku 还没起、或者用户在别处才授权成功，界面就永远显示"未连接"，

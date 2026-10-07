@@ -1338,6 +1338,7 @@ object AppStrings {
         "shield_note" to "说明：扫描排除 /proc /sys /dev /data/app 与 /vendor；文本类文件 <512KB 才检查内容，避免崩溃与误删二进制。删除是永久操作，请自行备份。",
         "settings_splash_anim" to "开屏动画",
         "settings_splash_anim_desc" to "关闭后进入软件将不再播放开屏动画，直接进主界面",
+        "temp_root_stop" to "停止重试（最多自动重试 10 次）",
     )
 
     private val enStrings = mapOf(
@@ -2615,6 +2616,7 @@ object AppStrings {
         "shield_note" to "Note: /proc /sys /dev /data/app and /vendor are excluded; only text-ish files <512KB are inspected. Deletion is permanent; back up first.",
         "settings_splash_anim" to "Splash animation",
         "settings_splash_anim_desc" to "When off, the splash animation is skipped and the app opens directly",
+        "temp_root_stop" to "Stop retry (auto-retries up to 10 times)",
     )
     private val hiStrings = mapOf(
         // सामान्य
@@ -3866,9 +3868,11 @@ object AppStrings {
         "shield_a11y_open" to "एक्सेसिबिलिटी खोलें",
         "shield_note" to "नोट: /proc /sys /dev /data/app /vendor बाहर रखे गए; केवल टेक्स्ट फ़ाइलें जाँची जाती हैं। हटाना स्थायी है।",
         "settings_splash_anim" to "स्प्लैश एनिमेशन",
-        "settings_splash_anim_desc" to "बंद करने पर ऐप सीधे खुलता है, कोई स्प्लैश नहीं",
+        "settings_splash_anim_desc" to "बंद करने पर ऐप सीधे खुलता है, कोई स्प्लैश नहींtemp_root_stop",
+        "temp_root_stop" to "पुनः प्रयास रोकें (अधिकतम 10)",
     )
 }
+
 
 
 
