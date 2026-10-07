@@ -14,8 +14,8 @@ import kotlinx.coroutines.withContext
  *
  * "完整"是**按数据算出来的**，不是我挑几条：本项目所有会改动系统的命令都做了一次全量扫描，
  * 结论是——
- * - 可能被写入的 `settings` 键共 47 个（global 26 / secure 14 / system 6，见下面三个列表）；
- * - 可能被禁用的组件 27 个（见 [reEnablePackages]）；
+ * - 可能被写入的 `settings` 键共 47 个（global 27 / secure 14 / system 6，见下面三个列表）；
+ * - 可能被禁用的组件 26 个（见 [reEnablePackages]）；
  * - 另有 appops 的后台运行权限、待机桶、deviceidle 状态、按游戏限帧的 game_overlay。
  * 上面的每一项在下面都有对应的还原步骤，**一条都不漏**。
  *

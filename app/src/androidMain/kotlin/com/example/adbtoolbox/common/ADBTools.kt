@@ -2014,14 +2014,12 @@ actual object ADBTools {
             val unzipError = unzipInto(local, outDir)
             if (unzipError != null) return CommandResult("", unzipError, 1)
             stageDir = outDir
-            val picked = pickKitEntry(outDir)
-                ?: return CommandResult("", "kit has no runnable entry (no script and no file)", 1)
-            entryName = picked
+            // 没有可执行入口时仍会推送数据（如 GhostLock 偏移表），
+            // 入口用 NO_RUNNABLE_ENTRY 标记，由界面如实说明，不假装能一键提权。
+            entryName = pickKitEntry(outDir) ?: NO_RUNNABLE_ENTRY
         } else if (isDir) {
             stageDir = local
-            val picked = pickKitEntry(local)
-                ?: return CommandResult("", "kit has no runnable entry (no script and no file)", 1)
-            entryName = picked
+            entryName = pickKitEntry(local) ?: NO_RUNNABLE_ENTRY
         }
         val files = stageDir?.listFiles()?.filter { it.isFile } ?: emptyList()
         if (files.isEmpty()) return CommandResult("", "kit has no files", 1)
@@ -2038,10 +2036,15 @@ actual object ADBTools {
         }
         // ---------- 3) 全部给可执行权限（脚本与 ELF 都要） ----------
         execCommand("chmod -R 755 ${shq(remoteDir)} 2>/dev/null", timeout = 30)
-        val remoteEntry = "$remoteDir/$entryName"
-        val listing = execCommand("ls -l ${shq(remoteDir)}", timeout = 30).output.trim()
-        return CommandResult(remoteEntry, "", 0).copy(output = remoteEntry + "\n" + listing)
+        val remoteEntry = if (entryName == NO_RUNNABLE_ENTRY) NO_RUNNABLE_ENTRY else "$remoteDir/$entryName"
+        val listing = execCommand("ls -l ${shq(remoteDir)} 2>/dev/null | head -n 30", timeout = 30).output.trim()
+        // 契约：第 1 行 = 入口远端路径（无可执行入口时为 NO_RUNNABLE_ENTRY）；
+        // 第 2 行 = 远端目录；其后为文件清单（便于界面核对）。
+        return CommandResult(remoteEntry, "", 0).copy(output = "$remoteEntry\n$remoteDir\n$listing")
     }
+
+    /** 内置工具包没有可执行入口（如只有偏移表数据）时的入口标记。 */
+    private const val NO_RUNNABLE_ENTRY = "NO_RUNNABLE_ENTRY"
 
     /** 单引号包裹 + 内部单引号转义，供 shell 使用。 */
     private fun shq(s: String): String = "'" + s.replace("'", "'\\''") + "'"

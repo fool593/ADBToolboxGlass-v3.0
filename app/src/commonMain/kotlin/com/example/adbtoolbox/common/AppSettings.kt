@@ -1308,6 +1308,11 @@ object AppStrings {
         "kroot_gh_matched" to "本机内核已收录，匹配的偏移配置：",
         "kroot_gh_unmatched" to "未收录：本机内核没有对应的偏移配置（GhostLock 按精确 uname -r 匹配，未收录会拒绝运行）",
         "kroot_gh_unkernel" to "读不到内核版本，无法核对",
+        "settings_brightness_apply" to "应用亮度",
+        "settings_brightness_applying" to "正在应用…",
+        "settings_brightness_applied" to "已应用，当前亮度",
+        "settings_brightness_failed" to "应用失败：写入 screen_brightness 需要 Shizuku(ADB) 或 Root 权限",
+        "kroot_no_native" to "已推送偏移表数据，但工具包里没有可执行入口（没有本机内核匹配的 native exploit 二进制），无法一键提权；需要自备 arm64 二进制或提供机型+内核以便内置",
     )
 
     private val enStrings = mapOf(
@@ -2559,6 +2564,11 @@ object AppStrings {
         "kroot_gh_matched" to "Kernel is supported; matching offset profile:",
         "kroot_gh_unmatched" to "Not supported: no offset profile for this kernel (GhostLock matches the exact uname -r and refuses to run otherwise)",
         "kroot_gh_unkernel" to "Cannot read the kernel release, cannot check",
+        "settings_brightness_apply" to "Apply brightness",
+        "settings_brightness_applying" to "Applying…",
+        "settings_brightness_applied" to "Applied; current brightness",
+        "settings_brightness_failed" to "Failed: writing screen_brightness needs Shizuku (ADB) or Root",
+        "kroot_no_native" to "Profiles pushed, but this kit has no runnable exploit binary; bring your own arm64 build or give us the device + kernel to bundle one",
     )
     private val hiStrings = mapOf(
         // सामान्य
@@ -3785,8 +3795,15 @@ object AppStrings {
         "kroot_gh_matched" to "कर्नल समर्थित; मेल खाती प्रोफ़ाइल:",
         "kroot_gh_unmatched" to "समर्थित नहीं: इस कर्नल के लिए कोई प्रोफ़ाइल नहीं",
         "kroot_gh_unkernel" to "कर्नल रिलीज़ नहीं पढ़ी जा सकी",
+        "settings_brightness_apply" to "ब्राइटनेस लागू करें",
+        "settings_brightness_applying" to "लागू हो रहा है…",
+        "settings_brightness_applied" to "लागू; वर्तमान ब्राइटनेस",
+        "settings_brightness_failed" to "screen_brightness लिखने के लिए Shizuku (ADB) या Root चाहिए",
+        "kroot_no_native" to "प्रोफ़ाइल भेजी गई, पर किट में कोई एक्सप्लॉइट बाइनरी नहीं; अपना arm64 बनाकर लाएँ या डिवाइस+कर्नल बताएँ",
     )
 }
+
+
 
 
 

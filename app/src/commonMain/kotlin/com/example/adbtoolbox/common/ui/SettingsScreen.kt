@@ -57,6 +57,7 @@ fun SettingsScreen(
     onGlassPlayground: () -> Unit = {}
 ) {
     var brightness by remember { mutableFloatStateOf(128f) }
+    var brightnessResult by remember { mutableStateOf<String?>(null) }
     var screenTimeout by remember { mutableIntStateOf(30) }
     // Shizuku 状态显示在下面的"Shizuku 服务"卡片里，直接读全局三态
     // （MainContent 统一检测 + 回到前台/授权回调后刷新），本页不再自己查一次。
@@ -460,6 +461,35 @@ fun SettingsScreen(
                     backdrop = backdrop,
                     modifier = Modifier.fillMaxWidth().height(44f.dp)
                 )
+                Spacer(Modifier.height(8f.dp))
+                // 之前这里只改本地 state、从不写设备（空壳，审计抓到），已接上真实写入。
+                // 滑条拖动先实时预览，点「应用」才真正写入并回读验证，无权限时如实报失败。
+                LiquidButton(
+                    onClick = {
+                        if (brightnessResult == AppStrings.get("settings_brightness_applying")) return@LiquidButton
+                        brightnessResult = AppStrings.get("settings_brightness_applying")
+                        dhizukuScope.launch {
+                            val target = brightness.toInt()
+                            val ok = withContext(Dispatchers.Default) { ADBTools.setBrightness(target) }
+                            val read = withContext(Dispatchers.Default) { ADBTools.getBrightness() }
+                            brightnessResult = if (ok) {
+                                AppStrings.get("settings_brightness_applied") + " $read"
+                            } else {
+                                AppStrings.get("settings_brightness_failed")
+                            }
+                            if (ok) brightness = read.toFloat()
+                        }
+                    },
+                    backdrop = backdrop,
+                    modifier = Modifier.height(40f.dp).fillMaxWidth(),
+                    tint = AppTheme.accent
+                ) {
+                    BasicText(AppStrings.get("settings_brightness_apply"), style = TextStyle(AppTheme.onAccent, 13f.sp))
+                }
+                brightnessResult?.let { msg ->
+                    Spacer(Modifier.height(6f.dp))
+                    BasicText(msg, style = TextStyle(contentColor.copy(alpha = 0.7f), AppLayout.captionSize))
+                }
 
                 Spacer(Modifier.height(16f.dp))
                 BasicText("${AppStrings.get("screen_timeout")}: ${screenTimeout}s", style = TextStyle(contentColor, AppLayout.bodySize))

@@ -230,11 +230,16 @@ fun KernelRootScreen(
                                         busy = false
                                         return@launch
                                     }
-                                    val entry = push.output.lineSequence().firstOrNull()?.trim().orEmpty()
+                                    // 契约：第 1 行=入口（无执行入口时为 NO_RUNNABLE_ENTRY），第 2 行=远端目录
+                                    val lines = push.output.lineSequence().filter { it.isNotBlank() }.toList()
+                                    val entry = lines.getOrNull(0)?.trim().orEmpty()
+                                    val remoteDir = lines.getOrNull(1)?.trim()
+                                        ?: entry.substringBeforeLast('/')
                                     remotePath = entry
-                                    // GhostLock 内核偏移表核对：.conf 文件名以 uname -r 开头 = 已收录
-                                    val remoteDir = entry.substringBeforeLast('/')
+                                    // GhostLock 内核偏移表核对：.conf 文件名以 uname -r 开头 = 已收录。
+                                    // 只保留安全字符再拼进 grep，避免设备返回的版本串里带 shell 元字符。
                                     val rel = info?.kernelRelease.orEmpty().trim()
+                                        .filter { it.isLetterOrDigit() || it in "._-+" }
                                     val matched = withContext(Dispatchers.Default) {
                                         if (rel.isEmpty()) ""
                                         else ADBTools.execCommand(
@@ -246,6 +251,12 @@ fun KernelRootScreen(
                                         rel.isEmpty() -> AppStrings.get("kroot_gh_unkernel")
                                         matched.isNotEmpty() -> AppStrings.get("kroot_gh_matched") + "\n" + matched
                                         else -> AppStrings.get("kroot_gh_unmatched")
+                                    }
+                                    if (entry == "NO_RUNNABLE_ENTRY") {
+                                        // 数据型工具包（例如仅偏移表）：如实说明，不假装能一键提权
+                                        statusText = AppStrings.get("kroot_no_native")
+                                        busy = false
+                                        return@launch
                                     }
                                     statusText = AppStrings.get("kroot_running")
                                     val run = withContext(Dispatchers.Default) {

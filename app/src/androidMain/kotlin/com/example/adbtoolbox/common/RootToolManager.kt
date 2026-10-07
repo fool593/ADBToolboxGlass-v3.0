@@ -321,9 +321,10 @@ actual object RootToolManager {
             // 运行 exploit
             val result = exec("$exploitPath 2>&1")
 
-            // 检查是否成功获取 root
+            // 检查是否成功获取 root：严格只看 `id` 里的 uid=0。
+            // （旧逻辑还匹配结果输出里的 "root"/"success" 文本，exploit 打印这些字样会误报成功，已修）
             val idResult = exec("id")
-            if (idResult.contains("uid=0") || result.contains("root", ignoreCase = true) || result.contains("success", ignoreCase = true)) {
+            if (idResult.contains("uid=0")) {
                 RootResult(true, "GhostLock temp root success! Based on CVE-2026-43499, lost after reboot\n\n$result", "ghostlock")
             } else {
                 RootResult(false, "GhostLock temp root failed\n\n$result", "ghostlock")
