@@ -20,6 +20,10 @@ fun BackdropEffectScope.lens(
     chromaticAberration: Boolean = false
 ) {
     if (!isRuntimeShaderSupported()) return
+    // NaN 守卫（关键）：首页玻璃卡片在部分设备/分辨率下首帧会拿到 NaN 折射高度，
+    // 而 `NaN <= 0f` 在 Kotlin 里是 false，旧守卫会放行 → roundToInt(NaN) 抛
+    // "Cannot round NaN value" 直接闪退（已在多台设备稳定复现）。
+    if (!refractionHeight.isFinite() || !refractionAmount.isFinite()) return
     if (refractionHeight <= 0f || refractionAmount <= 0f) return
 
     if (padding > 0f) {
