@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 安全护盾：无障碍服务配置。
+     用途：当用户在本应用开启无障碍后，系统把"新安装/卸载应用、当前前台窗口"等事件交给本服务，
+     护盾页面据此留意到新装包；删除仍由用户在应用内逐条确认（绝不自动删）。 -->
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:accessibilityEventTypes="typeWindowStateChanged|typeWindowContentChanged|typeNotificationStateChanged"
+    android:accessibilityFeedbackType="feedbackGeneric"
+    android:accessibilityFlags="flagReportViewIds|flagRetrieveInteractiveWindows"
+    android:canRetrieveWindowContent="true"
+    android:description="@string/accessibility_service_desc"
+    android:notificationTimeout="100" />

@@ -1339,6 +1339,11 @@ object AppStrings {
         "settings_splash_anim" to "开屏动画",
         "settings_splash_anim_desc" to "关闭后进入软件将不再播放开屏动画，直接进主界面",
         "temp_root_stop" to "停止重试（最多自动重试 10 次）",
+        "shield_perm_title" to "三项授权（真实状态）",
+        "shield_perm_desc" to "Shizuku / 无障碍 / Root 的当前真实状态；授权后才能跑对应的护盾能力",
+        "shield_a11y_enabled" to "已开启",
+        "shield_a11y_disabled" to "未开启（点下方按钮去系统里开启）",
+        "shield_root_ok" to "已就绪（su uid=0）",
     )
 
     private val enStrings = mapOf(
@@ -2617,6 +2622,11 @@ object AppStrings {
         "settings_splash_anim" to "Splash animation",
         "settings_splash_anim_desc" to "When off, the splash animation is skipped and the app opens directly",
         "temp_root_stop" to "Stop retry (auto-retries up to 10 times)",
+        "shield_perm_title" to "Three permissions (real status)",
+        "shield_perm_desc" to "Current real status of Shizuku / Accessibility / Root; grant them to unlock the matching shield features",
+        "shield_a11y_enabled" to "Enabled",
+        "shield_a11y_disabled" to "Not enabled (open system settings below)",
+        "shield_root_ok" to "Ready (su uid=0)",
     )
     private val hiStrings = mapOf(
         // सामान्य
@@ -3870,8 +3880,14 @@ object AppStrings {
         "settings_splash_anim" to "स्प्लैश एनिमेशन",
         "settings_splash_anim_desc" to "बंद करने पर ऐप सीधे खुलता है, कोई स्प्लैश नहींtemp_root_stop",
         "temp_root_stop" to "पुनः प्रयास रोकें (अधिकतम 10)",
+        "shield_perm_title" to "तीन अनुमतियाँ (वास्तविक स्थिति)",
+        "shield_perm_desc" to "Shizuku / एक्सेसिबिलिटी / Root की वर्तमान स्थिति",
+        "shield_a11y_enabled" to "चालू",
+        "shield_a11y_disabled" to "चालू नहीं",
+        "shield_root_ok" to "तैयार (su uid=0)",
     )
 }
+
 
 
 

@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,6 +40,7 @@ import com.example.adbtoolbox.common.theme.AppTheme
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.catalog.components.LiquidButton
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * 游龙式安全护盾页：root 全盘恶意脚本扫描。
@@ -52,6 +54,7 @@ fun ShieldScanScreen(
     backdrop: Backdrop,
     contentColor: Color,
     onBack: () -> Unit,
+    onRequestShizuku: () -> Unit = {},
     onOpenAccessibility: () -> Unit = {}
 ) {
     val scope = rememberCoroutineScope()
@@ -60,6 +63,13 @@ fun ShieldScanScreen(
     var statusText by remember { mutableStateOf<String?>(null) }
     var busyDelete by remember { mutableStateOf<String?>(null) } // 正在删除的路径
     var confirmDelete by remember { mutableStateOf<String?>(null) } // 等待二次确认的路径
+    var a11yOn by remember { mutableStateOf<Boolean?>(null) }
+    var rootOn by remember { mutableStateOf<Boolean?>(null) }
+
+    LaunchedEffect(Unit) {
+        a11yOn = Shield.accessibilityEnabled()
+        rootOn = Shield.rootAvailable()
+    }
 
     Column(
         Modifier
@@ -228,27 +238,67 @@ fun ShieldScanScreen(
 
         Spacer(Modifier.height(AppLayout.sectionGap))
 
-        // ---------------- 无障碍拦截（识别新装应用；删除仍在本页确认） ----------------
+        // ---------------- 三项授权（Shizuku / 无障碍 / Root，真实状态） ----------------
         GlassCard(backdrop = backdrop, pageType = "home") {
             Column(Modifier.padding(AppLayout.cardPad)) {
                 BasicText(
-                    AppStrings.get("shield_a11y_title"),
+                    AppStrings.get("shield_perm_title"),
                     style = TextStyle(contentColor, AppLayout.sectionTitleSize, FontWeight.Medium)
                 )
                 Spacer(Modifier.height(4.dp))
                 BasicText(
-                    AppStrings.get("shield_a11y_desc"),
+                    AppStrings.get("shield_perm_desc"),
                     style = TextStyle(contentColor.copy(alpha = 0.6f), AppLayout.captionSize)
                 )
                 Spacer(Modifier.height(10.dp))
-                LiquidButton(
-                    onClick = onOpenAccessibility,
+                // Shizuku：读全局三态
+                ShieldPermRow(
+                    title = AppStrings.get("ob_perm_shizuku"),
+                    desc = AppStrings.get("ob_perm_shizuku_desc"),
+                    statusText = when (com.example.adbtoolbox.common.AppCache.shizukuState.value) {
+                        "granted" -> AppStrings.get("ob_perm_ok")
+                        "no_permission" -> AppStrings.get("ob_perm_shizuku_no_perm")
+                        "not_running" -> AppStrings.get("ob_perm_shizuku_not_running")
+                        else -> AppStrings.get("ob_perm_unknown")
+                    },
+                    ok = com.example.adbtoolbox.common.AppCache.shizukuState.value == "granted",
+                    actionText = AppStrings.get("ob_perm_shizuku_action"),
+                    onAction = onRequestShizuku,
                     backdrop = backdrop,
-                    modifier = Modifier.height(42.dp).fillMaxWidth(),
-                    tint = AppTheme.accent
-                ) {
-                    BasicText(AppStrings.get("shield_a11y_open"), style = TextStyle(AppTheme.onAccent, 13.sp))
-                }
+                    contentColor = contentColor
+                )
+                Spacer(Modifier.height(14.dp))
+                // 无障碍：真实读系统已启用列表
+                ShieldPermRow(
+                    title = AppStrings.get("shield_a11y_title"),
+                    desc = AppStrings.get("shield_a11y_desc"),
+                    statusText = when (a11yOn) {
+                        true -> AppStrings.get("shield_a11y_enabled")
+                        false -> AppStrings.get("shield_a11y_disabled")
+                        null -> AppStrings.get("ob_perm_unknown")
+                    },
+                    ok = a11yOn == true,
+                    actionText = AppStrings.get("shield_a11y_open"),
+                    onAction = onOpenAccessibility,
+                    backdrop = backdrop,
+                    contentColor = contentColor
+                )
+                Spacer(Modifier.height(14.dp))
+                // Root：真实探针 su -c id
+                ShieldPermRow(
+                    title = AppStrings.get("ob_perm_root"),
+                    desc = AppStrings.get("ob_perm_root_desc"),
+                    statusText = when (rootOn) {
+                        true -> AppStrings.get("shield_root_ok")
+                        false -> AppStrings.get("ob_perm_root_optional")
+                        null -> AppStrings.get("ob_perm_unknown")
+                    },
+                    ok = rootOn == true,
+                    actionText = null,
+                    onAction = {},
+                    backdrop = backdrop,
+                    contentColor = contentColor
+                )
             }
         }
 
@@ -258,5 +308,37 @@ fun ShieldScanScreen(
             style = TextStyle(contentColor.copy(alpha = 0.5f), AppLayout.captionSize)
         )
         Spacer(Modifier.height(80.dp))
+    }
+}
+@Composable
+private fun ShieldPermRow(
+    title: String,
+    desc: String,
+    statusText: String,
+    ok: Boolean,
+    actionText: String?,
+    onAction: () -> Unit,
+    backdrop: Backdrop,
+    contentColor: Color
+) {
+    Column {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                BasicText(title, style = TextStyle(contentColor, AppLayout.bodySize, FontWeight.Medium))
+                BasicText(desc, style = TextStyle(contentColor.copy(alpha = 0.55f), AppLayout.captionSize))
+            }
+            PerfBadge(statusText, if (ok) Color(0xFF34C759) else Color(0xFFFF9500))
+        }
+        if (!ok && actionText != null) {
+            Spacer(Modifier.height(8.dp))
+            LiquidButton(
+                onClick = onAction,
+                backdrop = backdrop,
+                modifier = Modifier.height(38.dp).fillMaxWidth(),
+                tint = AppTheme.accent
+            ) {
+                BasicText(actionText, style = TextStyle(AppTheme.onAccent, 12.sp))
+            }
+        }
     }
 }

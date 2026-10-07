@@ -63,4 +63,23 @@ object Shield {
 
     /** 打开无障碍设置（用户可在此启用"拦截/识别新装应用"；删除仍需在本应用内确认）。 */
     fun accessibilitySettingsAction(): String = "android.settings.ACCESSIBILITY_SETTINGS"
+
+    /** 无障碍是否已为本应用开启：读系统 enabled_accessibility_services（无需 root，真实结果）。 */
+    suspend fun accessibilityEnabled(): Boolean = withContext(Dispatchers.Default) {
+        try {
+            ADBTools.execCommand("settings get secure enabled_accessibility_services", 20)
+                .output.contains("com.example.adbtoolbox/", true)
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    /** Root 是否真可用：su -c id 返回 uid=0（真实探针，不用路径猜测）。 */
+    suspend fun rootAvailable(): Boolean = withContext(Dispatchers.Default) {
+        try {
+            ADBTools.execCommand("su -c id 2>/dev/null || id", 15).output.contains("uid=0")
+        } catch (e: Exception) {
+            false
+        }
+    }
 }

@@ -98,6 +98,11 @@ object AppCache {
     // 无障碍设置页触发（安全护盾：识别新装应用；删除仍需应用内确认）
     val openAccessibilityTrigger = mutableStateOf(0)
 
+    // 无障碍服务状态：系统侧开启/关闭时由服务自身更新（护盾页据此显示授权真实状态）
+    val accessibilityServiceConnected = mutableStateOf(false)
+    val lastSeenAccessibilityPackage = mutableStateOf<String?>(null)
+    val lastForegroundAccessPackage = mutableStateOf<String?>(null)
+
     // 一键 Root（临时 root）自动重试的停止开关：用户点「停止重试」置 true，
     // 注入循环在每个尝试间隔检查它，置 true 即退出（下一次启动前会复位）。
     val cancelTempRootRequested = mutableStateOf(false)
