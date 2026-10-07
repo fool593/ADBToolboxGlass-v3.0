@@ -19,6 +19,7 @@ class SplashActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        com.example.adbtoolbox.CrashGuard.install(applicationContext)
 
         val prefs = getSharedPreferences("splash_state", MODE_PRIVATE)
 

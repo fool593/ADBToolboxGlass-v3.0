@@ -48,6 +48,19 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        com.example.adbtoolbox.CrashGuard.install(applicationContext)
+        // 上次运行若崩溃：用 Toast 显示堆栈开头，便于用户原样发回定位（不吞异常）
+        try {
+            com.example.adbtoolbox.CrashGuard.lastCrash(this)?.let { c ->
+                val head = c.take(1200)
+                android.widget.Toast.makeText(
+                    this,
+                    "[上次运行崩溃，请原样发回]\n" + head,
+                    android.widget.Toast.LENGTH_LONG
+                ).show()
+            }
+        } catch (_: Exception) {
+        }
         com.example.adbtoolbox.common.appContext = applicationContext
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
