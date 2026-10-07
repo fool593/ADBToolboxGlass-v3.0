@@ -1346,6 +1346,9 @@ object AppStrings {
         "shield_root_ok" to "已就绪（su uid=0）",
         "settings_crashlog" to "上次运行崩溃日志（请复制发给开发者）",
         "settings_crashlog_hint" to "复制这段文字发给开发者即可定位闪退根因",
+        "module_reboot_hint" to "模块已刷入，当前未启用；重启手机后才会真正生效。",
+        "reboot_device" to "重启手机（使模块生效）",
+        "reboot_failed" to "无法重启：",
     )
 
     private val enStrings = mapOf(
@@ -2631,6 +2634,9 @@ object AppStrings {
         "shield_root_ok" to "Ready (su uid=0)",
         "settings_crashlog" to "Last crash log (copy and send to the developer)",
         "settings_crashlog_hint" to "Send this text to the developer to locate the crash root cause",
+        "module_reboot_hint" to "Module flashed and currently disabled; it takes effect after reboot.",
+        "reboot_device" to "Reboot device (to activate module)",
+        "reboot_failed" to "Reboot failed:",
     )
     private val hiStrings = mapOf(
         // सामान्य
@@ -3891,8 +3897,12 @@ object AppStrings {
         "shield_root_ok" to "तैयार (su uid=0)",
         "settings_crashlog" to "पिछला क्रैश लॉग (डेवलपर को भेजें)",
         "settings_crashlog_hint" to "यह पाठ डेवलपर को भेजें",
+        "module_reboot_hint" to "मॉड्यूल इंस्टॉल हुआ; रिबूट के बाद प्रभावी होगा।",
+        "reboot_device" to "डिवाइस रिबूट करें",
+        "reboot_failed" to "रिबूट विफल:",
     )
 }
+
 
 
 

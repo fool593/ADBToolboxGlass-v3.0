@@ -62,6 +62,8 @@ fun ADBModuleScreen(
     var useRootMode by remember { mutableStateOf(true) }
     var capability by remember { mutableStateOf(ModuleCapability()) }
     var isSuccess by remember { mutableStateOf(false) }
+    var pendingReboot by remember { mutableStateOf(false) }        // 刷入成功，等待用户确认重启后生效
+    var isRebooting by remember { mutableStateOf(false) }          // 正在重启（按钮防连点）
     var failureMessage by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
@@ -131,6 +133,28 @@ fun ADBModuleScreen(
                 ?: if (failed) AppStrings.get("operation_failed") else null
             installLog = result
             isInstalling = false
+            pendingReboot = isSuccess
+        }
+    }
+
+    /** 重启手机（模块重启后才会真正生效）；需要 Root，失败如实提示。 */
+    fun rebootNow() {
+        scope.launch {
+            isRebooting = true
+            val r = withContext(Dispatchers.Default) {
+                kotlin.runCatching {
+                    ADBTools.execCommand(
+                        "su -c setprop sys.powerctl reboot 2>/dev/null || setprop sys.powerctl reboot 2>/dev/null || reboot",
+                        12
+                    )
+                }.getOrNull()
+            }
+            isRebooting = false
+            if (r?.exitCode != 0) {
+                failureMessage = AppStrings.get("reboot_failed") + (r?.error?.trim()?.let { "\n$it" } ?: "")
+            } else {
+                pendingReboot = false
+            }
         }
     }
 
@@ -287,6 +311,25 @@ fun ADBModuleScreen(
                         installLog,
                         style = TextStyle(contentColor, AppLayout.captionSize, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
                     )
+                    if (pendingReboot) {
+                        Spacer(Modifier.height(10.dp))
+                        BasicText(
+                            AppStrings.get("module_reboot_hint"),
+                            style = TextStyle(Color(0xFF34C759), AppLayout.captionSize)
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        LiquidButton(
+                            onClick = { rebootNow() },
+                            backdrop = backdrop,
+                            modifier = Modifier.height(40.dp).fillMaxWidth(),
+                            tint = Color(0xFF34C759)
+                        ) {
+                            BasicText(
+                                if (isRebooting) AppStrings.get("rebooting") else AppStrings.get("reboot_device"),
+                                style = TextStyle(Color.White, 13.sp)
+                            )
+                        }
+                    }
                 }
             }
         }
