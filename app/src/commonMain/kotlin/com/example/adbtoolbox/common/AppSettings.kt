@@ -20,6 +20,10 @@ object AppSettings {
     // 落盘键 app_onboarding_done；用户点"跳过"也算完成，不会反复弹。
     var onboardingDone by mutableStateOf(false)
 
+    // 开屏动画开关（v2.9+，落盘键 app_splash_anim）。
+    // 关闭后进入软件将不再播放开屏视频，直接进主界面。
+    var splashAnimEnabled by mutableStateOf(true)
+
     /**
      * 用户在"液态玻璃调节"里手动改过玻璃参数。
      *
@@ -1313,6 +1317,27 @@ object AppStrings {
         "settings_brightness_applied" to "已应用，当前亮度",
         "settings_brightness_failed" to "应用失败：写入 screen_brightness 需要 Shizuku(ADB) 或 Root 权限",
         "kroot_no_native" to "已推送偏移表数据，但工具包里没有可执行入口（没有本机内核匹配的 native exploit 二进制），无法一键提权；需要自备 arm64 二进制或提供机型+内核以便内置",
+        "shield_entry" to "安全护盾（全盘扫描）",
+        "shield_title" to "安全护盾",
+        "shield_warn" to "这是启发式扫描：只匹配明显危险的命令模式（卸载相册、清除全机、wipe、dd、recovery 重置、下载即执行等），可能有误报。它只列出与提示，绝不会自动删除任何文件；删除必须由你逐条确认。需要 ROOT 权限。",
+        "shield_start" to "开始全盘扫描",
+        "shield_running" to "正在全盘扫描（首次可能较慢）…",
+        "shield_run" to "正在扫描全部目录（含每个应用的缓存）…",
+        "shield_clean" to "未发现明显危险脚本",
+        "shield_found" to "发现可能的恶意脚本",
+        "shield_ask_before_delete" to "以下每条的处理都要你单独决定，应用不会自动删除",
+        "shield_delete" to "删除",
+        "shield_deleting" to "…",
+        "shield_delete_failed" to "删除失败",
+        "shield_deleted" to "已删除",
+        "shield_confirm_title" to "确认删除这个文件？删除不可恢复",
+        "shield_confirm_delete" to "确认删除",
+        "shield_a11y_title" to "无障碍拦截（识别新装应用）",
+        "shield_a11y_desc" to "在系统设置里为本应用开启无障碍后，可以留意到新安装的应用包；如你判断为恶意软件包，回到这里用根权限卸载（同样需要确认）。",
+        "shield_a11y_open" to "去开启无障碍",
+        "shield_note" to "说明：扫描排除 /proc /sys /dev /data/app 与 /vendor；文本类文件 <512KB 才检查内容，避免崩溃与误删二进制。删除是永久操作，请自行备份。",
+        "settings_splash_anim" to "开屏动画",
+        "settings_splash_anim_desc" to "关闭后进入软件将不再播放开屏动画，直接进主界面",
     )
 
     private val enStrings = mapOf(
@@ -2569,6 +2594,27 @@ object AppStrings {
         "settings_brightness_applied" to "Applied; current brightness",
         "settings_brightness_failed" to "Failed: writing screen_brightness needs Shizuku (ADB) or Root",
         "kroot_no_native" to "Profiles pushed, but this kit has no runnable exploit binary; bring your own arm64 build or give us the device + kernel to bundle one",
+        "shield_entry" to "Security Shield (full scan)",
+        "shield_title" to "Security Shield",
+        "shield_warn" to "This is a heuristic scan: it only matches clearly dangerous patterns (wipe photos/device, dd, recovery reset, download-and-run). It may report false positives. It only lists and warns — it never auto-deletes; deletion requires your per-item confirmation. Needs ROOT.",
+        "shield_start" to "Start full scan",
+        "shield_running" to "Scanning (first run can be slow)…",
+        "shield_run" to "Scanning all directories including every app cache…",
+        "shield_clean" to "No obvious dangerous scripts found",
+        "shield_found" to "Possible malicious scripts found",
+        "shield_ask_before_delete" to "Each entry below is decided by you alone; the app never auto-deletes",
+        "shield_delete" to "Delete",
+        "shield_deleting" to "…",
+        "shield_delete_failed" to "Delete failed",
+        "shield_deleted" to "Deleted",
+        "shield_confirm_title" to "Delete this file? This cannot be undone",
+        "shield_confirm_delete" to "Confirm delete",
+        "shield_a11y_title" to "Accessibility interception (detect newly installed apps)",
+        "shield_a11y_desc" to "After enabling accessibility for this app in system settings, newly installed packages are noticed; if you judge one malicious, come back here to uninstall it with root (also confirmed by you).",
+        "shield_a11y_open" to "Open accessibility settings",
+        "shield_note" to "Note: /proc /sys /dev /data/app and /vendor are excluded; only text-ish files <512KB are inspected. Deletion is permanent; back up first.",
+        "settings_splash_anim" to "Splash animation",
+        "settings_splash_anim_desc" to "When off, the splash animation is skipped and the app opens directly",
     )
     private val hiStrings = mapOf(
         // सामान्य
@@ -3800,8 +3846,30 @@ object AppStrings {
         "settings_brightness_applied" to "लागू; वर्तमान ब्राइटनेस",
         "settings_brightness_failed" to "screen_brightness लिखने के लिए Shizuku (ADB) या Root चाहिए",
         "kroot_no_native" to "प्रोफ़ाइल भेजी गई, पर किट में कोई एक्सप्लॉइट बाइनरी नहीं; अपना arm64 बनाकर लाएँ या डिवाइस+कर्नल बताएँ",
+        "shield_entry" to "सुरक्षा शील्ड (पूर्ण स्कैन)",
+        "shield_title" to "सुरक्षा शील्ड",
+        "shield_warn" to "यह ह्युरिस्टिक स्कैन है: केवल खतरनाक पैटर्न मिलाता है, झूठी रिपोर्ट हो सकती है। यह कभी स्वतः हटाता नहीं; हर हटाने की पुष्टि आप करते हैं। ROOT चाहिए।",
+        "shield_start" to "पूर्ण स्कैन शुरू करें",
+        "shield_running" to "स्कैन हो रहा है…",
+        "shield_run" to "सभी निर्देशिकाएँ स्कैन हो रही हैं…",
+        "shield_clean" to "कोई खतरनाक स्क्रिप्ट नहीं मिली",
+        "shield_found" to "संभावित खतरनाक स्क्रिप्ट मिलीं",
+        "shield_ask_before_delete" to "हर प्रविष्टि पर आप निर्णय लें; ऐप स्वतः नहीं हटाता",
+        "shield_delete" to "हटाएँ",
+        "shield_deleting" to "…",
+        "shield_delete_failed" to "हटाना विफल",
+        "shield_deleted" to "हटाया गया",
+        "shield_confirm_title" to "इस फ़ाइल को हटाएँ? वापस नहीं आएगी",
+        "shield_confirm_delete" to "हटाने की पुष्टि",
+        "shield_a11y_title" to "एक्सेसिबिलिटी इंटरसेप्शन",
+        "shield_a11y_desc" to "एक्सेसिबिलिटी चालू करने पर नए इंस्टॉल दिखते हैं; संदिग्ध को root से अनइंस्टॉल करें",
+        "shield_a11y_open" to "एक्सेसिबिलिटी खोलें",
+        "shield_note" to "नोट: /proc /sys /dev /data/app /vendor बाहर रखे गए; केवल टेक्स्ट फ़ाइलें जाँची जाती हैं। हटाना स्थायी है।",
+        "settings_splash_anim" to "स्प्लैश एनिमेशन",
+        "settings_splash_anim_desc" to "बंद करने पर ऐप सीधे खुलता है, कोई स्प्लैश नहीं",
     )
 }
+
 
 
 

@@ -137,6 +137,8 @@ actual object GlassEffectPersistence {
         editor.putBoolean("app_theme_user_overrode", AppSettings.themeUserOverrode)
         // 首次设置向导是否已完成（完成或跳过都算已完成，不会每次启动都弹）
         editor.putBoolean("app_onboarding_done", AppSettings.onboardingDone)
+        // 开屏动画开关
+        editor.putBoolean("app_splash_anim", AppSettings.splashAnimEnabled)
 
         editor.apply()
     }
@@ -158,6 +160,7 @@ actual object GlassEffectPersistence {
         AppSettings.themeChosenByUser = prefs.getBoolean("app_theme_chosen", false)
         AppSettings.themeUserOverrode = prefs.getBoolean("app_theme_user_overrode", false)
         AppSettings.onboardingDone = prefs.getBoolean("app_onboarding_done", false)
+        AppSettings.splashAnimEnabled = prefs.getBoolean("app_splash_anim", true)
         if (savedTheme != null) AppSettings.themeId = savedTheme
 
         val config = GlassEffectConfig

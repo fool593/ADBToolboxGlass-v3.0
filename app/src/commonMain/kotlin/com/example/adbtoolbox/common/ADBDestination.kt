@@ -44,5 +44,7 @@ enum class ADBDestination {
      * v2.9 内核提权：运行**用户自备**的公开内核 exploit（例如 GhostLock / CVE-2026-43499 的机型移植）。
      * 本应用不内置、不下载 exploit；只做内核信息核对、整包推送、执行与真实 root 探测。
      */
+    /** v2.9 游龙式安全护盾：root 全盘恶意脚本扫描（只列出提示，删除需逐条确认） */
+    ShieldScan,
     KernelRoot
 }

@@ -22,6 +22,15 @@ class SplashActivity : ComponentActivity() {
 
         val prefs = getSharedPreferences("splash_state", MODE_PRIVATE)
 
+        // 开屏动画开关：用户关闭后直接进主界面，不播开屏视频（v2.9+）
+        // 直接读原始 SharedPreferences，因为 SplashActivity 跑在 AppSettings 加载之前
+        val animEnabled = getSharedPreferences("glass_effect_config", MODE_PRIVATE)
+            .getBoolean("app_splash_anim", true)
+        if (!animEnabled) {
+            navigateToMain()
+            return
+        }
+
         // 崩溃标记：上一轮如果没走到 MainActivity（开屏期间就被杀/崩溃），splash_ok 会是 false。
         // 这种情况直接跳过视频——高安卓版（Android 15/16，尤其部分厂商 ROM）上 MediaPlayer 的
         // codec/surface 硬崩溃无法被 try/catch 捕获，用户会"每次进应用看一小段动画就闪退"。

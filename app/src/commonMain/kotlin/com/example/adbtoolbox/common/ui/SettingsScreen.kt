@@ -33,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.adbtoolbox.common.ADBTools
@@ -486,6 +487,23 @@ fun SettingsScreen(
                 ) {
                     BasicText(AppStrings.get("settings_brightness_apply"), style = TextStyle(AppTheme.onAccent, 13f.sp))
                 }
+                Spacer(Modifier.height(14.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        BasicText(AppStrings.get("settings_splash_anim"), style = TextStyle(contentColor, AppLayout.bodySize, FontWeight.Medium))
+                        BasicText(AppStrings.get("settings_splash_anim_desc"), style = TextStyle(contentColor.copy(alpha = 0.55f), AppLayout.captionSize))
+                    }
+                    LiquidToggle(
+                        selected = { com.example.adbtoolbox.common.AppSettings.splashAnimEnabled },
+                        onSelect = {
+                            com.example.adbtoolbox.common.AppSettings.splashAnimEnabled = it
+                            com.example.adbtoolbox.common.GlassEffectPersistence.saveAll()
+                        },
+                        backdrop = backdrop,
+                        modifier = Modifier.size(51.dp, 31.dp)
+                    )
+                }
+                Spacer(Modifier.height(14.dp))
                 brightnessResult?.let { msg ->
                     Spacer(Modifier.height(6f.dp))
                     BasicText(msg, style = TextStyle(contentColor.copy(alpha = 0.7f), AppLayout.captionSize))

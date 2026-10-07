@@ -163,6 +163,13 @@ fun MainContent() {
                                     currentDestination = ADBDestination.Terminal
                                 }
                             )
+                            // v2.9 游龙式安全护盾：root 全盘恶意脚本扫描
+                            ADBDestination.ShieldScan -> com.example.adbtoolbox.common.ui.ShieldScanScreen(
+                                backdrop = backdrop,
+                                contentColor = contentColor,
+                                onBack = { currentDestination = ADBDestination.Home },
+                                onOpenAccessibility = { AppCache.openAccessibilityTrigger.value++ }
+                            )
                             ADBDestination.Home -> HomeScreen(
                                 backdrop = backdrop,
                                 contentColor = contentColor,

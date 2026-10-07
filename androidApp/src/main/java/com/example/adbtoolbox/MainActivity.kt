@@ -338,6 +338,19 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
+            // 安全护盾：打开无障碍设置页（用于识别新装应用；删除仍需在应用内二次确认）
+            val a11yTrigger by androidx.compose.runtime.rememberUpdatedState(AppCache.openAccessibilityTrigger.value)
+            LaunchedEffect(a11yTrigger) {
+                if (a11yTrigger > 0) {
+                    AppCache.openAccessibilityTrigger.value = 0
+                    try {
+                        startActivity(android.content.Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+            }
+
             // 自定义开屏动画视频选择器
             val splashPicker = rememberLauncherForActivityResult(
                 contract = ActivityResultContracts.GetContent()

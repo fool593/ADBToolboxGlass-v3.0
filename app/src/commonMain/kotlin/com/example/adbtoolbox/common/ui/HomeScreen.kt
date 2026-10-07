@@ -186,6 +186,10 @@ fun HomeScreen(
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12f.dp)) {
             QuickActionButton(backdrop, AppStrings.get("restore_entry"), Color(0xFFFF3B30), contentColor, Modifier.weight(1f)) { onNavigate(ADBDestination.SystemRestore) }
         }
+        // v2.9 新增：游龙式安全护盾（root 全盘恶意脚本扫描，只列出、删除需确认）
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12f.dp)) {
+            QuickActionButton(backdrop, AppStrings.get("shield_entry"), Color(0xFFFF3B30), contentColor, Modifier.weight(1f)) { onNavigate(ADBDestination.ShieldScan) }
+        }
         // v2.9 新增：内核提权（运行自备的公开 exploit，例如 GhostLock）+ 一键 Root 工具
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12f.dp)) {
             QuickActionButton(backdrop, AppStrings.get("kroot_entry"), Color(0xFFAF52DE), contentColor, Modifier.weight(1f)) { onNavigate(ADBDestination.KernelRoot) }

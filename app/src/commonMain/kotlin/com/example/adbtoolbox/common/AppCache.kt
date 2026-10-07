@@ -95,6 +95,9 @@ object AppCache {
     // 「使用情况访问」授权页触发（按游戏自动切换帧率需要它来判断前台应用）
     val openUsageAccessTrigger = mutableStateOf(0)
 
+    // 无障碍设置页触发（安全护盾：识别新装应用；删除仍需应用内确认）
+    val openAccessibilityTrigger = mutableStateOf(0)
+
     // ---------------- Shizuku 连接状态（全局唯一数据源） ----------------
     // 以前每个页面各自在 LaunchedEffect(Unit) 里查一次 isShizukuAvailable()，只查一次：
     // 如果进页面时 Shizuku 还没起、或者用户在别处才授权成功，界面就永远显示"未连接"，
