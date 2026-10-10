@@ -32,6 +32,17 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        // 无障碍真实状态（权限无关的正解）：直接问系统启用了哪些无障碍服务，
+        // 而不是读 settings （无提权时 shell 读不到 secure 设置会误报未赋予）
+        try {
+            val am = getSystemService(android.view.accessibility.AccessibilityManager::class.java)
+            val enabled = am.getEnabledAccessibilityServiceList(
+                android.accessibilityservice.AccessibilityServiceInfo.FEEDBACK_ALL_MASK or
+                    android.accessibilityservice.AccessibilityServiceInfo.FEEDBACK_GENERIC
+            ).any { s -> s.resolveInfo?.serviceInfo?.packageName == packageName }
+            com.example.adbtoolbox.common.AppCache.accessibilityServiceConnected.value = enabled
+        } catch (_: Exception) {
+        }
         // 开屏崩溃标记：能安全走到主界面 = 开屏没有崩，允许下次继续放开屏动画
         try {
             getSharedPreferences("splash_state", MODE_PRIVATE)

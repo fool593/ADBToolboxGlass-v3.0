@@ -82,4 +82,18 @@ object Shield {
             false
         }
     }
+
+    /** 紧急逃生动作：强停最近接触/前台的应用（需 Root/Shizuku）；只针对单个包，绝不批量。 */
+    suspend fun forceStopLastNewApp(): String = withContext(Dispatchers.Default) {
+        val pkg = com.example.adbtoolbox.common.AppCache.lastSeenAccessibilityPackage.value
+            ?: com.example.adbtoolbox.common.AppCache.lastForegroundAccessPackage.value
+        if (pkg.isNullOrBlank() || pkg == "com.android.systemui") {
+            "暂无可用目标：没有记录到最近前台/接触的应用"
+        } else {
+            val r = ADBTools.execCommand("am force-stop ", 15)
+            if (r.exitCode == 0) "已强停："
+            else "强停失败：\n"
+        }
+    }
+
 }

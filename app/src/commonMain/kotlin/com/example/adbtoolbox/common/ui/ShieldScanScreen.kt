@@ -39,6 +39,7 @@ import com.example.adbtoolbox.common.theme.AppLayout
 import com.example.adbtoolbox.common.theme.AppTheme
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.catalog.components.LiquidButton
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -63,6 +64,8 @@ fun ShieldScanScreen(
     var statusText by remember { mutableStateOf<String?>(null) }
     var busyDelete by remember { mutableStateOf<String?>(null) } // 正在删除的路径
     var confirmDelete by remember { mutableStateOf<String?>(null) } // 等待二次确认的路径
+    var confirmPanicStop by remember { mutableStateOf(false) }
+    var panicMsg by remember { mutableStateOf<String?>(null) }
     var a11yOn by remember { mutableStateOf<Boolean?>(null) }
     var rootOn by remember { mutableStateOf<Boolean?>(null) }
 
@@ -70,6 +73,8 @@ fun ShieldScanScreen(
         a11yOn = Shield.accessibilityEnabled()
         rootOn = Shield.rootAvailable()
     }
+    // 实时状态：无障碍服务自己维护的连接标记（androidMain 真实探测）+ settings 回读兜底
+    val a11yOnLive = com.example.adbtoolbox.common.AppCache.accessibilityServiceConnected.value || a11yOn == true
 
     Column(
         Modifier
@@ -238,6 +243,67 @@ fun ShieldScanScreen(
 
         Spacer(Modifier.height(AppLayout.sectionGap))
 
+        // ---------------- 紧急逃生（音量键连按 5 次触发，继承游龙护盾） ----------------
+        GlassCard(backdrop = backdrop, pageType = "home") {
+            Column(Modifier.padding(AppLayout.cardPad)) {
+                BasicText(
+                    AppStrings.get("shield_panic_title"),
+                    style = TextStyle(contentColor, AppLayout.sectionTitleSize, FontWeight.Medium)
+                )
+                Spacer(Modifier.height(4.dp))
+                BasicText(
+                    AppStrings.get("shield_panic_desc"),
+                    style = TextStyle(contentColor.copy(alpha = 0.6f), AppLayout.captionSize)
+                )
+                Spacer(Modifier.height(10.dp))
+                val panicCount = com.example.adbtoolbox.common.AppCache.panicTrigger.value
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    BasicText(
+                        AppStrings.get("shield_panic_status") + panicCount,
+                        style = TextStyle(contentColor, AppLayout.bodySize),
+                        modifier = Modifier.weight(1f)
+                    )
+                    if (panicCount > 0) {
+                        LiquidButton(
+                            onClick = { confirmPanicStop = true },
+                            backdrop = backdrop,
+                            modifier = Modifier.height(36.dp),
+                            tint = Color(0xFFFF6A3D)
+                        ) {
+                            BasicText(AppStrings.get("shield_panic_act"), style = TextStyle(Color.White, 12.sp))
+                        }
+                    }
+                }
+                if (confirmPanicStop) {
+                    Spacer(Modifier.height(8.dp))
+                    BasicText(
+                        AppStrings.get("shield_panic_confirm"),
+                        style = TextStyle(contentColor.copy(alpha = 0.7f), AppLayout.captionSize)
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    LiquidButton(
+                        onClick = {
+                            confirmPanicStop = false
+                            scope.launch {
+                                panicMsg = withContext(Dispatchers.Default) {
+                                    com.example.adbtoolbox.common.Shield.forceStopLastNewApp()
+                                }
+                            }
+                        },
+                        backdrop = backdrop,
+                        modifier = Modifier.height(38.dp).fillMaxWidth(),
+                        tint = Color(0xFFE5484D)
+                    ) {
+                        BasicText(AppStrings.get("shield_panic_confirm_btn"), style = TextStyle(Color.White, 13.sp))
+                    }
+                }
+                if (panicMsg != null) {
+                    Spacer(Modifier.height(8.dp))
+                    BasicText(panicMsg!!, style = TextStyle(Color(0xFF34C759), AppLayout.captionSize))
+                }
+            }
+        }
+
         // ---------------- 三项授权（Shizuku / 无障碍 / Root，真实状态） ----------------
         GlassCard(backdrop = backdrop, pageType = "home") {
             Column(Modifier.padding(AppLayout.cardPad)) {
@@ -272,12 +338,12 @@ fun ShieldScanScreen(
                 ShieldPermRow(
                     title = AppStrings.get("shield_a11y_title"),
                     desc = AppStrings.get("shield_a11y_desc"),
-                    statusText = when (a11yOn) {
+                    statusText = when (a11yOnLive) {
                         true -> AppStrings.get("shield_a11y_enabled")
                         false -> AppStrings.get("shield_a11y_disabled")
                         null -> AppStrings.get("ob_perm_unknown")
                     },
-                    ok = a11yOn == true,
+                    ok = a11yOnLive == true,
                     actionText = AppStrings.get("shield_a11y_open"),
                     onAction = onOpenAccessibility,
                     backdrop = backdrop,

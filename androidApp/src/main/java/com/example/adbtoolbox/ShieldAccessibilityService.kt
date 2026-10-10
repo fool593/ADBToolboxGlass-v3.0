@@ -13,6 +13,33 @@ import android.view.accessibility.AccessibilityEvent
  */
 class ShieldAccessibilityService : AccessibilityService() {
 
+    // 紧急逃生（继承游龙护盾）：3 秒内连按音量键 5 次触发
+    private val pressTimes = java.util.ArrayDeque<Long>()
+    private companion object {
+        const val PANIC_PRESSES = 5
+        const val PANIC_WINDOW_MS = 3000L
+    }
+
+    override fun onKeyEvent(event: android.view.KeyEvent?): Boolean {
+        try {
+            if (event != null && event.action == android.view.KeyEvent.ACTION_DOWN &&
+                (event.keyCode == android.view.KeyEvent.KEYCODE_VOLUME_UP ||
+                 event.keyCode == android.view.KeyEvent.KEYCODE_VOLUME_DOWN)) {
+                val now = android.os.SystemClock.uptimeMillis()
+                while (pressTimes.isNotEmpty() && now - pressTimes.peekFirst() > PANIC_WINDOW_MS) {
+                    pressTimes.pollFirst()
+                }
+                pressTimes.addLast(now)
+                if (pressTimes.size >= PANIC_PRESSES) {
+                    pressTimes.clear()
+                    com.example.adbtoolbox.common.AppCache.panicTrigger.value += 1
+                }
+            }
+        } catch (_: Exception) {
+        }
+        return false // 不吞按键，音量照常调节
+    }
+
     override fun onServiceConnected() {
         super.onServiceConnected()
         com.example.adbtoolbox.common.AppCache.accessibilityServiceConnected.value = true

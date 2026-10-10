@@ -100,6 +100,9 @@ object AppCache {
 
     // 减负模式：上次运行崩溃后本会话置 true（玻璃/动效降档，避免同一渲染路径反复触发崩溃）
     val reducedMode = mutableStateOf(false)
+    // 紧急逃生触发计数（无障碍服务里连按音量键 5 次自增；护盾页展示并给出快速动作）
+    val panicTrigger = mutableStateOf(0)
+
     // 上次崩溃堆栈（androidMain 启动时从 CrashGuard 填充），设置页可展示/复制后发回定位
     val crashLog = mutableStateOf<String?>(null)
 

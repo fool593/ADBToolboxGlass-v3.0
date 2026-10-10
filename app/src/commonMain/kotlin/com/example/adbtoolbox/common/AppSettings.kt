@@ -1349,6 +1349,12 @@ object AppStrings {
         "module_reboot_hint" to "模块已刷入，当前未启用；重启手机后才会真正生效。",
         "reboot_device" to "重启手机（使模块生效）",
         "reboot_failed" to "无法重启：",
+        "shield_panic_title" to "紧急逃生（音量键连按）",
+        "shield_panic_desc" to "3 秒内连按音量键 5 次触发（需要无障碍已开启）；触发后可快速强停最近接触的应用，适合被恶意界面困住时脱身。",
+        "shield_panic_status" to "已触发次数：",
+        "shield_panic_act" to "快速动作",
+        "shield_panic_confirm" to "确认强停最近接触的应用？仅强停单个包，不影响其他应用。",
+        "shield_panic_confirm_btn" to "确认强停",
     )
 
     private val enStrings = mapOf(
@@ -2637,6 +2643,12 @@ object AppStrings {
         "module_reboot_hint" to "Module flashed and currently disabled; it takes effect after reboot.",
         "reboot_device" to "Reboot device (to activate module)",
         "reboot_failed" to "Reboot failed:",
+        "shield_panic_title" to "Panic escape (volume-key rapid press)",
+        "shield_panic_desc" to "Press the volume key 5x within 3s to trigger (needs accessibility on); then quickly force-stop the last app, e.g. when trapped by a malicious UI.",
+        "shield_panic_status" to "Panic triggers:",
+        "shield_panic_act" to "Quick action",
+        "shield_panic_confirm" to "Force-stop the last accessed app? Single package only, nothing else touched.",
+        "shield_panic_confirm_btn" to "Confirm force-stop",
     )
     private val hiStrings = mapOf(
         // सामान्य
@@ -3900,8 +3912,15 @@ object AppStrings {
         "module_reboot_hint" to "मॉड्यूल इंस्टॉल हुआ; रिबूट के बाद प्रभावी होगा।",
         "reboot_device" to "डिवाइस रिबूट करें",
         "reboot_failed" to "रिबूट विफल:",
+        "shield_panic_title" to "आपातकालीन (वॉल्यूम कुंजी)",
+        "shield_panic_desc" to "वॉल्यूम कुंजी 5 बार दबाएँ (एक्सेसिबिलिटी चाहिए)",
+        "shield_panic_status" to "ट्रिगर:",
+        "shield_panic_act" to "त्वरित क्रिया",
+        "shield_panic_confirm" to "पुष्टि: अंतिम ऐप बंद करें?",
+        "shield_panic_confirm_btn" to "बंद करें",
     )
 }
+
 
 
 
