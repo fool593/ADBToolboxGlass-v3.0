@@ -187,29 +187,4 @@ object GlassEffectConfig {
         buttonBlurRadius.value = btnBlur
         buttonOpacity.value = btnOpac
     }
-
-    // 重置为默认值
-    fun resetToDefault() {
-        cornerRadius.value = 0.5f
-        blurRadius.value = 16f
-        refractionHeight.value = 0.2f
-        refractionAmount.value = 0.2f
-        chromaticAberration.value = 0f
-        enableVibrancy.value = true
-        globalIntensity.value = 1f
-        navBlurRadius.value = 8f
-        navOpacity.value = 0.4f
-        navCornerRadius.value = 0.6f
-        cardBlurRadius.value = 20f
-        cardOpacity.value = 0.3f
-        cardCornerRadius.value = 0.5f
-        buttonBlurRadius.value = 12f
-        buttonOpacity.value = 0.5f
-        glassColor.value = Color.White.copy(alpha = 0.15f)
-        fontColor.value = Color.Unspecified
-        longPressGlowIntensity.value = 0.6f
-        longPressGlowSize.value = 0.5f
-        longPressRefraction.value = 0.5f
-        longPressGlowColor.value = Color.White
-    }
 }
