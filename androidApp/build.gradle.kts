@@ -12,8 +12,8 @@ android {
         applicationId = "com.example.adbtoolbox"
         minSdk = 24
         targetSdk = 37
-        versionCode = 30
-        versionName = "3.0"
+        versionCode = 31
+        versionName = "3.1"
     }
 
     buildTypes {
