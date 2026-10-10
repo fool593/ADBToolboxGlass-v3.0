@@ -153,14 +153,6 @@ object AppCache {
         permissionCache.remove(packageName)
     }
 
-    fun invalidateApps() {
-        appsLoaded.value = false
-    }
-
-    fun invalidateDeviceInfo() {
-        deviceInfoLoaded.value = false
-    }
-
     fun clearAll() {
         installedApps.value = emptyList()
         appsLoaded.value = false

@@ -45,26 +45,6 @@ object Preloader {
         }
     }
 
-    fun refreshApps() {
-        scope.launch {
-            val apps = ADBTools.getInstalledApps()
-            AppCache.installedApps.value = apps
-            // 同上：空结果不代表加载成功，不能置位 appsLoaded，否则永远不再重试
-            if (apps.isNotEmpty()) AppCache.appsLoaded.value = true
-        }
-    }
-
-    fun refreshDeviceInfo() {
-        scope.launch {
-            AppCache.deviceInfo.value = ADBTools.getDeviceInfo()
-            AppCache.cpuInfo.value = ADBTools.getCpuInfo()
-            AppCache.cpuCores.value = ADBTools.getCpuCores()
-            AppCache.screenResolution.value = ADBTools.getScreenResolution()
-            AppCache.kernelVersion.value = ADBTools.getKernelVersion()
-            AppCache.deviceInfoLoaded.value = true
-        }
-    }
-
     fun cancel() {
         preloadJob?.cancel()
         AppCache.isPreloading.value = false

@@ -613,42 +613,6 @@ actual object PluginManager {
     }
 
     // 执行所有已启用插件的开机脚本（由 BootReceiver 调用）
-    fun runBootScripts(context: Context) {
-        try {
-            val plugins = getInstalledPlugins().filter { it.isEnabled }
-            plugins.forEach { plugin ->
-                val pluginDir = File(plugin.pluginDir)
-                // 执行 post-fs-data.sh
-                val postFsData = File(pluginDir, "post-fs-data.sh")
-                if (postFsData.isFile) {
-                    val dir = pluginDir.absolutePath
-                    ADBTools.execCommand(
-                        "cd ${shq(dir)} && MODDIR=${shq(dir)} sh post-fs-data.sh",
-                        timeout = 60
-                    )
-                }
-                // 执行 service.sh（后台执行）
-                val serviceSh = File(pluginDir, "service.sh")
-                if (serviceSh.isFile) {
-                    val dir = pluginDir.absolutePath
-                    Thread {
-                        ADBTools.execCommand(
-                            "cd ${shq(dir)} && MODDIR=${shq(dir)} sh service.sh",
-                            timeout = 300
-                        )
-                    }.start()
-                }
-                // 加载 system.prop
-                val systemProp = File(pluginDir, "system.prop")
-                if (systemProp.isFile) {
-                    parseModuleProp(systemProp).forEach { (key, value) ->
-                        ADBTools.execCommand("setprop ${shq(key)} ${shq(value)}")
-                    }
-                }
-            }
-        } catch (e: Exception) {
-        }
-    }
 
     // 获取插件 WebUI 的入口文件路径（不存在返回 null，界面因此不显示"打开界面"）
     actual fun getWebUIPath(pluginId: String): String? {
