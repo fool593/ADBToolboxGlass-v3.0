@@ -95,8 +95,22 @@ object KernelRoot {
         // 用 sh -c 进入目录再执行：部分 exploit 依赖当前工作目录写临时文件
         val escapedDir = "'" + dir.replace("'", "'\\''") + "'"
         val escapedFile = "'" + "./" + file.replace("'", "'\\''") + "'"
+        // 官方实现对照（ghostlock main.cpp CLI）：裸运行只打印 usage，
+        // 必须给入口参数才能走攻击链路 —— --ghostlock-app-call（app 入口）或
+        // --load-prebuilt-profile <bin>（预置 profile.bin）。同目录有 *.bin 时优先后者。
+        val ghostArgs: String = if (file.contains("ghostlock", ignoreCase = true)) {
+            try {
+                val bin = java.io.File(dir).listFiles()
+                    ?.firstOrNull { it.name.endsWith(".bin") }
+                if (bin != null) "--load-prebuilt-profile '" + bin.name.replace("'", "'\\''") + "'" else "--ghostlock-app-call"
+            } catch (e: Exception) {
+                "--ghostlock-app-call"
+            }
+        } else {
+            ""
+        }
         val run = try {
-            ADBTools.execCommand("cd $escapedDir && $escapedFile 2>&1; echo EXIT=\$?", timeoutSec)
+            ADBTools.execCommand("cd $escapedDir && $escapedFile $ghostArgs 2>&1; echo EXIT=\$?", timeoutSec)
         } catch (e: Exception) {
             CommandResult("", "${e.javaClass.simpleName}: ${e.message}", -1)
         }
