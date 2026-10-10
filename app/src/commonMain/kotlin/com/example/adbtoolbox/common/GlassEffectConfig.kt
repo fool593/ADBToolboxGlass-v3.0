@@ -158,33 +158,4 @@ object GlassEffectConfig {
         // 手动改过玻璃参数 = 从此刻起不再让主题强行覆盖（见 AppSettings.themeUserOverrode）
         AppSettings.markThemeUserOverride()
     }
-
-    // 设置字体颜色
-    fun setFontColor(color: Color) {
-        fontColor.value = color
-        AppSettings.markThemeUserOverride()
-    }
-
-    // 保存全局效果参数
-    fun saveGlobalConfig(
-        intensity: Float,
-        navBlur: Float,
-        navOpac: Float,
-        navCorner: Float,
-        cardBlur: Float,
-        cardOpac: Float,
-        cardCorner: Float,
-        btnBlur: Float,
-        btnOpac: Float
-    ) {
-        globalIntensity.value = intensity
-        navBlurRadius.value = navBlur
-        navOpacity.value = navOpac
-        navCornerRadius.value = navCorner
-        cardBlurRadius.value = cardBlur
-        cardOpacity.value = cardOpac
-        cardCornerRadius.value = cardCorner
-        buttonBlurRadius.value = btnBlur
-        buttonOpacity.value = btnOpac
-    }
 }
