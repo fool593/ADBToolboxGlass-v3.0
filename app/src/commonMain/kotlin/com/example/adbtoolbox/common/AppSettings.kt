@@ -1361,6 +1361,15 @@ object AppStrings {
         "home_sec_sec" to "安全",
         "home_sec_root" to "提权",
         "home_sec_mod" to "模块",
+        "kroot_adv_title" to "GhostLock 高级终端（官方 CLI 全集）",
+        "kroot_adv_desc" to "直接调用 ghostlock 二进制的全部官方参数：App 入口提权 / 加载预置 profile / 强制攻击 / 状态记录 / 导出内核日志 / 内核信息。需先在上方执行一次内置 kit 完成推送。",
+        "kroot_adv_need_push" to "请先用上方「内置 GhostLock kit」执行一次以推送工具包",
+        "kroot_adv_app" to "App 入口提权",
+        "kroot_adv_profile" to "加载预置 profile.bin",
+        "kroot_adv_force" to "强制攻击",
+        "kroot_adv_status" to "状态记录",
+        "kroot_adv_klog" to "导出内核日志",
+        "kroot_adv_uname" to "内核信息 (uname -r)",
     )
 
     private val enStrings = mapOf(
@@ -2661,6 +2670,15 @@ object AppStrings {
         "home_sec_sec" to "Security",
         "home_sec_root" to "Root access",
         "home_sec_mod" to "Modules",
+        "kroot_adv_title" to "GhostLock advanced terminal (full official CLI)",
+        "kroot_adv_desc" to "Invokes every official ghostlock flag: app-call entry, load-prebuilt-profile, force-attack, status-record, dump-kernel-log, kernel info. Push the kit first.",
+        "kroot_adv_need_push" to "Push the built-in GhostLock kit first (run it above)",
+        "kroot_adv_app" to "App-call entry",
+        "kroot_adv_profile" to "Load prebuilt profile.bin",
+        "kroot_adv_force" to "Force attack",
+        "kroot_adv_status" to "Status record",
+        "kroot_adv_klog" to "Dump kernel log",
+        "kroot_adv_uname" to "Kernel info (uname -r)",
     )
     private val hiStrings = mapOf(
         // सामान्य
@@ -3936,8 +3954,18 @@ object AppStrings {
         "home_sec_sec" to "सुरक्षा",
         "home_sec_root" to "रूट",
         "home_sec_mod" to "मॉड्यूल",
+        "kroot_adv_title" to "घोस्टलॉक एडवांस टर्मिनल",
+        "kroot_adv_desc" to "सभी आधिकारिक फ्लैग कॉल करता है; पहले किट पुश करें।",
+        "kroot_adv_need_push" to "पहले किट पुश करें",
+        "kroot_adv_app" to "ऐप-कॉल एंट्री",
+        "kroot_adv_profile" to "प्रोफाइल लोड",
+        "kroot_adv_force" to "फोर्स अटैक",
+        "kroot_adv_status" to "स्टेटस रिकॉर्ड",
+        "kroot_adv_klog" to "कर्नल लॉग डंप",
+        "kroot_adv_uname" to "कर्नल जानकारी",
     )
 }
+
 
 
 

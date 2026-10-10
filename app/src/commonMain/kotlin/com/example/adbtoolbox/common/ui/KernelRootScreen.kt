@@ -78,7 +78,9 @@ fun KernelRootScreen(
         builtinKits = withContext(Dispatchers.Default) { ADBTools.listAssetKits() }
     }
 
-    Column(
+        var ghFlags by remember { mutableStateOf<String?>(null) }
+    var ghAdvBusy by remember { mutableStateOf(false) }
+Column(
         Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
@@ -290,6 +292,76 @@ fun KernelRootScreen(
         }
 
         Spacer(Modifier.height(AppLayout.sectionGap))
+
+        // ---------------- GhostLock 高级终端（官方 CLI 全集：--ghostlock-app-call / --load-prebuilt-profile / --force-attack / --enable-status-record / --dump-kernel-log / 内核信息） ----------------
+        GlassCard(backdrop = backdrop, pageType = "home") {
+            Column(Modifier.padding(AppLayout.cardPad)) {
+                BasicText(
+                    AppStrings.get("kroot_adv_title"),
+                    style = TextStyle(contentColor, AppLayout.sectionTitleSize, FontWeight.Medium)
+                )
+                Spacer(Modifier.height(4.dp))
+                BasicText(
+                    AppStrings.get("kroot_adv_desc"),
+                    style = TextStyle(contentColor.copy(alpha = 0.6f), AppLayout.captionSize)
+                )
+                Spacer(Modifier.height(10.dp))
+                val advItems = listOf(
+                    "--ghostlock-app-call" to "kroot_adv_app",
+                    "--load-prebuilt-profile" to "kroot_adv_profile",
+                    "--force-attack" to "kroot_adv_force",
+                    "--enable-status-record" to "kroot_adv_status",
+                    "--dump-kernel-log /data/local/tmp/kx_klog" to "kroot_adv_klog",
+                    "uname -r" to "kroot_adv_uname"
+                )
+                advItems.forEach { (flags, labelKey) ->
+                    LiquidButton(
+                        onClick = {
+                            if (ghAdvBusy) return@LiquidButton
+                            if (remotePath.isNullOrBlank() || !remotePath!!.startsWith("/data/local/tmp/")) {
+                                statusText = AppStrings.get("kroot_adv_need_push")
+                                return@LiquidButton
+                            }
+                            ghFlags = flags
+                            ghAdvBusy = true
+                            statusText = "Advanced: " + flags
+                            scope.launch {
+                                val r = withContext(Dispatchers.Default) {
+                                    if (flags == "uname -r") com.example.adbtoolbox.common.ADBTools.execCommand("uname -r", 15)
+                                    else com.example.adbtoolbox.common.perf.KernelRoot.runGhostlockCli(remotePath!!, flags, 120)
+                                }
+                                runOutput = buildString {
+                                    append(r.output.trim())
+                                    if (r.error.isNotBlank()) append("\n[stderr] ").append(r.error)
+                                }
+                                rootProbe = withContext(Dispatchers.Default) { com.example.adbtoolbox.common.perf.KernelRoot.probeRoot() }
+                                ghAdvBusy = false
+                            }
+                        },
+                        backdrop = backdrop,
+                        modifier = Modifier.height(38.dp).fillMaxWidth(),
+                        tint = if (ghAdvBusy) Color(0xFF8E8E93) else Color(0xFF5856D6)
+                    ) {
+                        BasicText(
+                            if (ghAdvBusy && ghFlags == flags) AppStrings.get("kroot_working") else flags,
+                            style = TextStyle(
+                                color = Color.White,
+                                fontSize = 11.sp,
+                                fontFamily = FontFamily.Monospace
+                            )
+                        )
+                    }
+                    Spacer(Modifier.height(6.dp))
+                }
+                if (ghFlags != null && runOutput != null) {
+                    Spacer(Modifier.height(6.dp))
+                    BasicText(
+                        runOutput!!,
+                        style = TextStyle(contentColor.copy(alpha = 0.9f), 10.sp, fontFamily = FontFamily.Monospace)
+                    )
+                }
+            }
+        }
 
         // ---------------- 步骤 1：选择本地 exploit ----------------
         GlassCard(backdrop = backdrop, pageType = "home") {

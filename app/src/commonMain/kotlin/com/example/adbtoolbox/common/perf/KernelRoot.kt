@@ -141,4 +141,31 @@ object KernelRoot {
         }
         if (plain.isBlank()) viaSu else "$plain\n(su: ${viaSu.ifBlank { "不可用" }})"
     }
+    /** 官方 CLI 全集执行：跑 ghostlock 二进制并显式追加 flags（见 main.cpp），
+     *  裸运行只会打印 usage；同 runExploit 一样最后做 uid=0 探测。 */
+    suspend fun runGhostlockCli(remotePath: String, flags: String, timeoutSec: Int = 120): CommandResult =
+        withContext(Dispatchers.Default) {
+            if (remotePath.isBlank() || !remotePath.startsWith("/data/local/tmp/")) {
+                return@withContext CommandResult("", "refused: remote path must be under /data/local/tmp", 1)
+            }
+            val dir = remotePath.substringBeforeLast('/')
+            val file = "./" + remotePath.substringAfterLast('/')
+            val ed = "'" + dir.replace("'", "'\\''") + "'"
+            val ef = "'" + file.replace("'", "'\\''") + "'"
+            val run = try {
+                ADBTools.execCommand("cd $ed && $ef $flags 2>&1; echo EXIT=\$?", timeoutSec)
+            } catch (e: Exception) {
+                CommandResult("", "${e.javaClass.simpleName}: ${e.message}", -1)
+            }
+            val probe = probeRoot()
+            CommandResult(
+                output = buildString {
+                    append(run.output.trim())
+                    append("\n--- root 探测 ---\n")
+                    append(probe)
+                },
+                error = run.error,
+                exitCode = if (probe.contains("uid=0")) 0 else run.exitCode
+            )
+        }
 }
