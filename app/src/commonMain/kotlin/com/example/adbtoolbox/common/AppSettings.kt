@@ -1355,6 +1355,12 @@ object AppStrings {
         "shield_panic_act" to "快速动作",
         "shield_panic_confirm" to "确认强停最近接触的应用？仅强停单个包，不影响其他应用。",
         "shield_panic_confirm_btn" to "确认强停",
+        "home_sec_system" to "系统",
+        "home_sec_perf" to "性能",
+        "home_sec_game" to "游戏",
+        "home_sec_sec" to "安全",
+        "home_sec_root" to "提权",
+        "home_sec_mod" to "模块",
     )
 
     private val enStrings = mapOf(
@@ -2649,6 +2655,12 @@ object AppStrings {
         "shield_panic_act" to "Quick action",
         "shield_panic_confirm" to "Force-stop the last accessed app? Single package only, nothing else touched.",
         "shield_panic_confirm_btn" to "Confirm force-stop",
+        "home_sec_system" to "System",
+        "home_sec_perf" to "Performance",
+        "home_sec_game" to "Gaming",
+        "home_sec_sec" to "Security",
+        "home_sec_root" to "Root access",
+        "home_sec_mod" to "Modules",
     )
     private val hiStrings = mapOf(
         // सामान्य
@@ -3918,8 +3930,15 @@ object AppStrings {
         "shield_panic_act" to "त्वरित क्रिया",
         "shield_panic_confirm" to "पुष्टि: अंतिम ऐप बंद करें?",
         "shield_panic_confirm_btn" to "बंद करें",
+        "home_sec_system" to "सिस्टम",
+        "home_sec_perf" to "प्रदर्शन",
+        "home_sec_game" to "गेमिंग",
+        "home_sec_sec" to "सुरक्षा",
+        "home_sec_root" to "रूट",
+        "home_sec_mod" to "मॉड्यूल",
     )
 }
+
 
 
 

@@ -1,6 +1,7 @@
 package com.example.adbtoolbox.common.ui
 
 import androidx.compose.foundation.clickable
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -26,6 +27,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
@@ -147,62 +149,87 @@ fun HomeScreen(
         }
 
         // 快捷功能
-        BasicText(AppStrings.get("quick_actions"), style = TextStyle(contentColor, 18f.sp, androidx.compose.ui.text.font.FontWeight.Medium))
-
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12f.dp)) {
-            QuickActionButton(backdrop, AppStrings.get("device_info"), Color(0xFF0088FF), contentColor, Modifier.weight(1f)) { onNavigate(ADBDestination.DeviceInfo) }
-            QuickActionButton(backdrop, AppStrings.get("adb_panel"), Color(0xFFFF9500), contentColor, Modifier.weight(1f)) { onNavigate(ADBDestination.ADBPanel) }
-        }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12f.dp)) {
-            QuickActionButton(backdrop, AppStrings.get("permissions"), Color(0xFFFF3B30), contentColor, Modifier.weight(1f)) { onNavigate(ADBDestination.Permissions) }
-            QuickActionButton(backdrop, AppStrings.get("root_manager"), Color(0xFFAF52DE), contentColor, Modifier.weight(1f)) { onNavigate(ADBDestination.RootManager) }
-        }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12f.dp)) {
-            QuickActionButton(backdrop, AppStrings.get("shell_executor"), Color(0xFF34C759), contentColor, Modifier.weight(1f)) { onNavigate(ADBDestination.ShellExecutor) }
-            QuickActionButton(backdrop, AppStrings.get("app_manager"), Color(0xFF5AC8FA), contentColor, Modifier.weight(1f)) { onNavigate(ADBDestination.Apps) }
-        }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12f.dp)) {
-            QuickActionButton(backdrop, AppStrings.get("adb_module"), Color(0xFFBF5AF2), contentColor, Modifier.weight(1f)) { onNavigate(ADBDestination.ADBModule) }
-        }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12f.dp)) {
-            QuickActionButton(backdrop, AppStrings.get("temp_root"), Color(0xFFFF9500), contentColor, Modifier.weight(1f)) { onNavigate(ADBDestination.TempRoot) }
-            QuickActionButton(backdrop, AppStrings.get("huawei_boost"), AppTheme.accent, contentColor, Modifier.weight(1f)) { onNavigate(ADBDestination.HuaweiBoost) }
-        }
-        // v2.9 新增：机型分类优化（每个品牌独立分类入口，独占一行避免与其它入口挤在一起）
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12f.dp)) {
-            QuickActionButton(backdrop, AppStrings.get("brand_perf_entry"), Color(0xFFFF9500), contentColor, Modifier.weight(1f)) { onNavigate(ADBDestination.BrandPerf) }
-        }
-        // v2.9 新增：游戏帧率（全机型）+ 已安装 Root 模块管理
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12f.dp)) {
-            QuickActionButton(backdrop, AppStrings.get("game_frame_rate"), Color(0xFF34C759), contentColor, Modifier.weight(1f)) { onNavigate(ADBDestination.GameFrameRate) }
-            QuickActionButton(backdrop, AppStrings.get("installed_root_modules"), AppTheme.accentAlt, contentColor, Modifier.weight(1f)) { onNavigate(ADBDestination.RootModules) }
-        }
-        // v2.9 新增：品牌自适应一键性能加速 + 手机体检（配色跟随当前主题）
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12f.dp)) {
-            QuickActionButton(backdrop, AppStrings.get("performance_boost"), AppTheme.accent, contentColor, Modifier.weight(1f)) { onNavigate(ADBDestination.PerformanceBoost) }
-            QuickActionButton(backdrop, AppStrings.get("phone_inspector"), AppTheme.deep, contentColor, Modifier.weight(1f)) { onNavigate(ADBDestination.PhoneInspector) }
-        }
-        // v2.9 新增：还原系统默认设置（性能优化改了整机级设置时的退路）
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12f.dp)) {
-            QuickActionButton(backdrop, AppStrings.get("restore_entry"), Color(0xFFFF3B30), contentColor, Modifier.weight(1f)) { onNavigate(ADBDestination.SystemRestore) }
-        }
-        // v2.9 新增：游龙式安全护盾（root 全盘恶意脚本扫描，只列出、删除需确认）
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12f.dp)) {
-            QuickActionButton(backdrop, AppStrings.get("shield_entry"), Color(0xFFFF3B30), contentColor, Modifier.weight(1f)) { onNavigate(ADBDestination.ShieldScan) }
-        }
-        // v2.9 新增：内核提权（运行自备的公开 exploit，例如 GhostLock）+ 一键 Root 工具
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12f.dp)) {
-            QuickActionButton(backdrop, AppStrings.get("kroot_entry"), Color(0xFFAF52DE), contentColor, Modifier.weight(1f)) { onNavigate(ADBDestination.KernelRoot) }
-            QuickActionButton(backdrop, AppStrings.get("root_tool"), Color(0xFF5856D6), contentColor, Modifier.weight(1f)) { onNavigate(ADBDestination.RootTool) }
-        }
-        Spacer(Modifier.height(6f.dp))
+                // ============ 布局重构 v3.1：分区重排 + 入场级联动画（控件/目的地全部不变） ============
+        HomeSection(AppStrings.get("home_sec_system"), backdrop, contentColor, sectionIndex = 0, onNavigate = onNavigate, rows = listOf(
+            listOf(Triple(AppStrings.get("device_info"), Color(0xFF0088FF), ADBDestination.DeviceInfo),
+                   Triple(AppStrings.get("adb_panel"), Color(0xFFFF9500), ADBDestination.ADBPanel)),
+            listOf(Triple(AppStrings.get("permissions"), Color(0xFFFF3B30), ADBDestination.Permissions),
+                   Triple(AppStrings.get("root_manager"), Color(0xFFAF52DE), ADBDestination.RootManager)),
+            listOf(Triple(AppStrings.get("shell_executor"), Color(0xFF34C759), ADBDestination.ShellExecutor),
+                   Triple(AppStrings.get("app_manager"), Color(0xFF5AC8FA), ADBDestination.Apps)),
+        ))
+        HomeSection(AppStrings.get("home_sec_perf"), backdrop, contentColor, sectionIndex = 1, onNavigate = onNavigate, rows = listOf(
+            listOf(Triple(AppStrings.get("performance_boost"), AppTheme.accent, ADBDestination.PerformanceBoost),
+                   Triple(AppStrings.get("phone_inspector"), AppTheme.deep, ADBDestination.PhoneInspector)),
+            listOf(Triple(AppStrings.get("brand_perf_entry"), Color(0xFFFF9500), ADBDestination.BrandPerf),
+                   Triple(AppStrings.get("huawei_boost"), AppTheme.accent, ADBDestination.HuaweiBoost)),
+            listOf(Triple(AppStrings.get("restore_entry"), Color(0xFFFF3B30), ADBDestination.SystemRestore)),
+        ))
+        HomeSection(AppStrings.get("home_sec_game"), backdrop, contentColor, sectionIndex = 2, onNavigate = onNavigate, rows = listOf(
+            listOf(Triple(AppStrings.get("game_frame_rate"), Color(0xFF34C759), ADBDestination.GameFrameRate)),
+        ))
+        HomeSection(AppStrings.get("home_sec_sec"), backdrop, contentColor, sectionIndex = 3, onNavigate = onNavigate, rows = listOf(
+            listOf(Triple(AppStrings.get("shield_entry"), Color(0xFFFF3B30), ADBDestination.ShieldScan)),
+        ))
+        HomeSection(AppStrings.get("home_sec_root"), backdrop, contentColor, sectionIndex = 4, onNavigate = onNavigate, rows = listOf(
+            listOf(Triple(AppStrings.get("kroot_entry"), Color(0xFFAF52DE), ADBDestination.KernelRoot),
+                   Triple(AppStrings.get("root_tool"), Color(0xFF5856D6), ADBDestination.RootTool)),
+            listOf(Triple(AppStrings.get("temp_root"), Color(0xFFFF9500), ADBDestination.TempRoot)),
+        ))
+        HomeSection(AppStrings.get("home_sec_mod"), backdrop, contentColor, sectionIndex = 5, onNavigate = onNavigate, rows = listOf(
+            listOf(Triple(AppStrings.get("adb_module"), Color(0xFFBF5AF2), ADBDestination.ADBModule),
+                   Triple(AppStrings.get("installed_root_modules"), AppTheme.accentAlt, ADBDestination.RootModules)),
+        ))
+        Spacer(Modifier.height(10f.dp))
         BasicText(
             "· " + AppStrings.get("restore_remind_perf"),
             Modifier.padding(horizontal = 4.dp),
             style = TextStyle(contentColor.copy(alpha = 0.55f), 11.sp)
         )
+Spacer(Modifier.height(16f.dp))
+    }
+}
 
+/** 首页分区：标题 + 1~2 列入口；控件复用 QuickActionButton（布局重构不换控件）。
+ *  入场动画：全区淡入+上移，sectionIndex 错峰 60ms 级联；容器内容尺寸动画。 */
+@Composable
+private fun HomeSection(
+    title: String,
+    backdrop: Backdrop,
+    contentColor: Color,
+    sectionIndex: Int,
+    onNavigate: (ADBDestination) -> Unit,
+    rows: List<List<Triple<String, Color, ADBDestination>>>
+) {
+    var appear by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.delay((sectionIndex * 60L))
+        appear = true
+    }
+    val shown by androidx.compose.animation.core.animateFloatAsState(
+        if (appear) 1f else 0f,
+        androidx.compose.animation.core.tween(420, easing = androidx.compose.animation.core.FastOutSlowInEasing)
+    )
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .animateContentSize(androidx.compose.animation.core.tween(300))
+            .graphicsLayer {
+                alpha = shown
+                translationY = (1f - shown) * 12f.dp.toPx()
+            }
+    ) {
         Spacer(Modifier.height(16f.dp))
+        BasicText(title, style = TextStyle(contentColor, 16f.sp, androidx.compose.ui.text.font.FontWeight.Medium))
+        Spacer(Modifier.height(8f.dp))
+        rows.forEach { row ->
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12f.dp)) {
+                row.forEach { (label, color, dest) ->
+                    QuickActionButton(backdrop, label, color, contentColor, Modifier.weight(1f)) { onNavigate(dest) }
+                }
+            }
+            Spacer(Modifier.height(10f.dp))
+        }
     }
 }
 
