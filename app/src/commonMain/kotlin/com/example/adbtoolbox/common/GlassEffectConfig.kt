@@ -152,23 +152,6 @@ object GlassEffectConfig {
         "紫" to Color(0xFFAF52DE).copy(alpha = 0.2f)
     )
 
-    // 保存参数
-    fun saveConfig(
-        corner: Float,
-        blur: Float,
-        refHeight: Float,
-        refAmount: Float,
-        chromatic: Float,
-        vibrancy: Boolean
-    ) {
-        cornerRadius.value = corner
-        blurRadius.value = blur
-        refractionHeight.value = refHeight
-        refractionAmount.value = refAmount
-        chromaticAberration.value = chromatic
-        enableVibrancy.value = vibrancy
-    }
-
     // 设置颜色
     fun setColor(color: Color) {
         glassColor.value = color
