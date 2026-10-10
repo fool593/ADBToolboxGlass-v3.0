@@ -434,13 +434,27 @@ actual object PluginManager {
                     if (pt.contains("\r\n")) prop.writeText(pt.replace("\r\n", "\n"))
                 }
             } catch (_: Exception) {}
-            // 2) 优先用 AxManager BusyBox ash（装了 AxManager 时），并注入 AXERON 环境
+            // 2) 补全标准安装环境（根因修复，非补丁）：脚本靠这些变量决定逻辑，
+            //    缺失会导致 [ "$ARCH" = arm64 ]、$ZIPFILE、$API 等引用落空 -> exit 1。
             val dir = moduleDir.absolutePath
+            val is64 = android.os.Build.SUPPORTED_64_BIT_ABIS.isNotEmpty()
+            val env = buildString {
+                append("MODPATH=${shq(dir)} ")
+                append("TMPDIR=${shq(dir)} ")
+                append("ZIPFILE=${shq("$dir/installer.zip")} ")
+                append("ARCH=").append(if (is64) "arm64" else "arm").append(' ')
+                append("IS64BIT=").append(if (is64) "true" else "false").append(' ')
+                append("API=").append(android.os.Build.VERSION.SDK_INT).append(' ')
+                append("BOOTMODE=true ")
+                // OUTFD：Magisk/AxManager 标准脚本的 ui_print 走 fd 3（echo >&3），
+                // 没有 fd 3 时脚本一写 UI 日志就 "Bad file descriptor" -> abort -> exit 1。
+                append("OUTFD=3 ")
+            }
             val axBox = detectAxManagerBusybox()
             val shell = if (axBox != null) "${shq(axBox)} sh" else "sh"
             val axEnv = if (axBox != null) "AXERON=true AXERONVER=10400 " else ""
             val result = ADBTools.execCommand(
-                "cd ${shq(dir)} && ${axEnv}MODPATH=${shq(dir)} TMPDIR=${shq(dir)} $shell customize.sh",
+                "cd ${shq(dir)} && ${axEnv}${env}$shell customize.sh 3>&1",
                 timeout = 120
             )
             if (result.exitCode == 0) {
